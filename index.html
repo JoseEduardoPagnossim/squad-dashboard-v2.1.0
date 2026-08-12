@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>Soften • Performance Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-layer"></div>
+
+  <section id="loginScreen" class="login-screen">
+    <div class="login-shell">
+      <div class="login-brand">
+        <div class="brand-mark large">S</div>
+        <div><strong>SOFTEN</strong><span>Performance Hub</span></div>
+      </div>
+      <div class="login-card">
+        <span class="eyebrow">ACESSO SEGURO</span>
+        <h1>Entre no seu Squad</h1>
+        <p>Técnicos visualizam somente o próprio Squad. Administradores gerenciam dados, metas e campanha.</p>
+        <form id="loginForm">
+          <label><span>E-mail</span><input id="loginEmail" type="email" autocomplete="username" required placeholder="seu.email@empresa.com"></label>
+          <label><span>Senha</span><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
+          <div id="loginError" class="login-error"></div>
+          <button class="btn primary wide login-submit" type="submit">Entrar</button>
+        </form>
+        <details class="demo-accounts">
+          <summary>Contas de demonstração</summary>
+          <div class="demo-account"><b>Admin geral</b><span>admin.geral@soften.local</span><code>Admin123!</code></div>
+          <div class="demo-account"><b>Admin Squad D</b><span>admin.squadd@soften.local</span><code>SquadD123!</code></div>
+          <div class="demo-account"><b>Técnico Rodolfo</b><span>rodolfo.donda@soften.local</span><code>Tecnico123!</code></div>
+          <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
+        </details>
+      </div>
+      <small class="login-version">V2.1.0 • multi-squad + usuários + central de ajuda</small>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div><strong>SOFTEN</strong><span>Performance Hub</span></div>
+      </div>
+      <div class="user-mini">
+        <span class="user-avatar" id="sideAvatar">A</span>
+        <div><strong id="sideUserName">Usuário</strong><small id="sideUserRole">Perfil</small></div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-view="individual"><span>◈</span> Meu desempenho</button>
+        <button class="nav-btn" data-view="team"><span>♛</span> Visão do Squad</button>
+        <button class="nav-btn admin-only" data-view="users"><span>♟</span> Usuários</button>
+        <button class="nav-btn admin-only" data-view="admin"><span>⚙</span> Administração</button>
+        <button class="nav-btn" data-view="help"><span>?</span> Como usar</button>
+      </nav>
+      <div class="side-card">
+        <span class="eyebrow">Campanha atual</span>
+        <strong id="campaignTitle">Dragão Vermithor</strong>
+        <small id="campaignTagline">Transforme números em conquista.</small>
+      </div>
+      <button class="logout-link" id="logoutBtn">↪ Sair</button>
+      <div class="sidebar-footer">V2.1.0 • Squads A, B, D e E</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu">☰</button>
+        <div class="top-title">
+          <span class="eyebrow" id="squadEyebrow">SQUAD D</span>
+          <h1 id="pageTitle">Meu desempenho</h1>
+        </div>
+        <div class="top-actions">
+          <label class="control select-wrap super-only" id="squadControl">
+            <span>Squad</span>
+            <select id="squadSelect"></select>
+          </label>
+          <label class="control select-wrap month-control">
+            <span>Mês</span>
+            <select id="monthSelect"></select>
+          </label>
+          <label class="control select-wrap technician-control">
+            <span>Técnico</span>
+            <select id="techSelect"></select>
+          </label>
+          <div class="top-user"><span class="user-avatar" id="topAvatar">A</span><div><b id="topUserName">Usuário</b><small id="topUserScope">Squad</small></div></div>
+        </div>
+      </header>
+
+      <section id="view-individual" class="view active">
+        <div id="individualEmpty" class="empty-state hidden"><div>◈</div><h2>Sem dados para este Squad</h2><p>Um administrador precisa importar a planilha do mês.</p></div>
+        <div id="individualContent">
+          <div class="hero card glass">
+            <div class="hero-copy">
+              <span class="pill" id="heroStatus">EM EVOLUÇÃO</span>
+              <h2>Olá, <span id="heroName">Técnico</span>.</h2>
+              <p id="heroMessage">Seu painel está pronto para acompanhar o ritmo do mês.</p>
+              <div class="hero-meta"><span id="lastUpdate">Atualizado</span><span>•</span><span id="sourceFile">Planilha de desempenho</span></div>
+            </div>
+            <div class="hero-rank"><span>RANKING</span><strong id="rankNumber">#1</strong><small id="rankContext">no Squad</small></div>
+          </div>
+
+          <div class="kpi-grid">
+            <article class="kpi card"><div class="kpi-head"><span>Atendimentos</span><span class="icon-chip">☎</span></div><div class="kpi-value"><strong id="kpiAtt">0</strong><span id="kpiAttGoal">/ 0</span></div><div class="progress"><i id="attBar"></i></div><div class="kpi-foot"><span id="attProgress">0%</span><small id="attRemaining">Faltam 0</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>Notas 5</span><span class="icon-chip">★</span></div><div class="kpi-value"><strong id="kpiNotes">0</strong><span id="kpiNotesGoal">/ 0</span></div><div class="progress"><i id="noteBar"></i></div><div class="kpi-foot"><span id="noteProgress">0%</span><small id="noteRemaining">Faltam 0</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>% Avaliado</span><span class="icon-chip">%</span></div><div class="kpi-value"><strong id="kpiEvalPct">0%</strong></div><div class="mini-line"><span id="evalQuality">Meta de qualidade</span></div><div class="kpi-foot"><span id="evalCount">0 avaliações</span><small id="avgRating">Média 0,00</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>Pontuação</span><span class="icon-chip">◆</span></div><div class="kpi-value"><strong id="kpiPoints">0</strong></div><div class="mini-line"><span id="goalsHit">0 metas batidas</span></div><div class="kpi-foot"><span id="discountValue">Desconto R$ 0</span><small id="bonusValue">Bônus R$ 0</small></div></article>
+          </div>
+
+          <article class="card game-card">
+            <div class="section-title"><div><span class="eyebrow">JORNADA DO MÊS</span><h3>Seu progresso de conquista</h3></div><span class="level-badge" id="levelBadge">NÍVEL 1</span></div>
+            <div class="game-grid">
+              <div class="xp-zone"><div class="xp-ring" id="xpRing"><div><strong id="xpPercent">0%</strong><small>ritmo</small></div></div><div><span class="muted">Nível atual</span><h3 id="levelName">Recruta</h3><p id="levelText">Continue acumulando pontos e avançando nas metas.</p><div class="level-progress"><i id="levelBar"></i></div><small id="nextLevelText">Próximo nível</small></div></div>
+              <div class="mission-box"><span>🎯</span><div><small>MISSÃO ATUAL</small><strong id="missionTitle">Manter o ritmo</strong><p id="missionText">Carregando sua próxima conquista...</p></div></div>
+              <div class="badge-zone"><small>CONQUISTAS</small><div class="badges" id="achievementBadges"></div></div>
+            </div>
+          </article>
+
+          <div class="content-grid">
+            <article class="card goal-card">
+              <div class="section-title"><div><span class="eyebrow">META MENSAL</span><h3>Como está o seu ritmo?</h3></div><span class="status-orb" id="goalOrb"></span></div>
+              <div class="goal-lines"><div class="goal-row"><div><strong>Atendimentos</strong><small id="attGoalText">Carregando...</small></div><span id="attGoalPct">0%</span></div><div class="goal-row"><div><strong>Notas 5</strong><small id="noteGoalText">Carregando...</small></div><span id="noteGoalPct">0%</span></div></div>
+              <div class="coach-box"><span>🎯</span><div><strong id="coachTitle">Próximo passo</strong><p id="coachText">Continue acompanhando o painel diariamente.</p></div></div>
+            </article>
+            <article class="card chart-card"><div class="section-title"><div><span class="eyebrow">EVOLUÇÃO DIÁRIA</span><h3>Atendimentos e notas 5</h3></div><div class="legend"><span><i class="dot att"></i>Atend.</span><span><i class="dot note"></i>Notas 5</span></div></div><div id="dailyChart" class="chart"></div></article>
+          </div>
+
+          <div class="content-grid bottom-grid">
+            <article class="card daily-card"><div class="section-title"><div><span class="eyebrow">DIA A DIA</span><h3>Histórico do mês</h3></div><span class="muted" id="dailySummary"></span></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Atendimentos</th><th>Notas 5</th><th>% aval.</th><th>Ritmo</th></tr></thead><tbody id="dailyRows"></tbody></table></div></article>
+            <article class="card compact-ranking"><div class="section-title"><div><span class="eyebrow">TOP DO SQUAD</span><h3>Ranking atual</h3></div></div><div id="miniRanking" class="ranking-list"></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-team" class="view">
+        <div id="allSquadsPanel" class="hidden">
+          <div class="portfolio-hero card"><div><span class="eyebrow">VISÃO ADMINISTRATIVA</span><h2>Todos os Squads</h2><p>Resumo consolidado dos quatro times. Selecione um Squad no topo para abrir os detalhes.</p></div><span class="portfolio-chip">4 SQUADS</span></div>
+          <div id="squadPortfolio" class="portfolio-grid"></div>
+        </div>
+        <div id="singleSquadPanel">
+          <div id="teamEmpty" class="empty-state hidden"><div>♛</div><h2>Este Squad ainda não possui dados</h2><p>Use a Administração para importar o primeiro mês.</p></div>
+          <div id="teamContent">
+            <div class="team-hero card glass"><div><span class="eyebrow">VISÃO GERAL</span><h2 id="teamHeroTitle">Squad em Agosto</h2><p>Compare resultados, acompanhe o ranking e veja quem está acelerando.</p></div><div class="team-result"><span>RESULTADO DA EQUIPE</span><strong id="teamResult">ACIMA</strong></div></div>
+            <div class="team-kpis">
+              <article class="card team-goal-card"><span>Total de atendimentos</span><div class="team-kpi-value"><strong id="teamAtt">0</strong><small>/ <b id="teamAttGoal">0</b></small></div><div class="team-progress"><i id="teamAttBar"></i></div><small class="team-kpi-note" id="teamAttNote">Meta mensal</small></article>
+              <article class="card"><span>Total de avaliações</span><strong id="teamEval">0</strong><small class="team-kpi-note">Avaliações recebidas até o momento</small></article>
+              <article class="card team-goal-card"><span>% de avaliação</span><div class="team-kpi-value"><strong id="teamPct">0%</strong><small>/ <b id="teamPctGoal">34,3%</b></small></div><div class="team-progress"><i id="teamPctBar"></i></div><small class="team-kpi-note" id="teamPctNote">Meta mensal</small></article>
+            </div>
+            <article class="card leaderboard-card"><div class="section-title"><div><span class="eyebrow">CLASSIFICAÇÃO</span><h3>Ranking completo</h3></div><span class="muted">Atualizado pela última importação</span></div><div id="teamLeaderboard" class="leaderboard"></div></article>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="view-users" class="view admin-only">
+        <div class="users-hero card">
+          <div><span class="eyebrow">GESTÃO DE ACESSOS</span><h2>Usuários do Performance Hub</h2><p id="usersScopeText">Cadastre e consulte os usuários dentro do escopo que você administra.</p></div>
+          <button class="btn primary" id="newUserBtn">+ Criar usuário</button>
+        </div>
+        <div class="user-stats" id="userStats"></div>
+        <article class="card users-card">
+          <div class="section-title"><div><span class="eyebrow">USUÁRIOS</span><h3>Cadastros e permissões</h3></div><span class="muted" id="usersCountLabel">0 usuários</span></div>
+          <div class="users-toolbar"><label class="search-field"><span>Buscar</span><input id="userSearchInput" type="search" placeholder="Nome, e-mail ou técnico"></label><label class="filter-field"><span>Perfil</span><select id="userRoleFilter"><option value="all">Todos</option><option value="super_admin">Admin geral</option><option value="squad_admin">Admin do Squad</option><option value="technician">Técnico</option></select></label></div>
+          <div class="table-wrap users-table-wrap"><table class="users-table"><thead><tr><th>Usuário</th><th>Perfil</th><th>Squad</th><th>Técnico vinculado</th><th>Status</th></tr></thead><tbody id="userRows"></tbody></table></div>
+          <div class="admin-note">Por segurança, a criação real no Supabase é feita por uma Edge Function no servidor. A chave <code>service_role</code> nunca fica exposta no navegador.</div>
+        </article>
+      </section>
+
+      <section id="view-help" class="view">
+        <div class="help-hero card glass">
+          <div><span class="eyebrow">CENTRAL DE AJUDA</span><h2>Como usar o Performance Hub</h2><p>Um guia rápido para entender o painel, atualizar dados e administrar cada Squad.</p></div>
+          <div class="help-role"><small>SEU PERFIL</small><strong id="helpRoleName">Técnico</strong><span id="helpRoleScope">Squad D</span></div>
+        </div>
+        <div class="help-grid">
+          <article class="card help-card"><span class="help-step">01</span><h3>Meu desempenho</h3><p>Acompanhe atendimentos, notas 5, percentual avaliado, pontuação, ranking, ritmo necessário e conquistas do mês.</p><ul><li>Use o seletor de mês para consultar histórico.</li><li>O técnico vê somente o próprio desempenho.</li><li>Administradores podem escolher um técnico do Squad para acompanhamento.</li></ul></article>
+          <article class="card help-card"><span class="help-step">02</span><h3>Visão do Squad</h3><p>Mostra o consolidado da equipe, progresso das metas e ranking. Cada usuário enxerga apenas os Squads permitidos para seu perfil.</p><ul><li>Admin geral pode alternar entre Todos os Squads e um Squad específico.</li><li>Admin do Squad e técnico ficam limitados à própria equipe.</li></ul></article>
+          <article class="card help-card admin-help"><span class="help-step">03</span><h3>Atualizar os dados</h3><p>A importação de XLSX fica exclusivamente na Administração.</p><ol><li>Selecione o Squad correto.</li><li>Abra Administração.</li><li>Clique em <b>Importar planilha XLSX</b>.</li><li>Confira mês, técnicos e data da última atualização.</li></ol></article>
+          <article class="card help-card admin-help"><span class="help-step">04</span><h3>Criar usuários</h3><p>O cadastro é feito pelo módulo Usuários, sem precisar acessar o painel do Supabase no dia a dia.</p><ol><li>Clique em <b>Usuários</b>.</li><li>Use <b>Criar usuário</b>.</li><li>Defina nome, e-mail, senha temporária, perfil e Squad.</li><li>Para técnico, vincule o nome exatamente como aparece na planilha.</li></ol></article>
+          <article class="card help-card admin-help"><span class="help-step">05</span><h3>Metas e tema</h3><p>As metas e o tema são configurados por Squad e por mês quando aplicável.</p><ul><li>Meta de atendimentos pode usar dias úteis × 10 × técnicos.</li><li>Meta de avaliação pode ser definida manualmente.</li><li>Somente administradores alteram tema e fundo.</li></ul></article>
+          <article class="card help-card"><span class="help-step">06</span><h3>Entenda os indicadores</h3><dl><div><dt>Atendimentos</dt><dd>Realizado no mês comparado à meta individual.</dd></div><div><dt>Notas 5</dt><dd>Total de avaliações máximas comparado à meta.</dd></div><div><dt>% Avaliado</dt><dd>Total de avaliações dividido pelos atendimentos.</dd></div><div><dt>Pontuação</dt><dd>Indicador usado na classificação e regras de bonificação.</dd></div></dl></article>
+        </div>
+        <article class="card help-access">
+          <div class="section-title"><div><span class="eyebrow">PERMISSÕES</span><h3>Quem pode fazer o quê?</h3></div></div>
+          <div class="permission-matrix"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads</div><div>✓</div><div>—</div><div>—</div><div>Importar XLSX / metas / tema</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Criar Admin de Squad</div><div>✓</div><div>—</div><div>—</div><div>Criar técnicos</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ no próprio</div><div>✓ próprio</div></div>
+        </article>
+        <article class="card help-tips"><span class="eyebrow">BOAS PRÁTICAS</span><h3>Rotina recomendada</h3><p><b>Diariamente:</b> o administrador importa a planilha atualizada e confere se a data e o total de técnicos estão corretos. <b>Mensalmente:</b> valida metas, tema/campanha e cadastros do Squad. <b>Ao adicionar um técnico:</b> mantenha o campo “Nome do técnico na planilha” idêntico ao nome usado no XLSX para que o painel associe os resultados automaticamente.</p></article>
+      </section>
+
+      <section id="view-admin" class="view admin-only">
+        <div class="admin-context card"><span class="eyebrow">ESCOPO DE ADMINISTRAÇÃO</span><div><h2 id="adminScopeTitle">Squad D</h2><p id="adminScopeText">Tudo o que você alterar abaixo será aplicado somente a este Squad.</p></div></div>
+        <div class="admin-grid">
+          <article class="card admin-card"><span class="eyebrow">DADOS • SOMENTE ADMIN</span><h2>Atualização diária</h2><p>A importação XLSX foi removida das telas dos técnicos. O arquivo é aplicado ao Squad selecionado e ao mês identificado na planilha.</p><button class="btn primary wide" id="adminImportBtn">↑ Importar planilha XLSX</button><div class="admin-note">No modo Supabase, o resultado da importação é gravado no banco e fica disponível para todos os usuários autorizados do Squad.</div></article>
+          <article class="card admin-card"><span class="eyebrow">METAS DO SQUAD</span><h2>Metas do mês selecionado</h2><p>Defina as metas usadas nos cards. Atendimento pode ser calculado por dias úteis × 10 × quantidade de técnicos.</p><div class="admin-form"><label><span>Meta de atendimentos do Squad</span><input id="teamGoalAttInput" type="number" min="0" step="1"></label><label><span>Meta de % de avaliação</span><div class="input-suffix"><input id="teamGoalPctInput" type="number" min="0" max="100" step="0.1"><b>%</b></div></label></div><div class="auto-goal" id="autoGoalHint">Selecione um mês com dados.</div><div class="admin-actions"><button class="btn secondary" id="autoGoalBtn">↻ Cálculo automático</button><button class="btn primary" id="saveGoalsBtn">Salvar metas</button></div></article>
+          <article class="card admin-card"><span class="eyebrow">APARÊNCIA • SOMENTE ADMIN</span><h2>Campanha e tema</h2><p>Cada Squad pode ter sua própria campanha. O técnico apenas visualiza o tema definido pelo administrador.</p><button class="btn secondary wide" id="adminThemeBtn">✦ Personalizar tema</button><div class="theme-file-actions"><button class="btn secondary" id="importThemeBtn">Importar tema JSON</button><button class="btn secondary" id="exportThemeBtn">Exportar tema</button></div><div class="theme-preview"><div><small>ATUAL</small><strong id="themeName">Vermithor</strong></div></div></article>
+          <article class="card admin-card"><span class="eyebrow">ACESSOS</span><h2>Usuários e permissões</h2><p>Os cadastros agora são feitos diretamente pelo sistema. Admin geral gerencia todos os Squads; Admin do Squad pode cadastrar técnicos somente na própria equipe.</p><button class="btn secondary wide" id="openUsersBtn">♟ Abrir gestão de usuários</button><div class="role-cards"><div><b>Admin geral</b><span>Todos os Squads + admins + técnicos</span></div><div><b>Admin do Squad</b><span>Cria e consulta técnicos do próprio Squad</span></div><div><b>Técnico</b><span>Seu desempenho + visão do próprio Squad</span></div></div></article>
+          <article class="card admin-card full"><span class="eyebrow">MESES IMPORTADOS</span><h2>Histórico</h2><div id="monthHistory" class="history-list"></div></article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <input id="xlsxInput" type="file" accept=".xlsx" hidden>
+  <input id="themeJsonInput" type="file" accept=".json,application/json" hidden>
+
+  <div id="importModal" class="modal" aria-hidden="true"><div class="modal-card"><button class="modal-close" data-close="importModal">×</button><div class="modal-icon">↑</div><h2>Importar planilha</h2><p id="importMessage">Selecione o XLSX.</p><div class="import-progress"><i id="importProgress"></i></div><div class="import-details" id="importDetails"></div><div class="modal-actions"><button class="btn secondary" data-close="importModal">Cancelar</button><button class="btn primary" id="chooseFileBtn">Escolher XLSX</button></div></div></div>
+
+  <div id="themeModal" class="modal" aria-hidden="true"><div class="modal-card theme-modal"><button class="modal-close" data-close="themeModal">×</button><span class="eyebrow">TEMA DO SQUAD</span><h2>Personalizar campanha</h2><p>Somente administradores podem alterar esta configuração.</p><div class="preset-grid"><button class="preset" data-theme="vermithor"><i class="swatch fire"></i><span>Vermithor</span></button><button class="preset" data-theme="soften"><i class="swatch soften"></i><span>Soften</span></button><button class="preset" data-theme="neon"><i class="swatch neon"></i><span>Neon</span></button><button class="preset" data-theme="clean"><i class="swatch clean"></i><span>Claro</span></button></div><div class="custom-theme"><label><span>Cor principal</span><input id="accentColor" type="color" value="#f0a33a"></label><label><span>Cor secundária</span><input id="secondaryColor" type="color" value="#ef5a29"></label><label><span>Nome da campanha</span><input id="campaignNameInput" type="text"></label><label><span>Frase da campanha</span><input id="campaignTaglineInput" type="text"></label><label><span>Imagem de fundo</span><input id="backgroundFile" type="file" accept="image/*"></label><button class="link-btn" id="removeBg">Remover fundo personalizado</button></div></div></div>
+
+
+  <div id="userModal" class="modal" aria-hidden="true"><div class="modal-card user-modal"><button class="modal-close" data-close="userModal">×</button><span class="eyebrow">NOVO ACESSO</span><h2>Criar usuário</h2><p id="userModalHint">Defina o acesso e o vínculo com o Squad.</p><form id="createUserForm" class="user-form">
+    <label><span>Nome completo</span><input id="newUserName" type="text" required autocomplete="off" placeholder="Ex.: João da Silva"></label>
+    <label><span>E-mail</span><input id="newUserEmail" type="email" required autocomplete="off" placeholder="joao@empresa.com"></label>
+    <label><span>Senha temporária</span><input id="newUserPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
+    <div class="user-form-grid"><label><span>Perfil</span><select id="newUserRole" required><option value="technician">Técnico</option><option value="squad_admin">Admin do Squad</option><option value="super_admin">Admin geral</option></select></label><label><span>Squad</span><select id="newUserSquad"></select></label></div>
+    <label id="technicianNameField"><span>Nome do técnico na planilha</span><input id="newUserTechName" type="text" autocomplete="off" placeholder="Ex.: RODOLFO DONDA"><small>Deve corresponder ao nome utilizado no XLSX para associar os resultados.</small></label>
+    <div id="createUserError" class="login-error"></div>
+    <div class="modal-actions"><button class="btn secondary" type="button" data-close="userModal">Cancelar</button><button class="btn primary" id="createUserSubmit" type="submit">Criar usuário</button></div>
+  </form></div></div>
+
+  <div class="toast" id="toast"></div>
+  <script src="config.js"></script>
+  <script src="default-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
