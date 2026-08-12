@@ -1,8 +1,8 @@
-# Soften Performance Hub V2.1.0
+# Soften Performance Hub V2.1.1
 
 Painel multi-Squad de desempenho, metas, ranking e gamificação para os Squads **A, B, D e E**.
 
-## Novidades da V2.1.0
+## Novidades da V2.1.1
 
 - Novo módulo **Usuários** dentro do sistema.
 - Criação de login e senha pela própria interface.
@@ -136,3 +136,15 @@ Isso permite associar o login aos indicadores mensais e ao histórico diário. A
 - obrigar troca da senha temporária no primeiro acesso;
 - auditoria de importações e alterações administrativas;
 - notificações e conquistas adicionais.
+
+
+## Recuperação de senha
+
+A V2.1.1 adiciona recuperação de senha pela própria tela de login. Em produção, configure no Supabase em **Authentication > URL Configuration**:
+
+- **Site URL:** a URL pública exata do Performance Hub;
+- **Redirect URLs:** inclua a mesma URL pública.
+
+Exemplo em GitHub Pages: `https://SEU-USUARIO.github.io/SEU-REPOSITORIO/`.
+
+O botão **Esqueci minha senha** envia o e-mail usando essa URL como `redirectTo`. Ao retornar ao site, o Performance Hub detecta o evento de recuperação e solicita a nova senha.

@@ -1,4 +1,4 @@
-# Soften Performance Hub V2.1.0 — Implantação com Supabase
+# Soften Performance Hub V2.1.1 — Implantação com Supabase
 
 Este guia prepara o sistema para os Squads **A, B, D e E**, com autenticação, isolamento por Squad e criação de usuários pela interface.
 
@@ -10,7 +10,7 @@ Você precisará de:
 - acesso ao SQL Editor;
 - acesso ao Authentication;
 - acesso a Edge Functions;
-- a pasta desta V2.1.0.
+- a pasta desta V2.1.1.
 
 A aplicação usa a chave pública no navegador. A chave administrativa `service_role` fica somente no ambiente seguro da Edge Function.
 
@@ -49,7 +49,7 @@ Se você já tinha executado a V2.0.x, pode executar o `supabase_schema.sql` des
 Esta é a única criação de usuário que precisa ser feita fora da interface, porque ainda não existe um administrador autenticado para criar o primeiro acesso.
 
 1. Abra **Authentication > Users**.
-2. Crie o primeiro Admin geral com e-mail e senha.
+2. Crie o primeiro Admin geral com e-mail e senha e deixe o e-mail **confirmado/auto-confirmado**. Usuário com e-mail não confirmado não consegue entrar.
 3. Copie o **User UID**.
 4. Abra `bootstrap_primeiro_admin.sql`.
 5. Troque `UUID_DO_PRIMEIRO_ADMIN` pelo UUID real.
@@ -93,6 +93,25 @@ create-user
 ```
 
 ## 5. Conectar o site ao Supabase
+
+### 5.1 Configurar a URL pública de autenticação
+
+Antes de testar login ou recuperação de senha, abra **Authentication > URL Configuration** no Supabase.
+
+Defina:
+
+- **Site URL:** a URL pública exata do Performance Hub;
+- **Redirect URLs:** adicione a mesma URL.
+
+Para GitHub Pages, um exemplo é:
+
+```text
+https://SEU-USUARIO.github.io/SEU-REPOSITORIO/
+```
+
+Isso é necessário para que confirmação de e-mail e recuperação de senha retornem ao Performance Hub em vez de `localhost`.
+
+### 5.2 Project URL e chave pública
 
 No painel do Supabase, copie:
 

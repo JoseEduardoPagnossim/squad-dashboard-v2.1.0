@@ -42,7 +42,8 @@
     theme:clone(DEFAULT_THEME),
     currentView:'individual',
     userDirectory:[],
-    userDirectoryLoaded:false
+    userDirectoryLoaded:false,
+    recoveryMode:false
   };
 
   function loadDemoSquads(){
@@ -76,7 +77,13 @@
   async function boot(){
     bindStaticEvents();
     if((window.APP_CONFIG?.mode||'demo')==='supabase'){
-      try{await initSupabase(); const {data}=await state.supabase.auth.getSession(); if(data?.session) await enterSupabaseSession(data.session.user);}
+      try{
+        await initSupabase();
+        const {data}=await state.supabase.auth.getSession();
+        if(state.recoveryMode){showLogin('Link de recuperação validado. Defina sua nova senha.');openModal('recoveryModal');return;}
+        if(data?.session) return await enterSupabaseSession(data.session.user);
+        showLogin();
+      }
       catch(err){console.error(err); showLogin('Não foi possível conectar ao Supabase. Confira config.js.');}
     }else{
       try{const saved=JSON.parse(sessionStorage.getItem('squadDemoSession')||'null'); if(saved?.email){const u=findDemoUser(saved.email);if(u) return enterApp({...u});}}catch(e){}
@@ -86,6 +93,8 @@
 
   function bindStaticEvents(){
     $('#loginForm').addEventListener('submit',handleLogin);
+    $('#forgotPasswordBtn').addEventListener('click',handleForgotPassword);
+    $('#recoveryForm').addEventListener('submit',handleRecoveryPassword);
     $('#logoutBtn').addEventListener('click',logout);
     $$('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
     $('#mobileMenu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
@@ -130,7 +139,43 @@
       }
     }catch(err){$('#loginError').textContent=humanAuthError(err);}finally{btn.disabled=false;btn.textContent='Entrar';}
   }
-  function humanAuthError(err){const m=String(err?.message||err||'');if(/invalid login|invalid.*credential/i.test(m))return'E-mail ou senha inválidos.';return m||'Não foi possível entrar.'}
+  function humanAuthError(err){
+    const m=String(err?.message||err||'');
+    if(/invalid login|invalid.*credential/i.test(m))return'E-mail ou senha inválidos.';
+    if(/email not confirmed/i.test(m))return'Confirme seu e-mail antes de entrar.';
+    if(/rate limit/i.test(m))return'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+    return m||'Não foi possível entrar.';
+  }
+  function authRedirectUrl(){return window.location.origin+window.location.pathname;}
+  async function handleForgotPassword(){
+    $('#loginError').textContent='';
+    const email=$('#loginEmail').value.trim().toLowerCase();
+    if(!email){$('#loginError').textContent='Informe seu e-mail primeiro.';$('#loginEmail').focus();return;}
+    if((window.APP_CONFIG?.mode||'demo')!=='supabase'){$('#loginError').textContent='A recuperação de senha fica disponível no modo Supabase.';return;}
+    const btn=$('#forgotPasswordBtn');btn.disabled=true;btn.textContent='Enviando...';
+    try{
+      const {error}=await state.supabase.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});
+      if(error)throw error;
+      $('#loginError').classList.add('success');
+      $('#loginError').textContent='E-mail de recuperação enviado. Abra o link neste mesmo navegador.';
+    }catch(err){$('#loginError').classList.remove('success');$('#loginError').textContent=humanAuthError(err)}
+    finally{btn.disabled=false;btn.textContent='Esqueci minha senha';}
+  }
+  async function handleRecoveryPassword(e){
+    e.preventDefault();
+    const p1=$('#recoveryPassword').value,p2=$('#recoveryPasswordConfirm').value,errEl=$('#recoveryError');errEl.textContent='';
+    if(p1.length<8){errEl.textContent='A senha precisa ter pelo menos 8 caracteres.';return;}
+    if(p1!==p2){errEl.textContent='As senhas não conferem.';return;}
+    const btn=$('#recoverySubmit');btn.disabled=true;btn.textContent='Salvando...';
+    try{
+      const {data,error}=await state.supabase.auth.updateUser({password:p1});if(error)throw error;
+      state.recoveryMode=false;closeModal('recoveryModal');
+      window.history.replaceState({},document.title,authRedirectUrl());
+      $('#loginError').classList.add('success');$('#loginError').textContent='Senha alterada com sucesso. Entrando...';
+      if(data?.user) await enterSupabaseSession(data.user); else {const {data:sess}=await state.supabase.auth.getSession();if(sess?.session?.user)await enterSupabaseSession(sess.session.user);}
+    }catch(err){errEl.textContent=humanAuthError(err)}
+    finally{btn.disabled=false;btn.textContent='Salvar nova senha';}
+  }
   function showLogin(message=''){ $('#loginScreen').classList.remove('hidden');$('#appShell').classList.add('hidden');if(message)$('#loginError').textContent=message; }
   async function logout(){
     if(state.supabase) await state.supabase.auth.signOut(); sessionStorage.removeItem('squadDemoSession'); state.user=null;showLogin();
@@ -412,7 +457,16 @@
   /* ===== Supabase: login + dados multi-squad ===== */
   async function initSupabase(){
     const cfg=window.APP_CONFIG||{};if(!cfg.supabaseUrl||!cfg.supabaseAnonKey)throw new Error('Preencha supabaseUrl e supabaseAnonKey em config.js.');
-    await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');state.supabase=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+    await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    state.supabase=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
+    const hashType=new URLSearchParams(window.location.hash.replace(/^#/, '')).get('type');
+    if(hashType==='recovery')state.recoveryMode=true;
+    state.supabase.auth.onAuthStateChange((event)=>{
+      if(event==='PASSWORD_RECOVERY'){
+        state.recoveryMode=true;
+        setTimeout(()=>{showLogin('Link de recuperação validado. Defina sua nova senha.');openModal('recoveryModal');},0);
+      }
+    });
   }
   function loadScript(src){return new Promise((resolve,reject)=>{if(window.supabase)return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error('Falha ao carregar biblioteca Supabase.'));document.head.appendChild(s)})}
   async function enterSupabaseSession(authUser){

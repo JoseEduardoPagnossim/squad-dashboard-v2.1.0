@@ -1,4 +1,4 @@
-SOFTEN PERFORMANCE HUB V2.1.0 - CONTAS APENAS PARA O PROTOTIPO LOCAL
+SOFTEN PERFORMANCE HUB V2.1.1 - CONTAS APENAS PARA O PROTOTIPO LOCAL
 
 ADMIN GERAL
 E-mail: admin.geral@soften.local
@@ -22,7 +22,7 @@ mykael.keven@soften.local
 olavo.duarte@soften.local
 Senha de todos os tecnicos demo: Tecnico123!
 
-NOVIDADE V2.1.0
+NOVIDADE V2.1.1
 Administradores podem abrir o modulo USUARIOS e criar novos acessos pela interface.
 No modo demo esses cadastros ficam apenas no localStorage do navegador.
 

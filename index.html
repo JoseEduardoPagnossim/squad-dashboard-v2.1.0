@@ -25,6 +25,7 @@
           <label><span>Senha</span><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
           <div id="loginError" class="login-error"></div>
           <button class="btn primary wide login-submit" type="submit">Entrar</button>
+          <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
         <details class="demo-accounts">
           <summary>Contas de demonstração</summary>
@@ -34,7 +35,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.1.0 • multi-squad + usuários + central de ajuda</small>
+      <small class="login-version">V2.1.1 • multi-squad + usuários + recuperação de senha</small>
     </div>
   </section>
 
@@ -61,7 +62,7 @@
         <small id="campaignTagline">Transforme números em conquista.</small>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.1.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.1.1 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -216,6 +217,14 @@
     <label id="technicianNameField"><span>Nome do técnico na planilha</span><input id="newUserTechName" type="text" autocomplete="off" placeholder="Ex.: RODOLFO DONDA"><small>Deve corresponder ao nome utilizado no XLSX para associar os resultados.</small></label>
     <div id="createUserError" class="login-error"></div>
     <div class="modal-actions"><button class="btn secondary" type="button" data-close="userModal">Cancelar</button><button class="btn primary" id="createUserSubmit" type="submit">Criar usuário</button></div>
+  </form></div></div>
+
+
+  <div id="recoveryModal" class="modal" aria-hidden="true"><div class="modal-card recovery-modal"><button class="modal-close" data-close="recoveryModal">×</button><span class="eyebrow">RECUPERAÇÃO DE ACESSO</span><h2>Definir nova senha</h2><p>Digite uma nova senha para sua conta. Use pelo menos 8 caracteres.</p><form id="recoveryForm" class="user-form">
+    <label><span>Nova senha</span><input id="recoveryPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
+    <label><span>Confirmar nova senha</span><input id="recoveryPasswordConfirm" type="password" required minlength="8" autocomplete="new-password" placeholder="Repita a nova senha"></label>
+    <div id="recoveryError" class="login-error"></div>
+    <div class="modal-actions"><button class="btn primary wide" id="recoverySubmit" type="submit">Salvar nova senha</button></div>
   </form></div></div>
 
   <div class="toast" id="toast"></div>
