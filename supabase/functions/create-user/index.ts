@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     if (password.length < 8) return json({ error: 'A senha temporária deve ter pelo menos 8 caracteres.' }, 400)
     if (!['super_admin', 'squad_admin', 'technician'].includes(role)) return json({ error: 'Perfil inválido.' }, 400)
     if (requester.role === 'squad_admin' && role !== 'technician') return json({ error: 'Admin do Squad pode criar somente técnicos.' }, 403)
-    if (role === 'technician' && !technicianName) return json({ error: 'Informe o nome do técnico como aparece na planilha.' }, 400)
+    if (role === 'technician' && !technicianName) return json({ error: 'Informe o nome do técnico como aparece no CSV.' }, 400)
 
     let targetSquad: { id: string; code: string } | null = null
     if (role !== 'super_admin') {
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       return json({ error: profileError.message || 'Não foi possível criar o perfil.' }, 400)
     }
 
-    // Vincula resultados já importados quando o técnico é criado depois da planilha.
+    // Vincula resultados já importados quando o técnico é criado depois da importação do CSV.
     if (role === 'technician' && targetSquad && technicianName) {
       const { data: months } = await admin.from('squad_months').select('id').eq('squad_id', targetSquad.id)
       const monthIds = (months || []).map((m: { id: string }) => m.id)

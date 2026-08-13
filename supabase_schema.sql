@@ -1,4 +1,4 @@
--- SOFTEN PERFORMANCE HUB V2.1.1
+-- SOFTEN PERFORMANCE HUB V2.2.0
 -- Estrutura multi-squad preparada para Supabase/PostgreSQL.
 -- Execute este arquivo no SQL Editor de um projeto Supabase novo.
 

@@ -4,7 +4,7 @@
   e preencha a URL + chave publishable/anon do projeto.
 */
 window.APP_CONFIG = {
-  mode: 'supabase',
-  supabaseUrl: 'https://ulibturunaioulmoeykq.supabase.co',
-  supabaseAnonKey: 'sb_publishable_kOXVdDyPx6ljWYCoUR_Lbg_aqGZgvIv'
+  mode: 'demo',
+  supabaseUrl: '',
+  supabaseAnonKey: ''
 };

@@ -1,273 +1,247 @@
-# Soften Performance Hub V2.1.1 — Implantação com Supabase
+# Soften Performance Hub V2.2.0 — Guia de implantação e operação
 
-Este guia prepara o sistema para os Squads **A, B, D e E**, com autenticação, isolamento por Squad e criação de usuários pela interface.
+Este guia cobre tanto uma instalação nova quanto a continuidade de uma base V2.1.1.
 
-## Antes de começar
+## 1. Se você já está usando a V2.1.1
 
-Você precisará de:
+A V2.2.0 é compatível com o banco existente. **Não é necessário executar uma migração de banco.**
 
-- um projeto Supabase;
-- acesso ao SQL Editor;
-- acesso ao Authentication;
-- acesso a Edge Functions;
-- a pasta desta V2.1.1.
+Atualize os arquivos do GitHub Pages e mantenha seu `config.js` configurado.
 
-A aplicação usa a chave pública no navegador. A chave administrativa `service_role` fica somente no ambiente seguro da Edge Function.
+Veja também `ATUALIZACAO_V2.2.0.md`.
 
----
+## 2. Se for uma instalação nova
 
-## 1. Criar o projeto Supabase
+No projeto do Supabase:
 
-1. Crie um projeto novo no Supabase.
-2. Use um nome como `soften-performance-hub`.
-3. Guarde a senha do banco em local seguro.
-4. Aguarde o projeto finalizar a criação.
+1. abra **SQL Editor**;
+2. execute `supabase_schema.sql`;
+3. crie o primeiro usuário em **Authentication > Users**;
+4. copie o User UID;
+5. troque `UUID_DO_PRIMEIRO_ADMIN` em `bootstrap_primeiro_admin.sql`;
+6. execute o bootstrap;
+7. publique a Edge Function `create-user`;
+8. configure `config.js` com Project URL e Publishable key;
+9. configure a URL do GitHub Pages em **Authentication > URL Configuration**.
 
-## 2. Criar tabelas, Squads e políticas de segurança
+## 3. Publicar a Edge Function create-user
 
-1. Abra **SQL Editor**.
-2. Crie uma nova query.
-3. Copie todo o conteúdo de `supabase_schema.sql`.
-4. Execute.
-
-O script cria:
-
-- `organizations`
-- `squads`
-- `profiles`
-- `squad_months`
-- `technician_monthly`
-- `daily_metrics`
-- `squad_themes`
-
-Também cria a organização **Soften Sistemas**, os Squads **A, B, D e E** e as políticas RLS.
-
-Se você já tinha executado a V2.0.x, pode executar o `supabase_schema.sql` desta versão novamente. Ele contém a atualização necessária para o campo de e-mail do perfil.
-
-## 3. Criar somente o primeiro Admin geral
-
-Esta é a única criação de usuário que precisa ser feita fora da interface, porque ainda não existe um administrador autenticado para criar o primeiro acesso.
-
-1. Abra **Authentication > Users**.
-2. Crie o primeiro Admin geral com e-mail e senha e deixe o e-mail **confirmado/auto-confirmado**. Usuário com e-mail não confirmado não consegue entrar.
-3. Copie o **User UID**.
-4. Abra `bootstrap_primeiro_admin.sql`.
-5. Troque `UUID_DO_PRIMEIRO_ADMIN` pelo UUID real.
-6. Execute o SQL no SQL Editor.
-
-Depois desse bootstrap, **não é necessário criar os demais usuários manualmente no Supabase**. Eles serão cadastrados em **Usuários > Criar usuário** dentro do Performance Hub.
-
-## 4. Publicar a Edge Function `create-user`
-
-A pasta já contém:
+A função está em:
 
 ```text
 supabase/functions/create-user/index.ts
-supabase/config.toml
 ```
 
-A função valida quem está logado antes de criar o acesso:
+Ela permite que a criação cotidiana dos usuários seja feita dentro do Performance Hub.
 
-- Admin geral pode criar `super_admin`, `squad_admin` e `technician`;
-- Admin do Squad pode criar somente `technician` do próprio Squad;
-- Técnico não pode criar usuários.
+- Admin geral: Admin geral, Admin do Squad e Técnico.
+- Admin do Squad: somente Técnico do próprio Squad.
+- Técnico: sem permissão.
 
-### Opção A — Supabase CLI
+## 4. Configurar o site
 
-No terminal, dentro da pasta do projeto:
-
-```bash
-supabase login
-supabase link --project-ref SEU_PROJECT_REF
-supabase functions deploy create-user
-```
-
-O arquivo `supabase/config.toml` mantém `verify_jwt = true`, portanto a função espera um usuário autenticado.
-
-### Opção B — Dashboard do Supabase
-
-Você também pode criar/publicar uma Edge Function pelo painel do Supabase e copiar o conteúdo de `supabase/functions/create-user/index.ts` para ela. O nome precisa ser:
-
-```text
-create-user
-```
-
-## 5. Conectar o site ao Supabase
-
-### 5.1 Configurar a URL pública de autenticação
-
-Antes de testar login ou recuperação de senha, abra **Authentication > URL Configuration** no Supabase.
-
-Defina:
-
-- **Site URL:** a URL pública exata do Performance Hub;
-- **Redirect URLs:** adicione a mesma URL.
-
-Para GitHub Pages, um exemplo é:
-
-```text
-https://SEU-USUARIO.github.io/SEU-REPOSITORIO/
-```
-
-Isso é necessário para que confirmação de e-mail e recuperação de senha retornem ao Performance Hub em vez de `localhost`.
-
-### 5.2 Project URL e chave pública
-
-No painel do Supabase, copie:
-
-- Project URL;
-- chave pública/publishable do projeto.
-
-Abra `config.js` e altere:
+Em `config.js`:
 
 ```js
 window.APP_CONFIG = {
   mode: 'supabase',
-  supabaseUrl: 'SUA_PROJECT_URL',
+  supabaseUrl: 'https://SEU-PROJETO.supabase.co',
   supabaseAnonKey: 'SUA_CHAVE_PUBLICA'
 };
 ```
 
-Nunca coloque `service_role` neste arquivo.
+Não utilize Secret key nem `service_role` no site.
 
-## 6. Publicar o site
+## 5. Cadastrar usuários
 
-Publique os arquivos em um endereço HTTPS, por exemplo em servidor interno, Vercel, Netlify ou hospedagem estática equivalente.
+Depois de entrar como Admin geral, abra **Usuários**.
 
-Para teste local:
+Crie primeiro os Admins dos Squads A, B, D e E.
 
-```bash
-python -m http.server 8080
-```
+Depois crie os técnicos.
 
-Depois acesse:
-
-```text
-http://localhost:8080
-```
-
-## 7. Entrar com o primeiro Admin geral
-
-Faça login com a conta criada na etapa 3.
-
-O Admin geral deverá enxergar:
-
-- seletor **Todos os Squads**;
-- Squad A;
-- Squad B;
-- Squad D;
-- Squad E;
-- módulo **Usuários**;
-- módulo **Administração**;
-- módulo **Como usar**.
-
-## 8. Criar os administradores dos Squads pela interface
-
-1. Abra **Usuários**.
-2. Clique em **Criar usuário**.
-3. Informe nome, e-mail e senha temporária.
-4. Escolha **Admin do Squad**.
-5. Selecione A, B, D ou E.
-6. Clique em **Criar usuário**.
-
-Repita para cada equipe.
-
-## 9. Criar técnicos pela interface
-
-O Admin geral pode criar técnico em qualquer Squad. O Admin do Squad cria somente no próprio.
-
-Preencha:
+Para técnico, preencha:
 
 - nome completo;
 - e-mail;
 - senha temporária;
-- perfil `Técnico`;
+- perfil Técnico;
 - Squad;
-- **Nome do técnico na planilha**.
+- **Nome do técnico no CSV**.
 
 Exemplo:
 
 ```text
 Nome completo: Rodolfo Donda
-Nome do técnico na planilha: RODOLFO DONDA
+Nome do técnico no CSV: RODOLFO DONDA
 ```
 
-Esse último campo deve acompanhar o nome usado no XLSX.
+O vínculo é feito com a coluna `Tecnico` do relatório CSV.
 
-Quando o técnico é criado depois de um mês já importado, a Edge Function tenta vincular automaticamente os resultados históricos que tiverem o mesmo nome.
+### Importante
 
-## 10. Importar a planilha
+Na V2.2.0, o importador aceita somente técnicos ativos já cadastrados no sistema. Isso evita que linhas de total, nomes temporários, erros de digitação ou pessoas de outro Squad apareçam no ranking.
 
-Somente administradores veem esta função.
+## 6. Formato do CSV
 
-1. Se for Admin geral, selecione o Squad correto.
+Colunas esperadas:
+
+```text
+time
+Tecnico
+grupoAtendimento
+Quantidade
+Nota 5
+Nota 4
+Nota 3
+Nota 2
+Nota 1
+```
+
+O CSV pode conter os últimos 12 meses e todos os Squads.
+
+Os grupos válidos são:
+
+```text
+A
+B
+D
+E
+```
+
+Linhas sem grupo ou com grupo diferente são ignoradas.
+
+## 7. Importar o CSV
+
+1. Selecione um Squad específico. Se for Admin geral, também é possível selecionar **Todos os Squads** para importar A, B, D e E de uma vez.
 2. Abra **Administração**.
-3. Clique em **Importar planilha XLSX**.
-4. Selecione o arquivo do mês.
-5. Confira mês, quantidade de técnicos e data atualizada.
+3. Clique em **Importar CSV de atendimentos**.
+4. Escolha o arquivo.
+5. O sistema cruza os nomes do CSV com os técnicos ativos cadastrados e, no modo Todos os Squads, separa os dados pelo campo `grupoAtendimento`.
+6. Confira o resumo de nomes reconhecidos/ignorados.
+7. Escolha o mês que deseja importar.
+8. Clique em **Importar mês**.
 
-Novas importações do mesmo mês atualizam o registro existente daquele Squad/mês.
+O modal fecha automaticamente após sucesso.
 
-## 11. Configurar metas e tema
+### Reimportação diária
 
-Em **Administração**:
+Você pode importar o mesmo mês todos os dias.
 
-- ajuste a meta mensal de atendimentos;
-- ajuste a meta de percentual de avaliação;
-- aplique o cálculo automático quando desejar;
-- altere campanha, cores e fundo do Squad;
-- importe/exporte tema JSON.
+A nova importação substitui:
 
-As configurações afetam somente o Squad selecionado.
+- atendimentos;
+- Nota 5;
+- Nota 4;
+- Nota 3;
+- Nota 2;
+- Nota 1;
+- totais e médias calculadas;
+- histórico diário.
 
-## 12. Validar permissões
+As métricas mensais preenchidas manualmente são preservadas.
+
+## 8. Preencher métricas mensais
+
+Depois da primeira importação do mês, ainda em **Administração**, localize **Metas e bonificações do mês**.
+
+Para cada técnico, preencha:
+
+- Meta atend.;
+- Meta notas 5;
+- Status;
+- Metas batidas;
+- Pontos;
+- Desconto (R$);
+- Bônus (R$).
+
+Clique em **Salvar métricas dos técnicos**.
+
+O sistema recalcula automaticamente:
+
+- ranking por pontuação;
+- totais consolidados;
+- resultado do Squad.
+
+## 9. Metas do Squad
+
+No card **Metas do Squad**, configure:
+
+- Meta de atendimentos do Squad;
+- Meta de percentual de avaliação.
+
+A sugestão de atendimentos utiliza:
+
+```text
+dias úteis do mês × 10 × número de técnicos importados
+```
+
+## 10. Excluir um mês importado incorretamente
+
+Abra **Administração > Meses importados**.
+
+Clique em **Excluir** no mês desejado e confirme.
+
+A exclusão remove o mês inteiro e os registros vinculados a ele, inclusive as métricas manuais mensais.
+
+Depois você pode importar novamente o CSV correto.
+
+## 11. Tema
+
+Cada Squad possui seu próprio tema.
+
+Somente administradores podem alterar:
+
+- cores;
+- nome da campanha;
+- frase;
+- imagem de fundo;
+- tema JSON.
+
+## 12. Permissões esperadas
 
 ### Técnico
 
-Deve:
-
-- ver apenas o próprio Squad;
-- ver apenas o próprio painel individual;
-- não ver Usuários;
-- não ver Administração;
-- não importar XLSX.
+- somente o próprio Squad;
+- próprio desempenho;
+- Visão do Squad;
+- sem Administração;
+- sem importação;
+- sem edição de métricas.
 
 ### Admin do Squad
 
-Deve:
-
-- ficar limitado ao próprio Squad;
-- ver os técnicos da equipe;
-- criar somente técnicos do próprio Squad;
-- importar XLSX;
-- alterar metas e tema.
+- somente o próprio Squad;
+- técnicos do Squad;
+- criação de técnicos;
+- importação de CSV;
+- métricas mensais;
+- exclusão de meses;
+- metas e tema.
 
 ### Admin geral
 
-Deve:
+- Todos os Squads;
+- A, B, D e E;
+- criação de admins e técnicos;
+- importação e administração de qualquer Squad.
 
-- ver Todos os Squads;
-- entrar em A, B, D ou E;
-- criar Admin de Squad ou Técnico;
-- administrar dados, metas e temas de qualquer equipe.
+## 13. Recuperação de senha
 
-## 13. Módulo Como usar
+Em **Authentication > URL Configuration**, a URL publicada no GitHub Pages deve estar configurada como Site URL e/ou Redirect URL autorizado.
 
-Todos os perfis têm acesso a **Como usar** no menu lateral.
+O usuário pode usar **Esqueci minha senha** na tela de login e definir uma nova senha ao retornar ao Performance Hub.
 
-Ele explica:
+## 14. Rotina recomendada
 
-- Meu desempenho;
-- Visão do Squad;
-- atualização de XLSX;
-- criação de usuários;
-- metas e temas;
-- indicadores;
-- matriz de permissões;
-- rotina de operação recomendada.
+### Uma vez por técnico
 
-Os cards administrativos são ocultados para técnicos.
+Cadastrar usuário e garantir que **Nome do técnico no CSV** esteja correto.
 
-## Observação de segurança
+### Diariamente
 
-A criação de usuários do Supabase Auth não é executada diretamente pelo JavaScript do navegador. O site chama a Edge Function `create-user`, que faz a operação administrativa no servidor. Isso evita expor credenciais privilegiadas no cliente.
+Importar o CSV atualizado do mês corrente.
+
+### Mensalmente
+
+Preencher metas e bonificações individuais e revisar as metas do Squad.

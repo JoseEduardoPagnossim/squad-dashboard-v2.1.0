@@ -43,7 +43,8 @@
     currentView:'individual',
     userDirectory:[],
     userDirectoryLoaded:false,
-    recoveryMode:false
+    recoveryMode:false,
+    pendingCsv:null
   };
 
   function loadDemoSquads(){
@@ -109,8 +110,10 @@
     $('#newUserRole').addEventListener('change',syncCreateUserFields);
     $('#userSearchInput').addEventListener('input',renderUserRows);
     $('#userRoleFilter').addEventListener('change',renderUserRows);
-    $('#chooseFileBtn').addEventListener('click',()=>$('#xlsxInput').click());
-    $('#xlsxInput').addEventListener('change',handleFile);
+    $('#chooseFileBtn').addEventListener('click',()=>$('#csvInput').click());
+    $('#csvInput').addEventListener('change',handleCsvFile);
+    $('#confirmCsvImportBtn').addEventListener('click',confirmCsvImport);
+    $('#saveMonthlyMetricsBtn').addEventListener('click',saveMonthlyMetrics);
     $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
     $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
     $$('.preset').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.theme)));
@@ -208,9 +211,9 @@
   function currentSquad(){return state.squadCode==='all'?null:state.squads[state.squadCode]}
   function currentMonths(){return currentSquad()?.months||{}}
   function currentMonth(){return currentMonths()[state.currentId]||null}
-  function currentTech(){const m=currentMonth();if(!m)return null;return m.technicians.find(t=>t.name===state.techName)||m.technicians[0]||null}
+  function currentTech(){const m=currentMonth();if(!m)return null;return m.technicians.find(t=>normalizeName(t.name)===normalizeName(state.techName))||m.technicians[0]||null}
   function chooseLatestMonth(){const ids=Object.keys(currentMonths()).sort().reverse();state.currentId=ids[0]||null}
-  function chooseDefaultTech(){const m=currentMonth();if(!m){state.techName='';return}if(isTechnician()){state.techName=state.user.techName||m.technicians[0]?.name||'';return}if(!m.technicians.some(t=>t.name===state.techName))state.techName=m.technicians[0]?.name||''}
+  function chooseDefaultTech(){const m=currentMonth();if(!m){state.techName='';return}if(isTechnician()){const own=m.technicians.find(t=>normalizeName(t.name)===normalizeName(state.user.techName));state.techName=own?.name||state.user.techName||m.technicians[0]?.name||'';return}if(!m.technicians.some(t=>normalizeName(t.name)===normalizeName(state.techName)))state.techName=m.technicians[0]?.name||''}
 
   async function selectSquad(code){
     if(!isSuperAdmin())return; state.squadCode=code;
@@ -257,13 +260,13 @@
 
   function renderIndividual(){
     const m=currentMonth(),t=currentTech();if(!m||!t)return;
-    const attPct=t.goalAtt?safe(t.att)/t.goalAtt:0,notePct=t.goalEval?safe(t.notes5)/t.goalEval:0;
-    $('#heroName').textContent=firstName(t.name);$('#heroStatus').textContent=overallLabel(attPct,notePct);$('#heroStatus').style.color=overallColor(attPct,notePct);$('#heroMessage').textContent=buildHeroMessage(t,attPct,notePct);
+    const attPct=t.goalAtt?safe(t.att)/t.goalAtt:0,notePct=t.goalEval?safe(t.notes5)/t.goalEval:0,hasGoals=safe(t.goalAtt)>0&&safe(t.goalEval)>0;
+    $('#heroName').textContent=firstName(t.name);$('#heroStatus').textContent=hasGoals?overallLabel(attPct,notePct):'METAS PENDENTES';$('#heroStatus').style.color=hasGoals?overallColor(attPct,notePct):'var(--warn)';$('#heroMessage').textContent=buildHeroMessage(t,attPct,notePct);
     $('#lastUpdate').textContent=`Atualizado até ${String(m.latestDay||1).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`;$('#sourceFile').textContent=m.sourceFile||'Dados do banco';
     $('#rankNumber').textContent=t.rank?`#${t.rank}`:'—';$('#rankContext').textContent=`de ${m.technicians.length} no Squad ${state.squadCode}`;
     $('#kpiAtt').textContent=fmtInt(t.att);$('#kpiAttGoal').textContent=`/ ${fmtInt(t.goalAtt)}`;$('#attBar').style.width=clamp(attPct*100,0,100)+'%';$('#attProgress').textContent=fmtPct(attPct);$('#attRemaining').textContent=t.att>=t.goalAtt?`+${fmtInt(t.att-t.goalAtt)} acima`:`Faltam ${fmtInt(t.goalAtt-t.att)}`;
     $('#kpiNotes').textContent=fmtInt(t.notes5);$('#kpiNotesGoal').textContent=`/ ${fmtInt(t.goalEval)}`;$('#noteBar').style.width=clamp(notePct*100,0,100)+'%';$('#noteProgress').textContent=fmtPct(notePct);$('#noteRemaining').textContent=t.notes5>=t.goalEval?`+${fmtInt(t.notes5-t.goalEval)} acima`:`Faltam ${fmtInt(t.goalEval-t.notes5)}`;
-    $('#kpiEvalPct').textContent=fmtPct(t.evalPct);$('#evalCount').textContent=`${fmtInt(t.totalEval)} avaliações`;$('#avgRating').textContent=`Média ${safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;$('#evalQuality').textContent=t.evalPct>=.343?'Meta de avaliação atingida':t.avg>=4.9?'Qualidade excelente':'Acompanhar qualidade';
+    $('#kpiEvalPct').textContent=fmtPct(t.evalPct);$('#evalCount').textContent=`${fmtInt(t.totalEval)} avaliações`;$('#avgRating').textContent=`Média ${safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;const evalTarget=teamSettings(m).teamGoalEvalPct;$('#evalQuality').textContent=t.evalPct>=evalTarget?'Meta de avaliação atingida':t.avg>=4.9?'Qualidade excelente':'Acompanhar qualidade';
     $('#kpiPoints').textContent=fmtNum(t.points);$('#goalsHit').textContent=`${fmtInt(t.goalsHit)} ${t.goalsHit===1?'meta batida':'metas batidas'}`;$('#discountValue').textContent=`Desconto ${fmtMoney(t.discount)}`;$('#bonusValue').textContent=`Bônus ${fmtMoney(t.pointBonus)}`;
     $('#attGoalPct').textContent=fmtPct(attPct);$('#noteGoalPct').textContent=fmtPct(notePct);$('#attGoalText').textContent=goalLine('atendimentos',t.att,t.goalAtt);$('#noteGoalText').textContent=goalLine('notas',t.notes5,t.goalEval);
     $('#goalOrb').style.background=overallColor(attPct,notePct);$('#goalOrb').style.boxShadow=`0 0 18px ${overallColor(attPct,notePct)}`;const coach=coachText(t,m,attPct,notePct);$('#coachTitle').textContent=coach.title;$('#coachText').textContent=coach.text;
@@ -280,7 +283,7 @@
     const badges=[
       {icon:'🏆',name:'Top 3',desc:'Ranking do Squad',ok:safe(t.rank)>0&&safe(t.rank)<=3},
       {icon:'⭐',name:'Qualidade',desc:'Média ≥ 4,95',ok:safe(t.avg)>=4.95},
-      {icon:'%',name:'Avaliações',desc:'≥ 34,3%',ok:safe(t.evalPct)>=.343},
+      {icon:'%',name:'Avaliações',desc:`≥ ${fmtPct(teamSettings(m).teamGoalEvalPct)}`,ok:safe(t.evalPct)>=teamSettings(m).teamGoalEvalPct},
       {icon:'☎',name:'Volume',desc:'Meta de atend.',ok:attPct>=1},
       {icon:'◆',name:'Notas 5',desc:'Meta de notas',ok:notePct>=1},
       {icon:'🔥',name:'Constância',desc:'3 dias com 10+',ok:productive>=3}
@@ -383,7 +386,7 @@
   }
   function validateNewUserPayload(p){
     if(!p.fullName)throw new Error('Informe o nome completo.');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email))throw new Error('Informe um e-mail válido.');if(String(p.password||'').length<8)throw new Error('A senha temporária deve ter pelo menos 8 caracteres.');
-    if(!['technician','squad_admin','super_admin'].includes(p.role))throw new Error('Perfil inválido.');if(!isSuperAdmin()&&p.role!=='technician')throw new Error('Admin do Squad pode criar somente técnicos.');if(!isSuperAdmin()&&p.squadCode!==state.user.squadCode)throw new Error('Você só pode cadastrar usuários no seu próprio Squad.');if(p.role!=='super_admin'&&!state.squads[p.squadCode])throw new Error('Selecione um Squad válido.');if(p.role==='technician'&&!p.techName)throw new Error('Informe o nome do técnico como aparece na planilha.');
+    if(!['technician','squad_admin','super_admin'].includes(p.role))throw new Error('Perfil inválido.');if(!isSuperAdmin()&&p.role!=='technician')throw new Error('Admin do Squad pode criar somente técnicos.');if(!isSuperAdmin()&&p.squadCode!==state.user.squadCode)throw new Error('Você só pode cadastrar usuários no seu próprio Squad.');if(p.role!=='super_admin'&&!state.squads[p.squadCode])throw new Error('Selecione um Squad válido.');if(p.role==='technician'&&!p.techName)throw new Error('Informe o nome do técnico como aparece no CSV.');
   }
   function createDemoUser(p){
     if(allDemoUsers().some(u=>String(u.email).toLowerCase()===p.email))throw new Error('Já existe um usuário com este e-mail.');
@@ -396,20 +399,79 @@
   function humanCreateUserError(err){const m=String(err?.message||err||'');if(/already|registered|duplicate|unique/i.test(m))return'Já existe um usuário com este e-mail.';if(/function|failed to fetch|non-2xx/i.test(m))return'Falha ao criar no servidor. Confira se a Edge Function create-user foi publicada.';return m||'Não foi possível criar o usuário.'}
 
   function renderAdmin(){
-    if(!isAdmin())return;const specific=state.squadCode!=='all',m=currentMonth();$('#adminScopeTitle').textContent=specific?`Squad ${state.squadCode}`:'Todos os Squads';$('#adminScopeText').textContent=specific?'Importação, metas e tema abaixo afetam somente este Squad.':'Para alterar dados, metas ou tema, selecione um Squad específico no topo.';
-    ['#adminImportBtn','#adminThemeBtn','#saveGoalsBtn','#autoGoalBtn','#importThemeBtn','#exportThemeBtn'].forEach(sel=>{$(sel).disabled=!specific});
-    if(!specific||!m){$('#monthHistory').innerHTML=specific?'<div class="muted">Nenhum mês importado neste Squad.</div>':'<div class="muted">Selecione um Squad específico para ver o histórico.</div>';$('#teamGoalAttInput').value='';$('#teamGoalPctInput').value='';$('#autoGoalHint').textContent=m?'':'Importe um mês para configurar as metas.';updateThemeName();return}
-    const ids=Object.keys(currentMonths()).sort().reverse(),cfg=teamSettings(m);$('#monthHistory').innerHTML=ids.map(id=>{const mm=currentMonths()[id];return `<div class="history-row"><div><strong>${mm.monthName} ${mm.year}</strong><small>${escapeHtml(mm.sourceFile||'Banco de dados')} • ${mm.technicians.length} técnicos • até dia ${mm.latestDay}</small></div><span class="tag">${id===state.currentId?'EM USO':'SALVO'}</span><button class="link-btn" data-open-month="${id}">Abrir</button></div>`}).join('');$$('[data-open-month]').forEach(b=>b.addEventListener('click',()=>{state.currentId=b.dataset.openMonth;chooseDefaultTech();refreshSelectors();render();showView('individual')}));$('#teamGoalAttInput').value=Math.round(cfg.teamGoalAtt);$('#teamGoalPctInput').value=(cfg.teamGoalEvalPct*100).toFixed(1);const useful=businessDaysMonFri(m.year,m.month),suggested=autoTeamAttGoal(m);$('#autoGoalHint').textContent=`Sugestão: ${useful} dias úteis × 10 atendimentos × ${m.technicians.length} técnicos = ${fmtInt(suggested)} atendimentos.`;updateThemeName();
+    if(!isAdmin())return;
+    const specific=state.squadCode!=='all',m=currentMonth(),canImport=specific||isSuperAdmin();
+    $('#adminScopeTitle').textContent=specific?`Squad ${state.squadCode}`:'Todos os Squads';
+    $('#adminScopeText').textContent=specific?'Importação, métricas, metas e tema abaixo afetam somente este Squad.':'Admin geral pode importar o CSV para todos os Squads de uma vez. Para métricas, metas, exclusão de mês ou tema, selecione um Squad específico.';
+    $('#adminImportBtn').disabled=!canImport;
+    ['#adminThemeBtn','#saveGoalsBtn','#autoGoalBtn','#importThemeBtn','#exportThemeBtn','#saveMonthlyMetricsBtn'].forEach(sel=>{if($(sel))$(sel).disabled=!specific||(!m&&sel==='#saveMonthlyMetricsBtn')});
+    if(!specific||!m){
+      $('#monthHistory').innerHTML=specific?'<div class="muted">Nenhum mês importado neste Squad.</div>':'<div class="muted">Selecione um Squad específico para ver o histórico.</div>';
+      $('#teamGoalAttInput').value='';$('#teamGoalPctInput').value='';$('#autoGoalHint').textContent=m?'':'Importe um mês para configurar as metas.';
+      $('#monthlyMetricsRows').innerHTML='<tr><td colspan="10" class="muted">Importe um mês para preencher as métricas individuais.</td></tr>';
+      $('#monthlyMetricsHint').textContent='Importe um mês para preencher as métricas.';
+      updateThemeName();return;
+    }
+    const ids=Object.keys(currentMonths()).sort().reverse(),cfg=teamSettings(m);
+    $('#monthHistory').innerHTML=ids.map(id=>{const mm=currentMonths()[id];return `<div class="history-row"><div><strong>${mm.monthName} ${mm.year}</strong><small>${escapeHtml(mm.sourceFile||'Banco de dados')} • ${mm.technicians.length} técnicos • até dia ${mm.latestDay}</small></div><span class="tag">${id===state.currentId?'EM USO':'SALVO'}</span><button class="link-btn" data-open-month="${id}">Abrir</button><button class="link-btn danger-link" data-delete-month="${id}">Excluir</button></div>`}).join('');
+    $$('[data-open-month]').forEach(b=>b.addEventListener('click',()=>{state.currentId=b.dataset.openMonth;chooseDefaultTech();refreshSelectors();render();showView('individual')}));
+    $$('[data-delete-month]').forEach(b=>b.addEventListener('click',()=>deleteImportedMonth(b.dataset.deleteMonth)));
+    $('#teamGoalAttInput').value=Math.round(cfg.teamGoalAtt);$('#teamGoalPctInput').value=(cfg.teamGoalEvalPct*100).toFixed(1);
+    const useful=businessDaysMonFri(m.year,m.month),suggested=autoTeamAttGoal(m);$('#autoGoalHint').textContent=`Sugestão: ${useful} dias úteis × 10 atendimentos × ${m.technicians.length} técnicos = ${fmtInt(suggested)} atendimentos.`;
+    renderMonthlyMetrics(m);updateThemeName();
+  }
+
+  function renderMonthlyMetrics(m){
+    const list=[...(m?.technicians||[])].sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
+    $('#monthlyMetricsHint').textContent=`${m.monthName} ${m.year} • ${list.length} técnicos • dados de volume e avaliações vêm do CSV.`;
+    $('#monthlyMetricsRows').innerHTML=list.map(t=>`<tr data-metric-tech="${escapeHtml(t.name)}"><td>${escapeHtml(t.name)}</td><td>${fmtInt(t.att)}</td><td>${fmtInt(t.notes5)}</td><td><input class="metric-input" data-field="goalAtt" type="number" min="0" step="1" value="${safe(t.goalAtt)}"></td><td><input class="metric-input" data-field="goalEval" type="number" min="0" step="1" value="${safe(t.goalEval)}"></td><td><select class="metric-input" data-field="status"><option value="" ${!t.status?'selected':''}>—</option><option value="ACIMA" ${String(t.status).toUpperCase()==='ACIMA'?'selected':''}>ACIMA</option><option value="ABAIXO" ${String(t.status).toUpperCase()==='ABAIXO'?'selected':''}>ABAIXO</option></select></td><td><input class="metric-input" data-field="goalsHit" type="number" min="0" step="1" value="${safe(t.goalsHit)}"></td><td><input class="metric-input" data-field="points" type="number" step="0.01" value="${safe(t.points)}"></td><td><input class="metric-input" data-field="discount" type="number" step="0.01" value="${safe(t.discount)}"></td><td><input class="metric-input" data-field="pointBonus" type="number" step="0.01" value="${safe(t.pointBonus)}"></td></tr>`).join('')||'<tr><td colspan="10" class="muted">Nenhum técnico encontrado.</td></tr>';
+  }
+
+  async function saveMonthlyMetrics(){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;const btn=$('#saveMonthlyMetricsBtn');btn.disabled=true;btn.textContent='Salvando...';
+    try{
+      for(const row of $$('#monthlyMetricsRows [data-metric-tech]')){
+        const t=m.technicians.find(x=>normalizeName(x.name)===normalizeName(row.dataset.metricTech));if(!t)continue;
+        for(const input of $$('[data-field]',row))t[input.dataset.field]=input.dataset.field==='status'?String(input.value||''):safe(input.value);
+      }
+      recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistManualMetrics(m);refreshSelectors();render();toast('Métricas mensais salvas.');
+    }catch(err){console.error(err);toast('Não foi possível salvar as métricas mensais.')}finally{btn.disabled=false;btn.textContent='Salvar métricas dos técnicos'}
+  }
+
+  function recalculateMonth(m){
+    for(const t of m.technicians||[]){
+      t.totalEval=safe(t.notes5)+safe(t.notes4)+safe(t.notes3)+safe(t.notes2)+safe(t.notes1);
+      t.avg=t.totalEval?((safe(t.notes5)*5+safe(t.notes4)*4+safe(t.notes3)*3+safe(t.notes2)*2+safe(t.notes1))/t.totalEval):0;
+      t.evalPct=safe(t.att)?t.totalEval/safe(t.att):0;
+      t.status=String(t.status||'').toUpperCase();t.goalsHit=Math.max(0,Math.round(safe(t.goalsHit)));
+    }
+    const ranked=[...(m.technicians||[])].sort((a,b)=>safe(b.points)-safe(a.points)||safe(b.att)-safe(a.att)||String(a.name).localeCompare(String(b.name),'pt-BR'));
+    const hasPoints=ranked.some(t=>safe(t.points)!==0);ranked.forEach((t,i)=>t.rank=hasPoints?i+1:null);
+    m.teamTotals=deriveTotals(m.technicians);const cfg=teamSettings(m);m.teamResult=(cfg.teamGoalAtt>0&&m.teamTotals.att>=cfg.teamGoalAtt&&m.teamTotals.evalPct>=cfg.teamGoalEvalPct)?'ACIMA':'ABAIXO';
+  }
+
+  async function persistManualMetrics(m){
+    for(const t of m.technicians||[]){
+      if(!t.dbId)continue;
+      const {error}=await state.supabase.from('technician_monthly').update({goal_att:safe(t.goalAtt),goal_eval:safe(t.goalEval),points:safe(t.points),discount:safe(t.discount),point_bonus:safe(t.pointBonus),goals_hit:safe(t.goalsHit),status:t.status,rank:t.rank}).eq('id',t.dbId);if(error)throw error;
+    }
+    if(m.dbId){const {error}=await state.supabase.from('squad_months').update({team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error;}
+  }
+
+  async function deleteImportedMonth(id){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m)return;
+    if(!window.confirm(`Excluir ${m.monthName} ${m.year} do Squad ${state.squadCode}? Isso remove os dados importados e as métricas manuais deste mês.`))return;
+    try{if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').delete().eq('id',m.dbId);if(error)throw error;}delete currentSquad().months[id];const ids=Object.keys(currentMonths()).sort().reverse();state.currentId=ids[0]||null;chooseDefaultTech();saveDemoSquads();refreshSelectors();render();toast('Mês importado excluído.')}catch(err){console.error(err);toast('Não foi possível excluir este mês.')}
   }
 
   function businessDaysMonFri(y,m){let c=0,days=new Date(y,m,0).getDate();for(let d=1;d<=days;d++){const dow=new Date(y,m-1,d).getDay();if(dow>=1&&dow<=5)c++}return c}
   function autoTeamAttGoal(m){return businessDaysMonFri(m.year,m.month)*10*Math.max(1,m.technicians.length)}
   function teamSettings(m){const saved=m?.settings||{};return{teamGoalAtt:safe(saved.teamGoalAtt)||autoTeamAttGoal(m),teamGoalEvalPct:Number.isFinite(Number(saved.teamGoalEvalPct))?Number(saved.teamGoalEvalPct):.343}}
-  async function saveTeamGoals(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;const att=Math.max(0,safe($('#teamGoalAttInput').value)),pct=Math.max(0,safe($('#teamGoalPctInput').value))/100;m.settings={...(m.settings||{}),teamGoalAtt:att||autoTeamAttGoal(m),teamGoalEvalPct:pct};saveDemoSquads();if(state.supabase)await state.supabase.from('squad_months').update({team_goal_att:m.settings.teamGoalAtt,team_goal_eval_pct:m.settings.teamGoalEvalPct}).eq('id',m.dbId);renderTeam();renderAdmin();toast('Metas salvas para '+m.monthName+'.')}
+  async function saveTeamGoals(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;try{const att=Math.max(0,safe($('#teamGoalAttInput').value)),pct=Math.max(0,safe($('#teamGoalPctInput').value))/100;m.settings={...(m.settings||{}),teamGoalAtt:att||autoTeamAttGoal(m),teamGoalEvalPct:pct};recalculateMonth(m);saveDemoSquads();if(state.supabase){const {error}=await state.supabase.from('squad_months').update({team_goal_att:m.settings.teamGoalAtt,team_goal_eval_pct:m.settings.teamGoalEvalPct,team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error}renderTeam();renderAdmin();toast('Metas salvas para '+m.monthName+'.')}catch(err){console.error(err);toast('Não foi possível salvar as metas.')}}
   function useAutomaticTeamGoal(){const m=currentMonth();if(!m)return;$('#teamGoalAttInput').value=autoTeamAttGoal(m);if(!$('#teamGoalPctInput').value)$('#teamGoalPctInput').value='34.3';toast('Meta automática calculada. Clique em Salvar metas.')}
   function deriveTotals(list){const att=(list||[]).reduce((s,t)=>s+safe(t.att),0),evals=(list||[]).reduce((s,t)=>s+safe(t.totalEval),0),points=(list||[]).reduce((s,t)=>s+safe(t.points),0);return{att,eval:evals,evalPct:att?evals/att:0,points}}
   function goalLine(noun,current,goal){if(!goal)return'Meta não encontrada.';if(current>=goal)return`Meta atingida: ${fmtInt(current-goal)} ${noun} acima do objetivo.`;return`Faltam ${fmtInt(goal-current)} ${noun} para atingir a meta.`}
-  function buildHeroMessage(t,a,n){if(a>=1&&n>=1)return'Excelente ritmo: as duas metas mensais já foram atingidas.';if(a>=1)return'Meta de atendimentos atingida. Agora o foco é completar as notas 5.';if(n>=1)return'Meta de notas 5 atingida. Agora o foco é completar os atendimentos.';return`Você está em ${fmtPct(a)} da meta de atendimentos e ${fmtPct(n)} da meta de notas 5.`}
+  function buildHeroMessage(t,a,n){if(!safe(t.goalAtt)||!safe(t.goalEval))return'Resultados do mês importados. O administrador ainda precisa preencher as metas mensais deste técnico.';if(a>=1&&n>=1)return'Excelente ritmo: as duas metas mensais já foram atingidas.';if(a>=1)return'Meta de atendimentos atingida. Agora o foco é completar as notas 5.';if(n>=1)return'Meta de notas 5 atingida. Agora o foco é completar os atendimentos.';return`Você está em ${fmtPct(a)} da meta de atendimentos e ${fmtPct(n)} da meta de notas 5.`}
   function coachText(t,m,a,n){if(a>=1&&n>=1)return{title:'Meta completa!',text:'As duas metas foram batidas. O objetivo agora é sustentar qualidade e produtividade.'};const remainingDays=Math.max(1,businessDaysRemaining(m.year,m.month,m.latestDay)),attNeed=Math.max(0,t.goalAtt-t.att),noteNeed=Math.max(0,t.goalEval-t.notes5);if(a>=1)return{title:'Foco em avaliações',text:`Estimativa: ${(noteNeed/remainingDays).toLocaleString('pt-BR',{maximumFractionDigits:1})} nota(s) 5 por dia útil restante.`};if(n>=1)return{title:'Foco em volume',text:`Estimativa: ${(attNeed/remainingDays).toLocaleString('pt-BR',{maximumFractionDigits:1})} atendimento(s) por dia útil restante.`};return{title:'Ritmo necessário',text:`Estimativa: ${(attNeed/remainingDays).toLocaleString('pt-BR',{maximumFractionDigits:1})} atendimentos e ${(noteNeed/remainingDays).toLocaleString('pt-BR',{maximumFractionDigits:1})} notas 5 por dia útil restante.`}}
   function businessDaysRemaining(y,m,latest){let c=0,days=new Date(y,m,0).getDate();for(let d=latest+1;d<=days;d++){const dow=new Date(y,m-1,d).getDay();if(dow>=1&&dow<=5)c++}return c}
   function overallLabel(a,n){if(a>=1&&n>=1)return'META BATIDA';if(a>=.75&&n>=.75)return'ESTÁ NO CAMINHO';if(a>=.45||n>=.45)return'PRECISA DE ATENÇÃO';return'APERTA O PÉ'}
@@ -419,29 +481,82 @@
   function title(s=''){return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
   function titleWords(s=''){return s.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}
 
-  function openImport(){if(!isAdmin()||!requireSpecificSquad())return;$('#importMessage').textContent=`Selecione o XLSX para atualizar o Squad ${state.squadCode}.`;$('#importDetails').textContent='A importação espera as abas “STATUS DO SQUAD” e uma aba com o nome do mês.';$('#importProgress').style.width='0%';$('#chooseFileBtn').disabled=false;openModal('importModal')}
+  function openImport(){
+    if(!isAdmin())return;if(state.squadCode==='all'&&!isSuperAdmin())return;
+    const scope=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;
+    state.pendingCsv=null;$('#importMessage').textContent=`Selecione o CSV para atualizar ${scope}.`;
+    $('#importDetails').innerHTML='Colunas esperadas: <b>time</b>, <b>Tecnico</b>, <b>grupoAtendimento</b>, <b>Quantidade</b>, <b>Nota 5</b>, <b>Nota 4</b>, <b>Nota 3</b>, <b>Nota 2</b> e <b>Nota 1</b>.';
+    $('#importProgress').style.width='0%';$('#chooseFileBtn').disabled=false;$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden');openModal('importModal');
+  }
   function openModal(id){$('#'+id).classList.add('open');$('#'+id).setAttribute('aria-hidden','false')}
   function closeModal(id){$('#'+id).classList.remove('open');$('#'+id).setAttribute('aria-hidden','true')}
   function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2800)}
 
-  async function handleFile(e){
-    if(!isAdmin())return;const file=e.target.files?.[0];if(!file)return;openModal('importModal');$('#chooseFileBtn').disabled=true;$('#importMessage').textContent='Lendo planilha...';$('#importProgress').style.width='18%';
-    try{const data=await importWorkbook(file,p=>$('#importProgress').style.width=p+'%'),s=currentSquad(),previous=s.months[data.id];if(previous?.settings)data.settings={...previous.settings};s.months[data.id]=data;state.currentId=data.id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();if(state.supabase){$('#importMessage').textContent='Gravando no banco de dados...';await persistImportedMonth(data,s)}refreshSelectors();render();$('#importMessage').textContent=`${data.monthName} ${data.year} atualizado no Squad ${state.squadCode}.`;$('#importDetails').innerHTML=`<strong>${data.technicians.length} técnicos</strong> • até dia <strong>${data.latestDay}</strong> • <strong>${escapeHtml(file.name)}</strong>`;$('#importProgress').style.width='100%';toast('Planilha importada com sucesso.')}
-    catch(err){console.error(err);$('#importMessage').textContent='Não foi possível importar este arquivo.';$('#importDetails').textContent=err.message||String(err);$('#importProgress').style.width='100%'}finally{$('#chooseFileBtn').disabled=false;e.target.value=''}
+  async function handleCsvFile(e){
+    if(!isAdmin())return;const file=e.target.files?.[0];if(!file)return;openModal('importModal');$('#chooseFileBtn').disabled=true;$('#importMessage').textContent='Lendo CSV...';$('#importProgress').style.width='25%';
+    try{
+      const text=await file.text(),parsed=parseServiceCsv(text);$('#importProgress').style.width='55%';
+      if(!state.userDirectoryLoaded)await loadUserDirectory();
+      const scopeAll=isSuperAdmin()&&state.squadCode==='all',codes=scopeAll?Object.keys(state.squads):[state.squadCode],allowedBy={};
+      for(const code of codes)allowedBy[code]=new Set((state.userDirectory||[]).filter(u=>u.role==='technician'&&u.active&&u.squadCode===code&&u.techName).map(u=>normalizeName(u.techName)));
+      if(!codes.some(code=>allowedBy[code].size))throw new Error(scopeAll?'Cadastre técnicos nos Squads antes de importar o CSV.':`Cadastre os técnicos do Squad ${state.squadCode} em Usuários antes de importar o CSV.`);
+      const scopeRows=parsed.rows.filter(r=>codes.includes(r.group)),unmatched=[...new Set(scopeRows.filter(r=>!allowedBy[r.group]?.has(r.name)).map(r=>`${r.group}: ${r.name}`))].sort(),rows=scopeRows.filter(r=>allowedBy[r.group]?.has(r.name));
+      const months=[...new Set(rows.map(r=>r.id))].sort().reverse();if(!months.length)throw new Error(scopeAll?'O CSV não possui registros que correspondam aos técnicos cadastrados. Confira os vínculos em Usuários.':`O CSV não possui registros que correspondam aos técnicos cadastrados do Squad ${state.squadCode}. Confira o campo Nome do técnico no CSV.`);
+      state.pendingCsv={fileName:file.name,rows,ignored:parsed.ignored,total:parsed.total,months,unmatched,scopeAll,codes};
+      $('#csvMonthSelect').innerHTML=months.map(id=>{const [y,m]=id.split('-').map(Number);return `<option value="${id}">${MONTHS_PT[m-1]} ${y}</option>`}).join('');
+      $('#csvPeriodBlock').classList.remove('hidden');$('#confirmCsvImportBtn').classList.remove('hidden');$('#importMessage').textContent=scopeAll?'CSV reconhecido para importação geral.':`CSV reconhecido para o Squad ${state.squadCode}.`;
+      const unmatchedText=unmatched.length?` • <strong>${unmatched.length} vínculo(s) não encontrado(s) ignorado(s)</strong>: ${escapeHtml(unmatched.slice(0,5).join(', '))}${unmatched.length>5?'…':''}`:'';
+      $('#importDetails').innerHTML=`<strong>${fmtInt(rows.length)} linhas vinculadas</strong> aos técnicos cadastrados • <strong>${months.length} meses disponíveis</strong>${unmatchedText} • ${fmtInt(parsed.ignored)} linhas inválidas/fora dos Squads A, B, D e E.`;$('#importProgress').style.width='100%';
+    }catch(err){console.error(err);state.pendingCsv=null;$('#importMessage').textContent='Não foi possível ler este CSV.';$('#importDetails').textContent=err.message||String(err);$('#importProgress').style.width='100%';$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden')}
+    finally{$('#chooseFileBtn').disabled=false;e.target.value=''}
   }
 
-  async function importWorkbook(file, progress=()=>{}){
-    const buf=await file.arrayBuffer(); progress(28); const zip=await ZipReader.from(buf); progress(40); const workbook=xml(await zip.text('xl/workbook.xml')); const rels=xml(await zip.text('xl/_rels/workbook.xml.rels')); const relMap={}; $$xml(rels,'Relationship').forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target')); const sheets={}; $$xml(workbook,'sheet').forEach(s=>{const name=s.getAttribute('name'),rid=s.getAttribute('r:id')||s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');let target=relMap[rid];if(target){target=target.startsWith('/')?target.slice(1):'xl/'+target.replace(/^\.\//,'');sheets[name]=normalizePath(target)}}); const statusName=Object.keys(sheets).find(n=>normalizeName(n)==='STATUS DO SQUAD');if(!statusName)throw new Error('A aba “STATUS DO SQUAD” não foi encontrada.');const monthSheetName=Object.keys(sheets).find(n=>MONTH_SHEET[normalizeName(n)]);if(!monthSheetName)throw new Error('Não encontrei uma aba com nome de mês.');let shared=[];if(zip.has('xl/sharedStrings.xml'))shared=parseShared(xml(await zip.text('xl/sharedStrings.xml')));progress(52);const status=parseSheet(xml(await zip.text(sheets[statusName])),shared),daily=parseSheet(xml(await zip.text(sheets[monthSheetName])),shared);progress(72);const month=MONTH_SHEET[normalizeName(monthSheetName)];let year=(file.name.match(/20\d{2}/)||[])[0];year=year?Number(year):new Date().getFullYear();const metaBy={};for(let r=22;r<=40;r++){const name=cell(status,`B${r}`);if(name)metaBy[String(name).trim()]={att:safe(cell(status,`C${r}`)),eval:safe(cell(status,`F${r}`))}}const dailyBy={};let latest=0;for(let r=3;r<=20;r++){const name=cell(daily,`A${r}`);if(!name)continue;const arr=[];for(let d=1;d<=31;d++){const q=cell(daily,`${colLetter(2*d)}${r}`),n=cell(daily,`${colLetter(2*d+1)}${r}`),qn=typeof q==='number'?q:0,nn=typeof n==='number'?n:0,off=(typeof q==='string'&&q.trim())||(typeof n==='string'&&n.trim());if(qn||nn)latest=Math.max(latest,d);arr.push({day:d,att:qn,notes5:nn,off:!!off&&!qn&&!nn})}dailyBy[String(name).trim()]=arr}const technicians=[];for(let r=2;r<=20;r++){const name=cell(status,`A${r}`);if(!name)continue;const att=cell(status,`B${r}`),n5=cell(status,`D${r}`);if(att==null&&n5==null)continue;const nm=String(name).trim(),meta=metaBy[nm]||{att:0,eval:0};technicians.push({name:nm,att:safe(att),notes5:safe(n5),notes4:safe(cell(status,`E${r}`)),notes3:safe(cell(status,`F${r}`)),notes2:safe(cell(status,`G${r}`)),notes1:safe(cell(status,`H${r}`)),totalEval:safe(cell(status,`I${r}`)),avg:safe(cell(status,`J${r}`)),evalPct:safe(cell(status,`K${r}`)),status:cell(status,`L${r}`)||'',goalsHit:safe(cell(status,`M${r}`)),points:safe(cell(status,`N${r}`)),rank:safe(cell(status,`O${r}`))||null,discount:safe(cell(status,`P${r}`)),pointBonus:safe(cell(status,`Q${r}`)),goalAtt:meta.att,goalEval:meta.eval,daily:dailyBy[nm]||[]})}if(!technicians.length)throw new Error('Nenhum técnico com dados foi encontrado.');progress(86);const totals={att:safe(cell(status,'B12')),eval:safe(cell(status,'I12')),evalPct:safe(cell(status,'K12')),points:safe(cell(status,'N12'))},id=`${year}-${String(month).padStart(2,'0')}`;progress(96);return{id,month,monthName:MONTHS_PT[month-1],year,sourceFile:file.name,latestDay:latest||1,importedAt:new Date().toISOString(),teamResult:cell(status,'B13')||'',redistributed:safe(cell(status,'B15')),teamTotals:totals.att?totals:deriveTotals(technicians),technicians}
+  async function confirmCsvImport(){
+    if(!isAdmin()||!state.pendingCsv)return;const id=$('#csvMonthSelect').value;if(!id)return;const btn=$('#confirmCsvImportBtn');btn.disabled=true;btn.textContent='Importando...';
+    try{
+      $('#importMessage').textContent='Consolidando dados do mês...';$('#importProgress').style.width='35%';
+      const pending=state.pendingCsv,[year,month]=id.split('-').map(Number);let importedSquads=0,importedTechs=0;
+      if(pending.scopeAll){
+        const candidates=pending.codes.filter(code=>pending.rows.some(r=>r.group===code&&r.id===id));if(!candidates.length)throw new Error('Nenhum Squad possui registros vinculados para este mês.');
+        for(const code of candidates){const s=state.squads[code],previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,code);s.months[id]=data;importedSquads++;importedTechs+=data.technicians.length;if(state.supabase){$('#importMessage').textContent=`Gravando Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,candidates.length)*40))+'%';await persistImportedMonth(data,s)}}
+        saveDemoSquads();refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${importedSquads} Squads e ${importedTechs} técnicos atualizados.`);
+      }else{
+        const s=currentSquad(),previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,state.squadCode);s.months[id]=data;state.currentId=id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();
+        if(state.supabase){$('#importMessage').textContent='Gravando no banco de dados...';$('#importProgress').style.width='70%';await persistImportedMonth(data,s)}
+        refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${data.monthName} ${data.year} importado: ${data.technicians.length} técnicos.`);
+      }
+    }catch(err){console.error(err);$('#importMessage').textContent='Não foi possível concluir a importação.';$('#importDetails').textContent=err.message||String(err);$('#importProgress').style.width='100%'}finally{btn.disabled=false;btn.textContent='Importar mês'}
   }
 
-  class ZipReader{constructor(buffer,entries){this.buffer=buffer;this.view=new DataView(buffer);this.entries=entries}static async from(buffer){const v=new DataView(buffer);let eocd=-1;for(let i=buffer.byteLength-22;i>=Math.max(0,buffer.byteLength-65557);i--){if(v.getUint32(i,true)===0x06054b50){eocd=i;break}}if(eocd<0)throw new Error('Arquivo XLSX inválido: ZIP não reconhecido.');const count=v.getUint16(eocd+10,true),cdOffset=v.getUint32(eocd+16,true),dec=new TextDecoder('utf-8');let p=cdOffset;const entries={};for(let i=0;i<count;i++){if(v.getUint32(p,true)!==0x02014b50)break;const method=v.getUint16(p+10,true),comp=v.getUint32(p+20,true),uncomp=v.getUint32(p+24,true),nlen=v.getUint16(p+28,true),elen=v.getUint16(p+30,true),clen=v.getUint16(p+32,true),local=v.getUint32(p+42,true),name=dec.decode(new Uint8Array(buffer,p+46,nlen));entries[normalizePath(name)]={method,comp,uncomp,local};p+=46+nlen+elen+clen}return new ZipReader(buffer,entries)}has(name){return!!this.entries[normalizePath(name)]}async bytes(name){name=normalizePath(name);const e=this.entries[name];if(!e)throw new Error(`Arquivo interno não encontrado: ${name}`);const v=this.view,p=e.local;if(v.getUint32(p,true)!==0x04034b50)throw new Error('Cabeçalho ZIP inválido.');const nlen=v.getUint16(p+26,true),elen=v.getUint16(p+28,true),start=p+30+nlen+elen,raw=this.buffer.slice(start,start+e.comp);if(e.method===0)return new Uint8Array(raw);if(e.method===8){if(typeof DecompressionStream==='undefined')throw new Error('Seu navegador não suporta importação XLSX local. Use Chrome ou Edge atualizados.');const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return new Uint8Array(await new Response(stream).arrayBuffer())}throw new Error(`Compressão ZIP não suportada: ${e.method}`)}async text(name){return new TextDecoder('utf-8').decode(await this.bytes(name))}}
-  function xml(text){const d=new DOMParser().parseFromString(text,'application/xml');if(d.querySelector('parsererror'))throw new Error('XML interno da planilha inválido.');return d}
-  function $$xml(doc,tag){return[...doc.getElementsByTagName(tag)]}
-  function parseShared(doc){return $$xml(doc,'si').map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join(''))}
-  function parseSheet(doc,shared){const out={};for(const c of $$xml(doc,'c')){const ref=c.getAttribute('r'),type=c.getAttribute('t');let val=null;if(type==='inlineStr'){val=[...c.getElementsByTagName('t')].map(t=>t.textContent).join('')}else{const v=c.getElementsByTagName('v')[0];if(v){const raw=v.textContent;if(type==='s')val=shared[Number(raw)]??'';else if(type==='str')val=raw;else if(type==='b')val=raw==='1';else{const num=Number(raw);val=Number.isNaN(num)?raw:num}}}out[ref]=val}return out}
-  function cell(sheet,ref){return Object.prototype.hasOwnProperty.call(sheet,ref)?sheet[ref]:null}
-  function colLetter(n){let s='';while(n){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s}
-  function normalizePath(p){const parts=[];for(const x of p.replace(/\\/g,'/').split('/')){if(!x||x==='.')continue;if(x==='..')parts.pop();else parts.push(x)}return parts.join('/')}
+  function parseServiceCsv(text){
+    const lines=parseCsvRows(String(text||'').replace(/^﻿/,''));if(lines.length<2)throw new Error('CSV vazio ou sem linhas de dados.');
+    const headers=lines[0].map(normalizeHeader),idx={};headers.forEach((h,i)=>idx[h]=i);
+    const required=['time','tecnico','grupoatendimento','quantidade'];for(const h of required)if(idx[h]==null)throw new Error(`Coluna obrigatória não encontrada: ${h}.`);
+    const noteIndex=n=>idx[`nota${n}`];const rows=[];let ignored=0;
+    for(const cols of lines.slice(1)){
+      const date=parseCsvDate(cols[idx.time]),name=normalizeName(cols[idx.tecnico]),group=normalizeName(cols[idx.grupoatendimento]);
+      if(!date||!name||!['A','B','D','E'].includes(group)){ignored++;continue}
+      const year=date.year,month=date.month,day=date.day;rows.push({id:`${year}-${String(month).padStart(2,'0')}`,year,month,day,name,group,att:csvNumber(cols[idx.quantidade]),notes5:csvNumber(cols[noteIndex(5)]),notes4:csvNumber(cols[noteIndex(4)]),notes3:csvNumber(cols[noteIndex(3)]),notes2:csvNumber(cols[noteIndex(2)]),notes1:csvNumber(cols[noteIndex(1)])});
+    }
+    if(!rows.length)throw new Error('Nenhuma linha válida foi encontrada para os Squads A, B, D ou E.');return{rows,ignored,total:lines.length-1};
+  }
+
+  function buildMonthFromCsv(rows,id,fileName,previous,squadCode=state.squadCode){
+    const selected=rows.filter(r=>r.id===id&&r.group===squadCode);if(!selected.length)throw new Error('Nenhum registro encontrado para o mês selecionado.');
+    const [year,month]=id.split('-').map(Number),byTech=new Map();let latest=1;
+    for(const r of selected){latest=Math.max(latest,r.day);let t=byTech.get(r.name);if(!t){t={name:r.name,att:0,notes5:0,notes4:0,notes3:0,notes2:0,notes1:0,dailyMap:new Map()};byTech.set(r.name,t)}t.att+=r.att;t.notes5+=r.notes5;t.notes4+=r.notes4;t.notes3+=r.notes3;t.notes2+=r.notes2;t.notes1+=r.notes1;let d=t.dailyMap.get(r.day)||{day:r.day,att:0,notes5:0,off:false};d.att+=r.att;d.notes5+=r.notes5;t.dailyMap.set(r.day,d)}
+    const prevBy=new Map((previous?.technicians||[]).map(t=>[normalizeName(t.name),t]));const daysInMonth=new Date(year,month,0).getDate();
+    const technicians=[...byTech.values()].map(raw=>{const prev=prevBy.get(raw.name)||{};const daily=[];for(let d=1;d<=daysInMonth;d++)daily.push(raw.dailyMap.get(d)||{day:d,att:0,notes5:0,off:new Date(year,month-1,d).getDay()===0});return{name:raw.name,att:raw.att,notes5:raw.notes5,notes4:raw.notes4,notes3:raw.notes3,notes2:raw.notes2,notes1:raw.notes1,totalEval:0,avg:0,evalPct:0,status:prev.status||'',goalsHit:safe(prev.goalsHit),points:safe(prev.points),rank:prev.rank||null,discount:safe(prev.discount),pointBonus:safe(prev.pointBonus),goalAtt:safe(prev.goalAtt),goalEval:safe(prev.goalEval),daily}}).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    const data={id,month,monthName:MONTHS_PT[month-1],year,sourceFile:fileName,latestDay:latest,importedAt:new Date().toISOString(),teamResult:previous?.teamResult||'',redistributed:safe(previous?.redistributed),settings:previous?.settings?{...previous.settings}:undefined,technicians};recalculateMonth(data);return data;
+  }
+
+  function parseCsvRows(text){
+    const firstLine=(text.split(/\r?\n/,1)[0]||''),comma=(firstLine.match(/,/g)||[]).length,semi=(firstLine.match(/;/g)||[]).length,delimiter=semi>comma?';':',';const rows=[];let row=[],field='',quoted=false;
+    for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++}else if(c==='"')quoted=false;else field+=c}else if(c==='"')quoted=true;else if(c===delimiter){row.push(field);field=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);field='';if(row.some(v=>String(v).trim()!==''))rows.push(row);row=[]}else field+=c}row.push(field);if(row.some(v=>String(v).trim()!==''))rows.push(row);return rows;
+  }
+  function normalizeHeader(v){return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+  function csvNumber(v){if(v==null||String(v).trim()==='')return 0;let s=String(v).trim().replace(/\s/g,'');if(/^[-+]?\d{1,3}(\.\d{3})+,\d+$/.test(s))s=s.replace(/\./g,'').replace(',','.');else if(/^[-+]?\d+,\d+$/.test(s))s=s.replace(',','.');const n=Number(s);return Number.isFinite(n)?n:0}
+  function parseCsvDate(v){const m=String(v||'').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);if(month<1||month>12||day<1||day>31)return null;return{year,month,day}}
   function normalizeName(s){return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
 
   function applyPreset(name){if(!isAdmin())return;const presets={vermithor:clone(DEFAULT_THEME),soften:{name:'Soften',campaignTitle:'Soften Performance',campaignTagline:'Tecnologia que impulsiona resultados.',preset:'soften',accent:'#20b7f5',secondary:'#176bd3',bg:'#06111f',bg2:'#0a2035',panel:'rgba(8,24,40,.9)',text:'#f3f8fc',background:null,opacity:.18},neon:{name:'Neon',campaignTitle:'Squad Neon',campaignTagline:'Acelere. Evolua. Conquiste.',preset:'neon',accent:'#c05cff',secondary:'#21dbc9',bg:'#090514',bg2:'#151029',panel:'rgba(23,15,42,.9)',text:'#faf5ff',background:null,opacity:.18},clean:{name:'Claro',campaignTitle:'Performance',campaignTagline:'Clareza para acompanhar cada resultado.',preset:'clean',accent:'#3157d5',secondary:'#6a7be8',bg:'#e9eef5',bg2:'#f7f9fc',panel:'rgba(255,255,255,.91)',text:'#172033',background:null,opacity:.06}};state.theme=presets[name]||presets.vermithor;saveTheme();applyTheme(state.theme);toast(`Tema ${state.theme.name} aplicado.`)}
@@ -471,7 +586,7 @@
   function loadScript(src){return new Promise((resolve,reject)=>{if(window.supabase)return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error('Falha ao carregar biblioteca Supabase.'));document.head.appendChild(s)})}
   async function enterSupabaseSession(authUser){
     const {data:profile,error}=await state.supabase.from('profiles').select('user_id,email,full_name,role,squad_id,technician_name,squads(id,code,name)').eq('user_id',authUser.id).single();if(error)throw error;
-    state.user={userId:authUser.id,email:profile.email||authUser.email,fullName:profile.full_name,role:profile.role,squadCode:profile.squads?.code||null,techName:profile.technician_name||null};
+    state.user={userId:authUser.id,email:profile.email||authUser.email,fullName:profile.full_name,role:profile.role,squadCode:profile.squads?.code||null,techName:profile.technician_name?normalizeName(profile.technician_name):null};
     await loadSupabaseData();await enterApp(state.user);
   }
   async function loadSupabaseData(){
@@ -481,8 +596,16 @@
   async function persistImportedMonth(m,squad){
     const payload={squad_id:squad.dbId,year:m.year,month:m.month,source_file:m.sourceFile,latest_day:m.latestDay,team_result:m.teamResult,redistributed:m.redistributed,team_goal_att:m.settings?.teamGoalAtt||autoTeamAttGoal(m),team_goal_eval_pct:m.settings?.teamGoalEvalPct??.343,imported_by:state.user.userId,imported_at:new Date().toISOString()};
     const {data:monthRow,error}=await state.supabase.from('squad_months').upsert(payload,{onConflict:'squad_id,year,month'}).select('id').single();if(error)throw error;m.dbId=monthRow.id;
-    const {data:profiles}=await state.supabase.from('profiles').select('user_id,technician_name').eq('squad_id',squad.dbId);const userMap={};(profiles||[]).forEach(p=>{if(p.technician_name)userMap[normalizeName(p.technician_name)]=p.user_id});
-    for(const t of m.technicians){const row={squad_month_id:monthRow.id,user_id:userMap[normalizeName(t.name)]||null,technician_name:t.name,att:t.att,notes5:t.notes5,notes4:t.notes4,notes3:t.notes3,notes2:t.notes2,notes1:t.notes1,total_eval:t.totalEval,avg_rating:t.avg,eval_pct:t.evalPct,status:t.status,goals_hit:t.goalsHit,points:t.points,rank:t.rank,discount:t.discount,point_bonus:t.pointBonus,goal_att:t.goalAtt,goal_eval:t.goalEval};const {data:tm,error:te}=await state.supabase.from('technician_monthly').upsert(row,{onConflict:'squad_month_id,technician_name'}).select('id').single();if(te)throw te;t.dbId=tm.id;await state.supabase.from('daily_metrics').delete().eq('technician_month_id',tm.id);const daily=(t.daily||[]).map(d=>({technician_month_id:tm.id,day:d.day,att:d.att,notes5:d.notes5,off:!!d.off}));if(daily.length){const {error:de}=await state.supabase.from('daily_metrics').insert(daily);if(de)throw de}}
+    const {data:profiles,error:pe}=await state.supabase.from('profiles').select('user_id,technician_name').eq('squad_id',squad.dbId);if(pe)throw pe;const userMap={};(profiles||[]).forEach(p=>{if(p.technician_name)userMap[normalizeName(p.technician_name)]=p.user_id});
+    const {data:existing,error:ee}=await state.supabase.from('technician_monthly').select('id,technician_name').eq('squad_month_id',monthRow.id);if(ee)throw ee;const keepNames=new Set();
+    for(const t of m.technicians){
+      keepNames.add(normalizeName(t.name));
+      const row={squad_month_id:monthRow.id,user_id:userMap[normalizeName(t.name)]||null,technician_name:t.name,att:t.att,notes5:t.notes5,notes4:t.notes4,notes3:t.notes3,notes2:t.notes2,notes1:t.notes1,total_eval:t.totalEval,avg_rating:t.avg,eval_pct:t.evalPct,status:t.status,goals_hit:t.goalsHit,points:t.points,rank:t.rank,discount:t.discount,point_bonus:t.pointBonus,goal_att:t.goalAtt,goal_eval:t.goalEval};
+      const {data:tm,error:te}=await state.supabase.from('technician_monthly').upsert(row,{onConflict:'squad_month_id,technician_name'}).select('id').single();if(te)throw te;t.dbId=tm.id;
+      const {error:dd}=await state.supabase.from('daily_metrics').delete().eq('technician_month_id',tm.id);if(dd)throw dd;
+      const daily=(t.daily||[]).map(d=>({technician_month_id:tm.id,day:d.day,att:d.att,notes5:d.notes5,off:!!d.off}));if(daily.length){const {error:de}=await state.supabase.from('daily_metrics').insert(daily);if(de)throw de}
+    }
+    for(const old of existing||[]){if(!keepNames.has(normalizeName(old.technician_name))){const {error:se}=await state.supabase.from('technician_monthly').delete().eq('id',old.id);if(se)throw se}}
   }
   async function persistThemeToSupabase(){const squad=currentSquad();if(!state.supabase||!squad?.dbId)return;const {error}=await state.supabase.from('squad_themes').upsert({squad_id:squad.dbId,theme:themePayload(),updated_by:state.user.userId,updated_at:new Date().toISOString()},{onConflict:'squad_id'});if(error)throw error;squad.theme=clone(state.theme)}
 

@@ -1,150 +1,206 @@
-# Soften Performance Hub V2.1.1
+# Soften Performance Hub V2.2.0
 
-Painel multi-Squad de desempenho, metas, ranking e gamificação para os Squads **A, B, D e E**.
+Painel web multi-Squad para acompanhamento diário de desempenho dos técnicos da Soften Sistemas.
 
-## Novidades da V2.1.1
+Squads atuais: **A, B, D e E**.
 
-- Novo módulo **Usuários** dentro do sistema.
-- Criação de login e senha pela própria interface.
-- **Admin geral** pode cadastrar Admin de Squad e Técnico em qualquer Squad.
-- **Admin do Squad** pode cadastrar somente Técnicos do próprio Squad.
-- A criação de usuários em produção usa uma **Supabase Edge Function**, mantendo a chave `service_role` fora do navegador.
-- Novo módulo **Como usar**, disponível dentro do sistema, com instruções, indicadores, permissões e rotina recomendada.
-- A importação XLSX continua disponível somente para administradores.
-- Estrutura continua isolada por Squad: A, B, D e E.
-- README e guia de implantação revisados.
+## O que mudou na V2.2.0
 
-## Perfis e escopos
+A V2.2.0 remove a dependência das planilhas de desempenho dos Squads para atualização diária.
 
-### Admin geral — `super_admin`
+Agora o fluxo é dividido em duas fontes:
 
-- pode selecionar **Todos os Squads**;
-- pode acessar A, B, D e E individualmente;
-- importa XLSX em qualquer Squad;
-- altera metas e temas;
-- cria Admin de Squad e Técnico;
-- vê a gestão de usuários em todos os Squads.
+1. **CSV padronizado**: atendimentos e avaliações realizadas no dia a dia.
+2. **Administração do painel**: metas, pontuação, desconto e bônus mensais de cada técnico.
 
-### Admin do Squad — `squad_admin`
+Isso evita a necessidade de manter quatro planilhas com o mesmo formato.
 
-- fica limitado ao próprio Squad;
-- importa XLSX do próprio Squad;
-- altera metas e tema do próprio Squad;
-- vê os usuários do próprio Squad;
-- pode criar **somente Técnicos** no próprio Squad.
+Também foram adicionados:
 
-### Técnico — `technician`
+- importação de **CSV** no lugar de XLSX;
+- seleção do mês a importar quando o CSV contém vários meses;
+- filtro automático pelo Squad selecionado;
+- Admin geral pode selecionar **Todos os Squads** e atualizar A, B, D e E com o mesmo CSV em uma única operação;
+- importação somente dos **técnicos ativos cadastrados no sistema**;
+- nomes do CSV sem usuário correspondente são informados e ignorados;
+- fechamento automático da janela após uma importação bem-sucedida;
+- módulo **Metas e bonificações do mês** por técnico;
+- exclusão de um mês importado incorretamente;
+- preservação das métricas manuais ao atualizar novamente o CSV do mesmo mês;
+- recálculo do ranking por pontuação ao salvar as métricas mensais.
 
-- vê o próprio desempenho;
-- vê a visão geral/ranking do próprio Squad;
-- não vê Administração;
-- não vê Gestão de Usuários;
-- não importa XLSX;
-- não troca de técnico.
+## Formato esperado do CSV
 
-## Teste rápido sem banco
-
-O pacote sai com `config.js` em modo demonstração:
-
-```js
-mode: 'demo'
-```
-
-Abra `index.html` no navegador.
-
-### Contas demo
-
-**Admin geral**
-
-- E-mail: `admin.geral@soften.local`
-- Senha: `Admin123!`
-
-**Admin Squad D**
-
-- E-mail: `admin.squadd@soften.local`
-- Senha: `SquadD123!`
-
-**Técnico Rodolfo**
-
-- E-mail: `rodolfo.donda@soften.local`
-- Senha: `Tecnico123!`
-
-No modo demo, novos usuários criados pela interface ficam salvos no `localStorage` do navegador apenas para testes.
-
-## Fluxo normal de uso em produção
-
-1. Administrador entra no sistema.
-2. Se for Admin geral, seleciona o Squad desejado.
-3. Em **Administração**, importa o XLSX atualizado.
-4. Em **Usuários**, cria ou consulta acessos.
-5. Em **Administração**, ajusta metas e tema quando necessário.
-6. Técnicos acessam o painel com login e senha e visualizam somente o escopo permitido.
-7. O módulo **Como usar** fica disponível para consulta dentro do próprio sistema.
-
-## Estrutura dos arquivos
+O importador espera as colunas:
 
 ```text
-index.html                         Interface principal
+time
+Tecnico
+grupoAtendimento
+Quantidade
+Nota 5
+Nota 4
+Nota 3
+Nota 2
+Nota 1
+```
+
+Exemplo:
+
+```csv
+time,Tecnico,grupoAtendimento,Quantidade,Nota 5,Nota 4,Nota 3,Nota 2,Nota 1
+2026-08-13 08:00:00.000,RODOLFO DONDA,D,7,1,0,0,0,0
+2026-08-13 08:00:00.000,OLAVO DUARTE,D,9,2,0,0,0,0
+```
+
+O arquivo pode conter os últimos 12 meses e todos os Squads. Ao importar, o administrador escolhe o mês encontrado no arquivo. Se estiver em um Squad específico, somente aquele grupo é processado. Se o Admin geral estiver em **Todos os Squads**, o arquivo é distribuído automaticamente entre A, B, D e E.
+
+### Regras de importação
+
+- `grupoAtendimento` é normalizado para maiúsculo.
+- Somente **A, B, D e E** são aceitos.
+- Linhas sem grupo válido são ignoradas.
+- O nome do técnico é normalizado para comparação.
+- Somente técnicos ativos cadastrados no Squad são importados.
+- Um nome existente no CSV, mas não cadastrado no painel, não entra no ranking e aparece no resumo como ignorado.
+- Reimportar o mesmo Squad/mês substitui atendimentos e avaliações daquele mês, mas mantém as metas e bonificações manuais que já estavam preenchidas.
+
+## Cadastre os técnicos antes de importar
+
+Em **Usuários > Criar usuário**, para um técnico informe:
+
+- nome completo;
+- e-mail;
+- senha temporária;
+- perfil Técnico;
+- Squad;
+- **Nome do técnico no CSV**.
+
+Exemplo:
+
+```text
+Nome completo: Rodolfo Donda
+Nome do técnico no CSV: RODOLFO DONDA
+```
+
+O campo deve corresponder ao valor da coluna `Tecnico` do CSV.
+
+## Atualização diária
+
+1. Entre como Admin geral ou Admin do Squad.
+2. Selecione o Squad. O Admin geral também pode usar **Todos os Squads** para uma atualização geral.
+3. Abra **Administração**.
+4. Clique em **Importar CSV de atendimentos**.
+5. Escolha o CSV.
+6. O painel mostra os meses disponíveis para aquele Squad.
+7. Selecione o mês.
+8. Clique em **Importar mês**.
+
+Depois da gravação, a janela de importação fecha automaticamente e o dashboard é atualizado.
+
+## Métricas mensais por técnico
+
+Na Administração existe a tabela **Metas e bonificações do mês**.
+
+Atendimentos, Notas 5 e demais avaliações são calculados automaticamente pelo CSV. O administrador preenche:
+
+- **Meta atend.**;
+- **Meta notas 5**;
+- **Status**;
+- **Metas batidas**;
+- **Pontos**;
+- **Desconto (R$)**;
+- **Bônus (R$)**.
+
+Ao clicar em **Salvar métricas dos técnicos**, o sistema recalcula:
+
+- ranking por pontuação;
+- totais e indicadores consolidados;
+- resultado consolidado do Squad.
+
+## Excluir importação incorreta
+
+Em **Administração > Meses importados**, cada mês possui a ação **Excluir**.
+
+A exclusão remove:
+
+- dados importados do mês;
+- histórico diário do mês;
+- métricas manuais daquele mês.
+
+A operação pede confirmação antes de executar.
+
+## Perfis e permissões
+
+### Admin geral
+
+- vê todos os Squads;
+- administra A, B, D e E;
+- cria Admins de Squad e técnicos;
+- importa CSV de qualquer Squad;
+- preenche métricas mensais;
+- exclui meses importados;
+- configura metas e temas.
+
+### Admin do Squad
+
+- vê somente o próprio Squad;
+- cria técnicos do próprio Squad;
+- importa CSV do próprio Squad;
+- preenche métricas mensais;
+- exclui meses do próprio Squad;
+- configura metas e tema do próprio Squad.
+
+### Técnico
+
+- vê seu desempenho;
+- vê a Visão do próprio Squad;
+- não acessa Administração;
+- não importa CSV;
+- não altera métricas;
+- não gerencia usuários.
+
+## Atualizando a partir da V2.1.1
+
+**Não há alteração obrigatória na estrutura do banco.** As tabelas e políticas da V2.1.1 já suportam a V2.2.0.
+
+Para atualizar o site:
+
+1. faça backup do repositório atual;
+2. mantenha uma cópia do seu `config.js` atual, pois ele contém a URL e a chave pública do Supabase;
+3. substitua os arquivos do site pelos da V2.2.0;
+4. recoloque seu `config.js` configurado, se necessário;
+5. publique no GitHub Pages;
+6. use `Ctrl + F5` no navegador.
+
+Não é necessário recriar usuários nem executar novamente `supabase_schema.sql` em uma base V2.1.1 já funcionando.
+
+## Instalação nova
+
+Para uma instalação do zero, use:
+
+- `supabase_schema.sql`;
+- `bootstrap_primeiro_admin.sql`;
+- `supabase/functions/create-user/index.ts`;
+- `GUIA_BANCO_DADOS.md`.
+
+## Arquivos principais
+
+```text
+index.html                         Interface
 styles.css                        Estilos e responsividade
-app.js                            Regras do painel e integração
-config.js                         Modo demo / Supabase
-default-data.js                   Dados de demonstração
-assets/vermithor.png              Fundo da campanha demo
-supabase_schema.sql               Tabelas, RLS e estrutura dos Squads
-bootstrap_primeiro_admin.sql      Bootstrap único do primeiro Admin geral
-GUIA_BANCO_DADOS.md               Passo a passo de implantação
-supabase/config.toml              Configuração da Edge Function
-supabase/functions/create-user/   Função segura para criação de usuários
-modelo-tema-squad-para-ia.json    Modelo de tema importável
-CONTAS_DEMO.txt                   Credenciais do protótipo local
+app.js                            Regras, CSV, Supabase e dashboard
+config.js                         Configuração do Supabase
+default-data.js                   Dados apenas para demonstração
+supabase_schema.sql               Banco para instalação nova
+bootstrap_primeiro_admin.sql      Primeiro Admin geral
+supabase/functions/create-user/   Criação segura de usuários
+GUIA_BANCO_DADOS.md               Guia de implantação
+ATUALIZACAO_V2.2.0.md             Atualização da V2.1.1
 ```
 
-## Configuração de produção
+## Segurança
 
-Leia **`GUIA_BANCO_DADOS.md`**. Em resumo:
+Nunca coloque a chave `service_role` ou Secret key no `config.js` ou em qualquer arquivo publicado no GitHub Pages.
 
-1. criar o projeto no Supabase;
-2. executar `supabase_schema.sql`;
-3. criar uma única conta inicial de Admin geral no Supabase Auth;
-4. executar `bootstrap_primeiro_admin.sql` com o UUID dessa conta;
-5. publicar a Edge Function `create-user`;
-6. preencher `config.js` com URL e chave pública do projeto;
-7. alterar `mode` para `supabase`;
-8. publicar a pasta em HTTPS;
-9. a partir daí, criar todos os demais usuários dentro do próprio sistema.
-
-## Segurança importante
-
-A aplicação web usa apenas a chave pública/publishable do Supabase. A chave `service_role` é necessária para operações administrativas do Supabase Auth e fica somente na Edge Function, nunca no `config.js` nem no navegador.
-
-O banco também usa Row Level Security para limitar os dados por organização, Squad e perfil.
-
-## Associação do técnico com a planilha
-
-Ao criar um técnico, o campo **Nome do técnico na planilha** deve corresponder ao nome utilizado no XLSX, por exemplo:
-
-```text
-RODOLFO DONDA
-```
-
-Isso permite associar o login aos indicadores mensais e ao histórico diário. A Edge Function também tenta vincular o usuário aos meses que já haviam sido importados antes da criação do login.
-
-## Próximas evoluções sugeridas
-
-- edição/desativação de usuários pela interface;
-- redefinição de senha pelo administrador;
-- obrigar troca da senha temporária no primeiro acesso;
-- auditoria de importações e alterações administrativas;
-- notificações e conquistas adicionais.
-
-
-## Recuperação de senha
-
-A V2.1.1 adiciona recuperação de senha pela própria tela de login. Em produção, configure no Supabase em **Authentication > URL Configuration**:
-
-- **Site URL:** a URL pública exata do Performance Hub;
-- **Redirect URLs:** inclua a mesma URL pública.
-
-Exemplo em GitHub Pages: `https://SEU-USUARIO.github.io/SEU-REPOSITORIO/`.
-
-O botão **Esqueci minha senha** envia o e-mail usando essa URL como `redirectTo`. Ao retornar ao site, o Performance Hub detecta o evento de recuperação e solicita a nova senha.
+O navegador deve usar somente a chave pública/publishable. A criação administrativa de usuários continua na Edge Function `create-user`.

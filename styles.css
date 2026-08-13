@@ -73,5 +73,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(
 @media(max-width:720px){.users-hero,.help-hero{align-items:flex-start;flex-direction:column}.users-hero .btn{width:100%}.help-role{width:100%;text-align:left}.help-grid{grid-template-columns:1fr}.user-form-grid{grid-template-columns:1fr}.permission-matrix{grid-template-columns:1.35fr repeat(3,.8fr);overflow:auto}.permission-matrix>div{min-width:90px}.search-field{width:100%}.search-field input{width:100%}.user-stats{grid-template-columns:1fr 1fr}}
 
 
-/* V2.1.1 - recuperação de senha */
+/* V2.1.1 - recuperação de senha (mantido na V2.2.0) */
 .login-recovery-link{display:block;width:100%;margin-top:11px;padding:8px;border:0;background:transparent;color:var(--accent);font:700 12px/1.2 inherit;cursor:pointer;text-align:center}.login-recovery-link:hover{text-decoration:underline}.login-recovery-link:disabled{opacity:.55;cursor:wait}.login-error.success{color:#46d69b}.recovery-modal{max-width:460px}.recovery-modal .user-form{margin-top:18px}
+
+/* V2.2.0 - CSV + metricas mensais */
+.csv-period{margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.025)}.csv-period label{display:grid;gap:7px;font-size:11px;color:var(--muted)}.csv-period select{width:100%;padding:10px 12px}.csv-period small{display:block;margin-top:8px;color:var(--muted)}
+.monthly-metrics-wrap{max-height:520px}.monthly-metrics-table{min-width:1180px}.monthly-metrics-table td:first-child{min-width:180px;font-weight:800}.metric-input{width:100%;min-width:88px;border:1px solid var(--border);background:rgba(255,255,255,.035);color:var(--text);border-radius:9px;padding:8px 9px;outline:0}.metric-input:focus{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 12%,transparent)}
+.history-row{grid-template-columns:1fr auto auto auto}.danger-link{color:var(--danger)!important}.history-row .danger-link{padding:6px 8px;border-radius:9px}.history-row .danger-link:hover{background:rgba(242,99,99,.09)}
+@media(max-width:820px){.history-row{grid-template-columns:1fr auto}.history-row>div{grid-column:1/-1}.monthly-metrics-wrap{max-height:440px}}
