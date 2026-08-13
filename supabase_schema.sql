@@ -1,4 +1,4 @@
--- SOFTEN PERFORMANCE HUB V2.2.0
+-- SOFTEN PERFORMANCE HUB V2.3.0
 -- Estrutura multi-squad preparada para Supabase/PostgreSQL.
 -- Execute este arquivo no SQL Editor de um projeto Supabase novo.
 
@@ -50,6 +50,7 @@ create table if not exists public.squad_months (
   redistributed numeric(12,2) not null default 0,
   team_goal_att numeric(12,2),
   team_goal_eval_pct numeric(8,6) not null default 0.343,
+  score_settings jsonb not null default '{}'::jsonb,
   imported_by uuid references auth.users(id) on delete set null,
   imported_at timestamptz not null default now(),
   unique (squad_id, year, month)
