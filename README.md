@@ -1,14 +1,61 @@
-# Soften Performance Hub V2.3.0
+# Soften Performance Hub V2.4.0
 
 Painel web multi-Squad para acompanhamento diário e mensal de desempenho dos técnicos da Soften Sistemas.
 
 Squads atuais: **A, B, D e E**.
 
-## O que mudou na V2.3.0
+## Novidades da V2.4.0
 
-A pontuação mensal deixou de ser digitada manualmente e passou a ser calculada automaticamente com a mesma lógica da planilha original.
+A V2.4.0 adiciona **fechamento mensal com histórico protegido**.
 
-Fórmula equivalente:
+Enquanto o mês estiver **ABERTO**:
+
+- o Admin pode reimportar o CSV diariamente;
+- os dados do mesmo mês são **substituídos**, nunca somados à importação anterior;
+- metas, bônus, desconto e parâmetros já preenchidos daquele mês são preservados;
+- pontuação, metas batidas, status e ranking são recalculados automaticamente.
+
+Ao clicar em **Fechar mês**:
+
+- o mês passa para **FECHADO**;
+- novas importações para aquele Squad/mês são bloqueadas;
+- metas individuais e do Squad ficam bloqueadas;
+- parâmetros da fórmula ficam bloqueados;
+- bônus e descontos ficam bloqueados;
+- a pontuação, status, metas batidas e ranking são armazenados em um snapshot histórico;
+- as referências automáticas usadas na pontuação ficam registradas no snapshot do fechamento.
+
+Se for necessário corrigir um histórico, o Admin usa **Reabrir**, faz a correção e fecha novamente.
+
+## Metas por mês
+
+Cada técnico possui metas próprias em cada registro mensal. Julho, Agosto e Setembro não compartilham o mesmo campo de meta.
+
+No início de um novo mês existe o botão:
+
+**Copiar metas do mês anterior**
+
+Ele copia somente:
+
+- Meta de atendimentos do técnico;
+- Meta de notas 5 do técnico.
+
+As metas gerais do Squad continuam sendo configuradas no próprio mês, pois a meta de atendimento pode variar conforme a quantidade de dias úteis.
+
+## Reimportação diária
+
+Exemplo:
+
+- 13/08: CSV mostra 93 atendimentos;
+- 14/08: novo CSV mostra 105 atendimentos.
+
+Após importar novamente Agosto, o sistema fica com **105 atendimentos**, não 198.
+
+O mesmo vale para notas e histórico diário: o mês é reconstruído com o conteúdo atualizado do CSV e mantém as configurações administrativas daquele mês.
+
+## Pontuação automática
+
+A fórmula continua equivalente à planilha original:
 
 ```text
 Pontos = Atendimentos × Média da avaliação
@@ -18,31 +65,22 @@ Pontos = Atendimentos × Média da avaliação
        + (% avaliado >= referência ? +35 : -35)
 ```
 
-Se o técnico não tiver atendimentos no mês, a pontuação fica zerada.
+Por padrão, as referências são as médias do próprio Squad no mês. O Admin pode substituir qualquer referência em **Administração > Parâmetros da fórmula mensal**.
 
-Também são calculados automaticamente:
+Quando o mês é fechado, a referência efetivamente usada naquele momento é registrada no snapshot histórico.
 
-- **Metas batidas**: quantidade de referências atingidas, de 0 a 4;
-- **Status**: `ACIMA` quando bate 2 ou mais referências e `ABAIXO` quando bate 0 ou 1;
-- **Ranking mensal**: ordenado pela pontuação;
-- **Pontuação acumulada**: soma dos pontos do técnico em todos os meses importados no Squad.
+## Pontuação acumulada
 
-### Referências automáticas
+O acumulado considera:
 
-Por padrão, as quatro referências são as médias do próprio Squad no mês, reproduzindo a linha **Média Grupo** da planilha:
+- todos os meses **fechados**;
+- mais o mês aberto mais recente do Squad.
 
-- média de atendimentos por técnico;
-- média do total de avaliações por técnico;
-- média das médias de avaliação dos técnicos;
-- média do percentual avaliado dos técnicos.
+Isso evita que um mês histórico deixado aberto por engano entre duas vezes no conceito de temporada corrente.
 
-Em **Administração > Parâmetros da fórmula mensal**, o administrador pode sobrescrever qualquer referência. Campo vazio = usa a média automática do Squad.
+## Fonte de dados
 
-Os bônus/penalidades permanecem iguais à fórmula original: **±20, ±30, ±40 e ±35**.
-
-## Fonte diária dos dados
-
-A atualização continua sendo feita pelo CSV padronizado com as colunas:
+A atualização operacional usa CSV com as colunas:
 
 ```text
 time
@@ -56,80 +94,65 @@ Nota 2
 Nota 1
 ```
 
-O sistema calcula automaticamente:
+Somente técnicos ativos cadastrados no Performance Hub e vinculados ao nome do CSV são considerados.
 
-- atendimentos;
-- Nota 5 a Nota 1;
-- total de avaliações;
-- média de avaliação;
-- % avaliado;
-- pontuação;
-- metas batidas;
-- status;
-- ranking.
+## Atualização da V2.3.0
 
-O administrador preenche apenas as métricas que realmente variam por regra de gestão:
-
-- meta individual de atendimentos;
-- meta individual de notas 5;
-- desconto;
-- bônus.
-
-## Importação
-
-- somente técnicos ativos cadastrados no sistema são importados;
-- o Admin geral pode importar A, B, D e E de uma vez usando `grupoAtendimento`;
-- reimportar o mesmo mês atualiza os dados operacionais e mantém metas, desconto, bônus e parâmetros de pontuação;
-- o modal fecha automaticamente após sucesso;
-- meses importados incorretamente podem ser excluídos em **Administração > Meses importados**.
-
-## Atualização da V2.2.x para V2.3.0
-
-A V2.3.0 adiciona um campo ao banco para armazenar os parâmetros opcionais da pontuação.
-
-Antes de publicar os novos arquivos do site, execute no **SQL Editor do Supabase**:
+Antes de publicar o novo site, execute no **SQL Editor do Supabase**:
 
 ```text
-MIGRACAO_V2.3.0.sql
+MIGRACAO_V2.4.0.sql
 ```
+
+Essa migração apenas adiciona os campos de fechamento mensal. Ela não apaga usuários ou dados existentes.
 
 Depois:
 
-1. preserve seu `config.js` atual;
-2. substitua os arquivos do site pelos da V2.3.0;
-3. recoloque o `config.js` configurado;
-4. publique no GitHub Pages;
-5. use `Ctrl + F5`.
+1. preserve o seu `config.js` atual;
+2. substitua os arquivos do GitHub Pages pelos arquivos da V2.4.0;
+3. recoloque/mantenha o `config.js` configurado com seu Supabase;
+4. publique;
+5. abra o site e faça `Ctrl + F5`.
 
-Não execute novamente o `supabase_schema.sql` em uma base já existente.
+Veja também `ATUALIZACAO_V2.4.0.md`.
 
 ## Instalação nova
 
-Para uma instalação do zero, use:
+Para uma instalação nova, execute `supabase_schema.sql`. Ele já contém:
 
-- `supabase_schema.sql`;
-- `bootstrap_primeiro_admin.sql`;
-- `supabase/functions/create-user/index.ts`;
-- `GUIA_BANCO_DADOS.md`.
+- organizações;
+- Squads A, B, D e E;
+- perfis e permissões;
+- meses;
+- métricas mensais e diárias;
+- parâmetros de pontuação;
+- fechamento e snapshot mensal;
+- temas;
+- RLS.
 
-O `supabase_schema.sql` da V2.3.0 já contém o campo `score_settings`.
+Depois publique a Edge Function `create-user` e configure `config.js`.
 
 ## Arquivos principais
 
 ```text
 index.html                         Interface
-styles.css                        Estilos e responsividade
-app.js                            Regras, CSV, pontuação e Supabase
-config.js                         Configuração do Supabase
-default-data.js                   Dados de demonstração
-supabase_schema.sql               Banco para instalação nova
-MIGRACAO_V2.3.0.sql               Atualização de banco da V2.2.x
-bootstrap_primeiro_admin.sql      Primeiro Admin geral
+styles.css                        Estilos
+app.js                            Regras, importação e cálculos
+config.js                         Credenciais públicas do Supabase
+supabase_schema.sql               Banco completo para instalação nova
+MIGRACAO_V2.3.0.sql               Migração antiga: parâmetros de pontuação
+MIGRACAO_V2.4.0.sql               Migração: fechamento mensal
+ATUALIZACAO_V2.4.0.md             Passo a passo de atualização
+GUIA_BANCO_DADOS.md               Guia completo de implantação e operação
 supabase/functions/create-user/   Criação segura de usuários
-GUIA_BANCO_DADOS.md               Guia de implantação e operação
-ATUALIZACAO_V2.3.0.md             Passo a passo de atualização
 ```
 
 ## Segurança
 
-Nunca coloque a chave `service_role` ou Secret key no `config.js` ou no GitHub Pages. O navegador deve usar somente a Publishable key. A criação administrativa de usuários continua sendo feita pela Edge Function `create-user`.
+- `service_role` não deve ficar no navegador;
+- criação de usuários continua pela Edge Function;
+- técnicos veem somente o próprio contexto autorizado;
+- Admin de Squad fica limitado ao próprio Squad;
+- Admin geral pode administrar A, B, D e E;
+- importação e alterações mensais são ações exclusivas de Admin;
+- mês fechado precisa ser reaberto antes de qualquer correção pelo painel.

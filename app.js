@@ -114,6 +114,7 @@
     $('#csvInput').addEventListener('change',handleCsvFile);
     $('#confirmCsvImportBtn').addEventListener('click',confirmCsvImport);
     $('#saveMonthlyMetricsBtn').addEventListener('click',saveMonthlyMetrics);
+    $('#copyPreviousGoalsBtn').addEventListener('click',copyGoalsFromPreviousMonth);
     $('#saveScoreSettingsBtn').addEventListener('click',saveScoreSettings);
     $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
     $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
@@ -242,7 +243,7 @@
     if(isSuperAdmin()) $('#squadSelect').innerHTML=`<option value="all" ${state.squadCode==='all'?'selected':''}>Todos os Squads</option>`+Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code)).map(s=>`<option value="${s.code}" ${s.code===state.squadCode?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
     const m=currentMonth(), ids=Object.keys(currentMonths()).sort().reverse();
     $('#monthSelect').disabled=!ids.length||state.squadCode==='all';
-    $('#monthSelect').innerHTML=ids.length?ids.map(id=>{const mm=currentMonths()[id];return `<option value="${id}" ${id===state.currentId?'selected':''}>${mm.monthName} ${mm.year}</option>`}).join(''):'<option>Sem dados</option>';
+    $('#monthSelect').innerHTML=ids.length?ids.map(id=>{const mm=currentMonths()[id];return `<option value="${id}" ${id===state.currentId?'selected':''}>${mm.monthName} ${mm.year}${mm.isClosed?' • Fechado':''}</option>`}).join(''):'<option>Sem dados</option>';
     if(m){chooseDefaultTech();$('#techSelect').innerHTML=m.technicians.map(t=>`<option ${t.name===state.techName?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}else $('#techSelect').innerHTML='<option>Sem dados</option>';
     const label=state.squadCode==='all'?'TODOS OS SQUADS':`SQUAD ${state.squadCode}`;$('#squadEyebrow').textContent=label;
   }
@@ -263,7 +264,7 @@
     const m=currentMonth(),t=currentTech();if(!m||!t)return;
     const attPct=t.goalAtt?safe(t.att)/t.goalAtt:0,notePct=t.goalEval?safe(t.notes5)/t.goalEval:0,hasGoals=safe(t.goalAtt)>0&&safe(t.goalEval)>0;
     $('#heroName').textContent=firstName(t.name);$('#heroStatus').textContent=hasGoals?overallLabel(attPct,notePct):'METAS PENDENTES';$('#heroStatus').style.color=hasGoals?overallColor(attPct,notePct):'var(--warn)';$('#heroMessage').textContent=buildHeroMessage(t,attPct,notePct);
-    $('#lastUpdate').textContent=`Atualizado até ${String(m.latestDay||1).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`;$('#sourceFile').textContent=m.sourceFile||'Dados do banco';
+    $('#lastUpdate').textContent=m.isClosed?`🔒 Mês fechado • dados até ${String(m.latestDay||1).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`:`Atualizado até ${String(m.latestDay||1).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`;$('#sourceFile').textContent=m.sourceFile||'Dados do banco';
     $('#rankNumber').textContent=t.rank?`#${t.rank}`:'—';$('#rankContext').textContent=`de ${m.technicians.length} no Squad ${state.squadCode}`;
     $('#kpiAtt').textContent=fmtInt(t.att);$('#kpiAttGoal').textContent=`/ ${fmtInt(t.goalAtt)}`;$('#attBar').style.width=clamp(attPct*100,0,100)+'%';$('#attProgress').textContent=fmtPct(attPct);$('#attRemaining').textContent=t.att>=t.goalAtt?`+${fmtInt(t.att-t.goalAtt)} acima`:`Faltam ${fmtInt(t.goalAtt-t.att)}`;
     $('#kpiNotes').textContent=fmtInt(t.notes5);$('#kpiNotesGoal').textContent=`/ ${fmtInt(t.goalEval)}`;$('#noteBar').style.width=clamp(notePct*100,0,100)+'%';$('#noteProgress').textContent=fmtPct(notePct);$('#noteRemaining').textContent=t.notes5>=t.goalEval?`+${fmtInt(t.notes5-t.goalEval)} acima`:`Faltam ${fmtInt(t.goalEval-t.notes5)}`;
@@ -401,45 +402,55 @@
 
   function renderAdmin(){
     if(!isAdmin())return;
-    const specific=state.squadCode!=='all',m=currentMonth(),canImport=specific||isSuperAdmin();
+    const specific=state.squadCode!=='all',m=currentMonth(),canImport=specific||isSuperAdmin(),locked=!!m?.isClosed;
     $('#adminScopeTitle').textContent=specific?`Squad ${state.squadCode}`:'Todos os Squads';
-    $('#adminScopeText').textContent=specific?'Importação, métricas, metas e tema abaixo afetam somente este Squad.':'Admin geral pode importar o CSV para todos os Squads de uma vez. Para métricas, metas, exclusão de mês ou tema, selecione um Squad específico.';
+    $('#adminScopeText').textContent=specific
+      ? (locked?`${m.monthName} ${m.year} está FECHADO. Dados, metas e pontuação histórica estão protegidos. Reabra o mês para alterar.`:'Importação, métricas, metas e tema abaixo afetam somente este Squad.')
+      :'Admin geral pode importar o CSV para todos os Squads de uma vez. Para métricas, metas, fechamento/exclusão de mês ou tema, selecione um Squad específico.';
     $('#adminImportBtn').disabled=!canImport;
-    ['#adminThemeBtn','#saveGoalsBtn','#autoGoalBtn','#importThemeBtn','#exportThemeBtn','#saveMonthlyMetricsBtn','#saveScoreSettingsBtn'].forEach(sel=>{if($(sel))$(sel).disabled=!specific||(!m&&['#saveMonthlyMetricsBtn','#saveScoreSettingsBtn'].includes(sel))});
+    const disableForScope=['#adminThemeBtn','#importThemeBtn','#exportThemeBtn'];
+    disableForScope.forEach(sel=>{if($(sel))$(sel).disabled=!specific});
+    ['#saveGoalsBtn','#autoGoalBtn','#saveMonthlyMetricsBtn','#saveScoreSettingsBtn','#copyPreviousGoalsBtn'].forEach(sel=>{if($(sel))$(sel).disabled=!specific||!m||locked});
     if(!specific||!m){
       $('#monthHistory').innerHTML=specific?'<div class="muted">Nenhum mês importado neste Squad.</div>':'<div class="muted">Selecione um Squad específico para ver o histórico.</div>';
       $('#teamGoalAttInput').value='';$('#teamGoalPctInput').value='';$('#autoGoalHint').textContent=m?'':'Importe um mês para configurar as metas.';
-      ['scoreRefAtt','scoreRefEval','scoreRefAvg','scoreRefPct'].forEach(id=>{if($('#'+id))$('#'+id).value=''});if($('#scoreAutoHint'))$('#scoreAutoHint').textContent='Importe um mês para calcular as referências automáticas.';
+      $('#teamGoalAttInput').disabled=true;$('#teamGoalPctInput').disabled=true;
+      ['scoreRefAtt','scoreRefEval','scoreRefAvg','scoreRefPct'].forEach(id=>{if($('#'+id)){$('#'+id).value='';$('#'+id).disabled=true}});if($('#scoreAutoHint'))$('#scoreAutoHint').textContent='Importe um mês para calcular as referências automáticas.';
       $('#monthlyMetricsRows').innerHTML='<tr><td colspan="12" class="muted">Importe um mês para preencher as métricas individuais.</td></tr>';
       $('#monthlyMetricsHint').textContent='Importe um mês para preencher as métricas.';
       updateThemeName();return;
     }
-    const ids=Object.keys(currentMonths()).sort().reverse(),cfg=teamSettings(m);
-    $('#monthHistory').innerHTML=ids.map(id=>{const mm=currentMonths()[id];return `<div class="history-row"><div><strong>${mm.monthName} ${mm.year}</strong><small>${escapeHtml(mm.sourceFile||'Banco de dados')} • ${mm.technicians.length} técnicos • até dia ${mm.latestDay}</small></div><span class="tag">${id===state.currentId?'EM USO':'SALVO'}</span><button class="link-btn" data-open-month="${id}">Abrir</button><button class="link-btn danger-link" data-delete-month="${id}">Excluir</button></div>`}).join('');
+    const ids=Object.keys(currentMonths()).sort().reverse(),latestId=ids[0]||null,cfg=teamSettings(m);
+    $('#monthHistory').innerHTML=ids.map(id=>{const mm=currentMonths()[id],closed=!!mm.isClosed,closedInfo=closed&&mm.closedAt?` • fechado em ${formatDateTime(mm.closedAt)}`:'';return `<div class="history-row ${closed?'month-closed':''}"><div><strong>${closed?'🔒 ':'🟢 '}${mm.monthName} ${mm.year}</strong><small>${escapeHtml(mm.sourceFile||'Banco de dados')} • ${mm.technicians.length} técnicos • até dia ${mm.latestDay}${closedInfo}</small></div><span class="tag ${closed?'closed':'open'}">${closed?'FECHADO':id===latestId?'EM ANDAMENTO':'ABERTO'}</span><button class="link-btn" data-open-month="${id}">Abrir</button>${closed?`<button class="link-btn" data-reopen-month="${id}">Reabrir</button>`:`<button class="link-btn" data-close-month="${id}">Fechar mês</button><button class="link-btn danger-link" data-delete-month="${id}">Excluir</button>`}</div>`}).join('');
     $$('[data-open-month]').forEach(b=>b.addEventListener('click',()=>{state.currentId=b.dataset.openMonth;chooseDefaultTech();refreshSelectors();render();showView('individual')}));
     $$('[data-delete-month]').forEach(b=>b.addEventListener('click',()=>deleteImportedMonth(b.dataset.deleteMonth)));
+    $$('[data-close-month]').forEach(b=>b.addEventListener('click',()=>closeMonth(b.dataset.closeMonth)));
+    $$('[data-reopen-month]').forEach(b=>b.addEventListener('click',()=>reopenMonth(b.dataset.reopenMonth)));
     $('#teamGoalAttInput').value=Math.round(cfg.teamGoalAtt);$('#teamGoalPctInput').value=(cfg.teamGoalEvalPct*100).toFixed(1);
-    const useful=businessDaysMonFri(m.year,m.month),suggested=autoTeamAttGoal(m);$('#autoGoalHint').textContent=`Sugestão: ${useful} dias úteis × 10 atendimentos × ${m.technicians.length} técnicos = ${fmtInt(suggested)} atendimentos.`;
+    $('#teamGoalAttInput').disabled=locked;$('#teamGoalPctInput').disabled=locked;
+    const useful=businessDaysMonFri(m.year,m.month),suggested=autoTeamAttGoal(m);$('#autoGoalHint').textContent=locked?'🔒 Mês fechado: metas preservadas como histórico.':`Sugestão: ${useful} dias úteis × 10 atendimentos × ${m.technicians.length} técnicos = ${fmtInt(suggested)} atendimentos.`;
     renderScoreSettings(m);renderMonthlyMetrics(m);updateThemeName();
   }
 
   function renderScoreSettings(m){
-    const saved=m?.scoreSettings||{},auto=automaticScoreRefs(m),rules=scoreRules(m);
-    $('#scoreRefAtt').value=optionalValue(saved.refAtt);
-    $('#scoreRefEval').value=optionalValue(saved.refTotalEval);
-    $('#scoreRefAvg').value=optionalValue(saved.refAvg);
-    $('#scoreRefPct').value=saved.refEvalPct==null||saved.refEvalPct===''?'':(safe(saved.refEvalPct)*100).toFixed(2);
-    $('#scoreAutoHint').innerHTML=`Referências automáticas atuais: <b>${fmtNum(auto.refAtt)}</b> atend. • <b>${fmtNum(auto.refTotalEval)}</b> avaliações • média <b>${auto.refAvg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})}</b> • <b>${fmtPct(auto.refEvalPct)}</b> avaliados. ${rules.manualCount?`<strong>${rules.manualCount} parâmetro(s) sobrescrito(s) manualmente.</strong>`:'Todos os parâmetros estão usando a média do Squad.'}`;
+    const saved=m?.scoreSettings||{},auto=automaticScoreRefs(m),rules=scoreRules(m),frozen=m?.isClosed?(m.closedSnapshot?.scoreRules||rules):null;
+    $('#scoreRefAtt').value=frozen?optionalValue(frozen.refAtt):optionalValue(saved.refAtt);
+    $('#scoreRefEval').value=frozen?optionalValue(frozen.refTotalEval):optionalValue(saved.refTotalEval);
+    $('#scoreRefAvg').value=frozen?optionalValue(frozen.refAvg):optionalValue(saved.refAvg);
+    $('#scoreRefPct').value=frozen?(safe(frozen.refEvalPct)*100).toFixed(2):(saved.refEvalPct==null||saved.refEvalPct===''?'':(safe(saved.refEvalPct)*100).toFixed(2));
+    ['scoreRefAtt','scoreRefEval','scoreRefAvg','scoreRefPct'].forEach(id=>$('#'+id).disabled=!!m?.isClosed);
+    $('#scoreAutoHint').innerHTML=m?.isClosed?`🔒 <strong>Referências congeladas no fechamento:</strong> <b>${fmtNum(frozen.refAtt)}</b> atend. • <b>${fmtNum(frozen.refTotalEval)}</b> avaliações • média <b>${safe(frozen.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})}</b> • <b>${fmtPct(frozen.refEvalPct)}</b> avaliados.`:`Referências automáticas atuais: <b>${fmtNum(auto.refAtt)}</b> atend. • <b>${fmtNum(auto.refTotalEval)}</b> avaliações • média <b>${auto.refAvg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})}</b> • <b>${fmtPct(auto.refEvalPct)}</b> avaliados. ${rules.manualCount?`<strong>${rules.manualCount} parâmetro(s) sobrescrito(s) manualmente.</strong>`:'Todos os parâmetros estão usando a média do Squad.'}`;
   }
 
   function renderMonthlyMetrics(m){
     const list=[...(m?.technicians||[])].sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
-    $('#monthlyMetricsHint').textContent=`${m.monthName} ${m.year} • ${list.length} técnicos • pontos, metas batidas, status e ranking são calculados automaticamente.`;
-    $('#monthlyMetricsRows').innerHTML=list.map(t=>`<tr data-metric-tech="${escapeHtml(t.name)}"><td>${escapeHtml(t.name)}</td><td>${fmtInt(t.att)}</td><td>${fmtInt(t.totalEval)}</td><td>${safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${fmtPct(t.evalPct)}</td><td><input class="metric-input" data-field="goalAtt" type="number" min="0" step="1" value="${safe(t.goalAtt)}"></td><td><input class="metric-input" data-field="goalEval" type="number" min="0" step="1" value="${safe(t.goalEval)}"></td><td><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span><small class="metric-sub">${fmtInt(t.goalsHit)}/4 metas</small></td><td><strong>${fmtNum(t.points)}</strong></td><td><strong>${fmtNum(cumulativePointsForTech(t))}</strong></td><td><input class="metric-input" data-field="discount" type="number" step="0.01" value="${safe(t.discount)}"></td><td><input class="metric-input" data-field="pointBonus" type="number" step="0.01" value="${safe(t.pointBonus)}"></td></tr>`).join('')||'<tr><td colspan="12" class="muted">Nenhum técnico encontrado.</td></tr>';
+    const locked=!!m.isClosed,disabled=locked?' disabled':'';
+    $('#monthlyMetricsHint').textContent=locked?`${m.monthName} ${m.year} • 🔒 mês fechado: metas, bonificações e pontuação estão congeladas.`:`${m.monthName} ${m.year} • ${list.length} técnicos • pontos, metas batidas, status e ranking são calculados automaticamente.`;
+    $('#monthlyMetricsRows').innerHTML=list.map(t=>`<tr data-metric-tech="${escapeHtml(t.name)}"><td>${escapeHtml(t.name)}</td><td>${fmtInt(t.att)}</td><td>${fmtInt(t.totalEval)}</td><td>${safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${fmtPct(t.evalPct)}</td><td><input class="metric-input" data-field="goalAtt" type="number" min="0" step="1" value="${safe(t.goalAtt)}"${disabled}></td><td><input class="metric-input" data-field="goalEval" type="number" min="0" step="1" value="${safe(t.goalEval)}"${disabled}></td><td><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span><small class="metric-sub">${fmtInt(t.goalsHit)}/4 metas</small></td><td><strong>${fmtNum(t.points)}</strong></td><td><strong>${fmtNum(cumulativePointsForTech(t))}</strong></td><td><input class="metric-input" data-field="discount" type="number" step="0.01" value="${safe(t.discount)}"${disabled}></td><td><input class="metric-input" data-field="pointBonus" type="number" step="0.01" value="${safe(t.pointBonus)}"${disabled}></td></tr>`).join('')||'<tr><td colspan="12" class="muted">Nenhum técnico encontrado.</td></tr>';
   }
 
   async function saveMonthlyMetrics(){
-    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;const btn=$('#saveMonthlyMetricsBtn');btn.disabled=true;btn.textContent='Salvando...';
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de alterar metas ou bonificações.');return}const btn=$('#saveMonthlyMetricsBtn');btn.disabled=true;btn.textContent='Salvando...';
     try{
       for(const row of $$('#monthlyMetricsRows [data-metric-tech]')){
         const t=m.technicians.find(x=>normalizeName(x.name)===normalizeName(row.dataset.metricTech));if(!t)continue;
@@ -450,7 +461,7 @@
   }
 
   async function saveScoreSettings(){
-    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;const btn=$('#saveScoreSettingsBtn');btn.disabled=true;btn.textContent='Recalculando...';
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de alterar os parâmetros.');return}const btn=$('#saveScoreSettingsBtn');btn.disabled=true;btn.textContent='Recalculando...';
     try{
       m.scoreSettings={
         refAtt:optionalNumber($('#scoreRefAtt').value),
@@ -465,7 +476,7 @@
         await persistCalculatedScores(m);
       }
       render();toast('Parâmetros salvos. Pontuação, metas batidas, status e ranking recalculados.');
-    }catch(err){console.error(err);toast('Não foi possível salvar os parâmetros de pontuação. Confira se a migração V2.3.0 foi executada.')}finally{btn.disabled=false;btn.textContent='Salvar parâmetros e recalcular'}
+    }catch(err){console.error(err);toast('Não foi possível salvar os parâmetros de pontuação. Confira se as migrações V2.3.0 e V2.4.0 foram executadas.')}finally{btn.disabled=false;btn.textContent='Salvar parâmetros e recalcular'}
   }
 
   function optionalNumber(v){if(v==null||String(v).trim()==='')return null;const n=Number(String(v).replace(',','.'));return Number.isFinite(n)?n:null}
@@ -494,7 +505,11 @@
   }
   function cumulativePointsForTech(t,squad=currentSquad()){
     if(!squad)return safe(t?.points);let total=0;
-    for(const m of Object.values(squad.months||{})){const match=(m.technicians||[]).find(x=>(t?.userId&&x.userId&&x.userId===t.userId)||normalizeName(x.name)===normalizeName(t?.name));if(match)total+=safe(match.points)}
+    const latestId=Object.keys(squad.months||{}).sort().reverse()[0]||null;
+    for(const m of Object.values(squad.months||{})){
+      if(!m.isClosed&&m.id!==latestId)continue;
+      const match=(m.technicians||[]).find(x=>(t?.userId&&x.userId&&x.userId===t.userId)||normalizeName(x.name)===normalizeName(t?.name));if(match)total+=safe(match.points)
+    }
     return Number(total.toFixed(2));
   }
 
@@ -505,11 +520,50 @@
       t.avg=truncate2(rawAvg);
       t.evalPct=safe(t.att)?t.totalEval/safe(t.att):0;
     }
+    if(m.isClosed&&Array.isArray(m.closedSnapshot?.technicians)){
+      const snap=new Map(m.closedSnapshot.technicians.map(x=>[normalizeName(x.name),x]));
+      for(const t of m.technicians||[]){const s=snap.get(normalizeName(t.name));if(!s)continue;['att','notes5','notes4','notes3','notes2','notes1','totalEval','avg','evalPct','goalAtt','goalEval','points','goalsHit','discount','pointBonus'].forEach(k=>{if(s[k]!=null)t[k]=safe(s[k])});t.status=s.status||'';t.rank=safe(s.rank)||null;}
+      m.teamTotals=deriveTotals(m.technicians);m.teamResult=m.closedSnapshot.teamResult||m.teamResult||'—';return;
+    }
     const rules=scoreRules(m);
     for(const t of m.technicians||[]){const scored=calculateScore(t,rules);t.points=scored.points;t.goalsHit=scored.goalsHit;t.status=scored.status;}
     const ranked=[...(m.technicians||[])].sort((a,b)=>safe(b.points)-safe(a.points)||safe(b.att)-safe(a.att)||String(a.name).localeCompare(String(b.name),'pt-BR'));
     const hasPoints=ranked.some(t=>safe(t.points)!==0);ranked.forEach((t,i)=>t.rank=hasPoints?i+1:null);
     m.teamTotals=deriveTotals(m.technicians);const cfg=teamSettings(m);m.teamResult=(cfg.teamGoalAtt>0&&m.teamTotals.att>=cfg.teamGoalAtt&&m.teamTotals.evalPct>=cfg.teamGoalEvalPct)?'ACIMA':'ABAIXO';
+  }
+
+  function formatDateTime(v){if(!v)return'';try{return new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}catch(e){return String(v)}}
+  function previousMonthForCurrent(m=currentMonth()){
+    if(!m)return null;const ids=Object.keys(currentMonths()).filter(id=>id<m.id).sort().reverse();return ids.length?currentMonths()[ids[0]]:null;
+  }
+  async function copyGoalsFromPreviousMonth(){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de copiar metas.');return}
+    const prev=previousMonthForCurrent(m);if(!prev){toast('Não existe um mês anterior importado neste Squad.');return}
+    if(!window.confirm(`Copiar somente as metas individuais de ${prev.monthName} ${prev.year} para ${m.monthName} ${m.year}? Metas de atendimentos e notas 5 já preenchidas no mês atual serão substituídas.`))return;
+    try{
+      let copied=0;for(const t of m.technicians||[]){const old=(prev.technicians||[]).find(x=>(t.userId&&x.userId&&t.userId===x.userId)||normalizeName(x.name)===normalizeName(t.name));if(!old)continue;t.goalAtt=safe(old.goalAtt);t.goalEval=safe(old.goalEval);copied++;}
+      recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistManualMetrics(m);render();toast(`${copied} técnico(s) tiveram as metas individuais copiadas de ${prev.monthName}.`);
+    }catch(err){console.error(err);toast('Não foi possível copiar as metas do mês anterior.')}
+  }
+  async function closeMonth(id){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m||m.isClosed)return;
+    if(!window.confirm(`Fechar ${m.monthName} ${m.year}? A importação e as alterações de metas, parâmetros, bônus e desconto ficarão bloqueadas até que o mês seja reaberto.`))return;
+    try{
+      recalculateMonth(m);const rules=scoreRules(m),now=new Date().toISOString();
+      m.closedSnapshot={version:1,closedAt:now,scoreRules:{refAtt:rules.refAtt,refTotalEval:rules.refTotalEval,refAvg:rules.refAvg,refEvalPct:rules.refEvalPct,bonusAtt:rules.bonusAtt,bonusTotalEval:rules.bonusTotalEval,bonusAvg:rules.bonusAvg,bonusEvalPct:rules.bonusEvalPct},teamResult:m.teamResult,teamGoals:teamSettings(m),technicians:(m.technicians||[]).map(t=>({name:t.name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.totalEval),avg:safe(t.avg),evalPct:safe(t.evalPct),goalAtt:safe(t.goalAtt),goalEval:safe(t.goalEval),points:safe(t.points),goalsHit:safe(t.goalsHit),status:t.status,rank:t.rank,discount:safe(t.discount),pointBonus:safe(t.pointBonus)}))};
+      m.isClosed=true;m.closedAt=now;m.closedBy=state.user?.userId||state.user?.email||null;saveDemoSquads();
+      if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').update({is_closed:true,closed_at:now,closed_by:state.user.userId,closed_snapshot:m.closedSnapshot,team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error;await persistCalculatedScores(m)}
+      refreshSelectors();render();toast(`${m.monthName} ${m.year} fechado e congelado com sucesso.`);
+    }catch(err){console.error(err);toast('Não foi possível fechar o mês. Confira se a migração V2.4.0 foi executada.')}
+  }
+  async function reopenMonth(id){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m||!m.isClosed)return;
+    if(!window.confirm(`Reabrir ${m.monthName} ${m.year}? O mês voltará a aceitar importações e alterações. Ao concluir a correção, feche-o novamente.`))return;
+    try{
+      m.isClosed=false;m.closedAt=null;m.closedBy=null;m.closedSnapshot={};recalculateMonth(m);saveDemoSquads();
+      if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').update({is_closed:false,closed_at:null,closed_by:null,closed_snapshot:{},team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error;await persistCalculatedScores(m)}
+      refreshSelectors();render();toast(`${m.monthName} ${m.year} reaberto. Faça os ajustes e feche o mês novamente.`);
+    }catch(err){console.error(err);toast('Não foi possível reabrir o mês.')}
   }
 
   async function persistCalculatedScores(m){
@@ -525,16 +579,16 @@
   }
 
   async function deleteImportedMonth(id){
-    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m)return;
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m)return;if(m.isClosed){toast('Mês fechado não pode ser excluído. Reabra-o primeiro.');return}
     if(!window.confirm(`Excluir ${m.monthName} ${m.year} do Squad ${state.squadCode}? Isso remove os dados importados e as métricas manuais deste mês.`))return;
     try{if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').delete().eq('id',m.dbId);if(error)throw error;}delete currentSquad().months[id];const ids=Object.keys(currentMonths()).sort().reverse();state.currentId=ids[0]||null;chooseDefaultTech();saveDemoSquads();refreshSelectors();render();toast('Mês importado excluído.')}catch(err){console.error(err);toast('Não foi possível excluir este mês.')}
   }
 
   function businessDaysMonFri(y,m){let c=0,days=new Date(y,m,0).getDate();for(let d=1;d<=days;d++){const dow=new Date(y,m-1,d).getDay();if(dow>=1&&dow<=5)c++}return c}
   function autoTeamAttGoal(m){return businessDaysMonFri(m.year,m.month)*10*Math.max(1,m.technicians.length)}
-  function teamSettings(m){const saved=m?.settings||{};return{teamGoalAtt:safe(saved.teamGoalAtt)||autoTeamAttGoal(m),teamGoalEvalPct:Number.isFinite(Number(saved.teamGoalEvalPct))?Number(saved.teamGoalEvalPct):.343}}
-  async function saveTeamGoals(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;try{const att=Math.max(0,safe($('#teamGoalAttInput').value)),pct=Math.max(0,safe($('#teamGoalPctInput').value))/100;m.settings={...(m.settings||{}),teamGoalAtt:att||autoTeamAttGoal(m),teamGoalEvalPct:pct};recalculateMonth(m);saveDemoSquads();if(state.supabase){const {error}=await state.supabase.from('squad_months').update({team_goal_att:m.settings.teamGoalAtt,team_goal_eval_pct:m.settings.teamGoalEvalPct,team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error}renderTeam();renderAdmin();toast('Metas salvas para '+m.monthName+'.')}catch(err){console.error(err);toast('Não foi possível salvar as metas.')}}
-  function useAutomaticTeamGoal(){const m=currentMonth();if(!m)return;$('#teamGoalAttInput').value=autoTeamAttGoal(m);if(!$('#teamGoalPctInput').value)$('#teamGoalPctInput').value='34.3';toast('Meta automática calculada. Clique em Salvar metas.')}
+  function teamSettings(m){if(m?.isClosed&&m.closedSnapshot?.teamGoals)return{teamGoalAtt:safe(m.closedSnapshot.teamGoals.teamGoalAtt),teamGoalEvalPct:safe(m.closedSnapshot.teamGoals.teamGoalEvalPct)};const saved=m?.settings||{};return{teamGoalAtt:safe(saved.teamGoalAtt)||autoTeamAttGoal(m),teamGoalEvalPct:Number.isFinite(Number(saved.teamGoalEvalPct))?Number(saved.teamGoalEvalPct):.343}}
+  async function saveTeamGoals(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de alterar as metas.');return}try{const att=Math.max(0,safe($('#teamGoalAttInput').value)),pct=Math.max(0,safe($('#teamGoalPctInput').value))/100;m.settings={...(m.settings||{}),teamGoalAtt:att||autoTeamAttGoal(m),teamGoalEvalPct:pct};recalculateMonth(m);saveDemoSquads();if(state.supabase){const {error}=await state.supabase.from('squad_months').update({team_goal_att:m.settings.teamGoalAtt,team_goal_eval_pct:m.settings.teamGoalEvalPct,team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error}renderTeam();renderAdmin();toast('Metas salvas para '+m.monthName+'.')}catch(err){console.error(err);toast('Não foi possível salvar as metas.')}}
+  function useAutomaticTeamGoal(){const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de alterar as metas.');return}$('#teamGoalAttInput').value=autoTeamAttGoal(m);if(!$('#teamGoalPctInput').value)$('#teamGoalPctInput').value='34.3';toast('Meta automática calculada. Clique em Salvar metas.')}
   function deriveTotals(list){const att=(list||[]).reduce((s,t)=>s+safe(t.att),0),evals=(list||[]).reduce((s,t)=>s+safe(t.totalEval),0),points=(list||[]).reduce((s,t)=>s+safe(t.points),0);return{att,eval:evals,evalPct:att?evals/att:0,points}}
   function goalLine(noun,current,goal){if(!goal)return'Meta não encontrada.';if(current>=goal)return`Meta atingida: ${fmtInt(current-goal)} ${noun} acima do objetivo.`;return`Faltam ${fmtInt(goal-current)} ${noun} para atingir a meta.`}
   function buildHeroMessage(t,a,n){if(!safe(t.goalAtt)||!safe(t.goalEval))return'Resultados do mês importados. O administrador ainda precisa preencher as metas mensais deste técnico.';if(a>=1&&n>=1)return'Excelente ritmo: as duas metas mensais já foram atingidas.';if(a>=1)return'Meta de atendimentos atingida. Agora o foco é completar as notas 5.';if(n>=1)return'Meta de notas 5 atingida. Agora o foco é completar os atendimentos.';return`Você está em ${fmtPct(a)} da meta de atendimentos e ${fmtPct(n)} da meta de notas 5.`}
@@ -584,10 +638,11 @@
       const pending=state.pendingCsv,[year,month]=id.split('-').map(Number);let importedSquads=0,importedTechs=0;
       if(pending.scopeAll){
         const candidates=pending.codes.filter(code=>pending.rows.some(r=>r.group===code&&r.id===id));if(!candidates.length)throw new Error('Nenhum Squad possui registros vinculados para este mês.');
+        const closedCodes=candidates.filter(code=>state.squads[code]?.months?.[id]?.isClosed);if(closedCodes.length)throw new Error(`${MONTHS_PT[month-1]} ${year} está fechado no(s) Squad(s) ${closedCodes.join(', ')}. Reabra o mês antes de importar.`);
         for(const code of candidates){const s=state.squads[code],previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,code);s.months[id]=data;importedSquads++;importedTechs+=data.technicians.length;if(state.supabase){$('#importMessage').textContent=`Gravando Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,candidates.length)*40))+'%';await persistImportedMonth(data,s)}}
         saveDemoSquads();refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${importedSquads} Squads e ${importedTechs} técnicos atualizados.`);
       }else{
-        const s=currentSquad(),previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,state.squadCode);s.months[id]=data;state.currentId=id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();
+        const s=currentSquad(),previous=s.months[id];if(previous?.isClosed)throw new Error(`${MONTHS_PT[month-1]} ${year} está fechado no Squad ${state.squadCode}. Reabra o mês antes de importar.`);const data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,state.squadCode);s.months[id]=data;state.currentId=id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();
         if(state.supabase){$('#importMessage').textContent='Gravando no banco de dados...';$('#importProgress').style.width='70%';await persistImportedMonth(data,s)}
         refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${data.monthName} ${data.year} importado: ${data.technicians.length} técnicos.`);
       }
@@ -613,7 +668,7 @@
     for(const r of selected){latest=Math.max(latest,r.day);let t=byTech.get(r.name);if(!t){t={name:r.name,att:0,notes5:0,notes4:0,notes3:0,notes2:0,notes1:0,dailyMap:new Map()};byTech.set(r.name,t)}t.att+=r.att;t.notes5+=r.notes5;t.notes4+=r.notes4;t.notes3+=r.notes3;t.notes2+=r.notes2;t.notes1+=r.notes1;let d=t.dailyMap.get(r.day)||{day:r.day,att:0,notes5:0,off:false};d.att+=r.att;d.notes5+=r.notes5;t.dailyMap.set(r.day,d)}
     const prevBy=new Map((previous?.technicians||[]).map(t=>[normalizeName(t.name),t]));const daysInMonth=new Date(year,month,0).getDate();
     const technicians=[...byTech.values()].map(raw=>{const prev=prevBy.get(raw.name)||{};const daily=[];for(let d=1;d<=daysInMonth;d++)daily.push(raw.dailyMap.get(d)||{day:d,att:0,notes5:0,off:new Date(year,month-1,d).getDay()===0});return{name:raw.name,att:raw.att,notes5:raw.notes5,notes4:raw.notes4,notes3:raw.notes3,notes2:raw.notes2,notes1:raw.notes1,totalEval:0,avg:0,evalPct:0,status:prev.status||'',goalsHit:safe(prev.goalsHit),points:safe(prev.points),rank:prev.rank||null,discount:safe(prev.discount),pointBonus:safe(prev.pointBonus),goalAtt:safe(prev.goalAtt),goalEval:safe(prev.goalEval),daily}}).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    const data={id,month,monthName:MONTHS_PT[month-1],year,sourceFile:fileName,latestDay:latest,importedAt:new Date().toISOString(),teamResult:previous?.teamResult||'',redistributed:safe(previous?.redistributed),settings:previous?.settings?{...previous.settings}:undefined,scoreSettings:previous?.scoreSettings?{...previous.scoreSettings}:{},technicians};recalculateMonth(data);return data;
+    const data={id,month,monthName:MONTHS_PT[month-1],year,sourceFile:fileName,latestDay:latest,importedAt:new Date().toISOString(),teamResult:previous?.teamResult||'',redistributed:safe(previous?.redistributed),settings:previous?.settings?{...previous.settings}:undefined,scoreSettings:previous?.scoreSettings?{...previous.scoreSettings}:{},isClosed:!!previous?.isClosed,closedAt:previous?.closedAt||null,closedBy:previous?.closedBy||null,closedSnapshot:previous?.closedSnapshot?clone(previous.closedSnapshot):{},technicians};recalculateMonth(data);return data;
   }
 
   function parseCsvRows(text){
@@ -657,7 +712,7 @@
   }
   async function loadSupabaseData(){
     const {data:squads,error}=await state.supabase.from('squads').select('id,code,name').eq('active',true).order('code');if(error)throw error;state.squads={};
-    for(const s of squads){state.squads[s.code]={code:s.code,name:s.name,dbId:s.id,months:{}};const {data:themes}=await state.supabase.from('squad_themes').select('theme').eq('squad_id',s.id).maybeSingle();if(themes?.theme)state.squads[s.code].theme=themes.theme;const {data:months,error:me}=await state.supabase.from('squad_months').select('id,year,month,source_file,latest_day,imported_at,team_result,redistributed,team_goal_att,team_goal_eval_pct,score_settings,technician_monthly(id,user_id,technician_name,att,notes5,notes4,notes3,notes2,notes1,total_eval,avg_rating,eval_pct,status,goals_hit,points,rank,discount,point_bonus,goal_att,goal_eval,daily_metrics(day,att,notes5,off))').eq('squad_id',s.id).order('year',{ascending:false}).order('month',{ascending:false});if(me)throw me;for(const row of months||[]){const id=`${row.year}-${String(row.month).padStart(2,'0')}`,technicians=(row.technician_monthly||[]).map(t=>({dbId:t.id,userId:t.user_id,name:t.technician_name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.total_eval),avg:safe(t.avg_rating),evalPct:safe(t.eval_pct),status:t.status||'',goalsHit:safe(t.goals_hit),points:safe(t.points),rank:safe(t.rank)||null,discount:safe(t.discount),pointBonus:safe(t.point_bonus),goalAtt:safe(t.goal_att),goalEval:safe(t.goal_eval),daily:(t.daily_metrics||[]).map(d=>({day:d.day,att:safe(d.att),notes5:safe(d.notes5),off:!!d.off})).sort((a,b)=>a.day-b.day)}));const totals=deriveTotals(technicians);const monthData={dbId:row.id,id,year:row.year,month:row.month,monthName:MONTHS_PT[row.month-1],sourceFile:row.source_file||'Supabase',latestDay:row.latest_day||1,importedAt:row.imported_at,teamResult:row.team_result||'',redistributed:safe(row.redistributed),teamTotals:totals,settings:{teamGoalAtt:safe(row.team_goal_att),teamGoalEvalPct:Number(row.team_goal_eval_pct??.343)},scoreSettings:row.score_settings||{},technicians};recalculateMonth(monthData);state.squads[s.code].months[id]=monthData}}
+    for(const s of squads){state.squads[s.code]={code:s.code,name:s.name,dbId:s.id,months:{}};const {data:themes}=await state.supabase.from('squad_themes').select('theme').eq('squad_id',s.id).maybeSingle();if(themes?.theme)state.squads[s.code].theme=themes.theme;const {data:months,error:me}=await state.supabase.from('squad_months').select('id,year,month,source_file,latest_day,imported_at,team_result,redistributed,team_goal_att,team_goal_eval_pct,score_settings,is_closed,closed_at,closed_by,closed_snapshot,technician_monthly(id,user_id,technician_name,att,notes5,notes4,notes3,notes2,notes1,total_eval,avg_rating,eval_pct,status,goals_hit,points,rank,discount,point_bonus,goal_att,goal_eval,daily_metrics(day,att,notes5,off))').eq('squad_id',s.id).order('year',{ascending:false}).order('month',{ascending:false});if(me)throw me;for(const row of months||[]){const id=`${row.year}-${String(row.month).padStart(2,'0')}`,technicians=(row.technician_monthly||[]).map(t=>({dbId:t.id,userId:t.user_id,name:t.technician_name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.total_eval),avg:safe(t.avg_rating),evalPct:safe(t.eval_pct),status:t.status||'',goalsHit:safe(t.goals_hit),points:safe(t.points),rank:safe(t.rank)||null,discount:safe(t.discount),pointBonus:safe(t.point_bonus),goalAtt:safe(t.goal_att),goalEval:safe(t.goal_eval),daily:(t.daily_metrics||[]).map(d=>({day:d.day,att:safe(d.att),notes5:safe(d.notes5),off:!!d.off})).sort((a,b)=>a.day-b.day)}));const totals=deriveTotals(technicians);const monthData={dbId:row.id,id,year:row.year,month:row.month,monthName:MONTHS_PT[row.month-1],sourceFile:row.source_file||'Supabase',latestDay:row.latest_day||1,importedAt:row.imported_at,teamResult:row.team_result||'',redistributed:safe(row.redistributed),teamTotals:totals,settings:{teamGoalAtt:safe(row.team_goal_att),teamGoalEvalPct:Number(row.team_goal_eval_pct??.343)},scoreSettings:row.score_settings||{},isClosed:!!row.is_closed,closedAt:row.closed_at||null,closedBy:row.closed_by||null,closedSnapshot:row.closed_snapshot||{},technicians};recalculateMonth(monthData);state.squads[s.code].months[id]=monthData}}
   }
   async function persistImportedMonth(m,squad){
     const payload={squad_id:squad.dbId,year:m.year,month:m.month,source_file:m.sourceFile,latest_day:m.latestDay,team_result:m.teamResult,redistributed:m.redistributed,team_goal_att:m.settings?.teamGoalAtt||autoTeamAttGoal(m),team_goal_eval_pct:m.settings?.teamGoalEvalPct??.343,score_settings:m.scoreSettings||{},imported_by:state.user.userId,imported_at:new Date().toISOString()};

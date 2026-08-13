@@ -1,4 +1,4 @@
--- SOFTEN PERFORMANCE HUB V2.3.0
+-- SOFTEN PERFORMANCE HUB V2.4.0
 -- Estrutura multi-squad preparada para Supabase/PostgreSQL.
 -- Execute este arquivo no SQL Editor de um projeto Supabase novo.
 
@@ -51,10 +51,21 @@ create table if not exists public.squad_months (
   team_goal_att numeric(12,2),
   team_goal_eval_pct numeric(8,6) not null default 0.343,
   score_settings jsonb not null default '{}'::jsonb,
+  is_closed boolean not null default false,
+  closed_at timestamptz,
+  closed_by uuid references auth.users(id) on delete set null,
+  closed_snapshot jsonb not null default '{}'::jsonb,
   imported_by uuid references auth.users(id) on delete set null,
   imported_at timestamptz not null default now(),
   unique (squad_id, year, month)
 );
+
+-- Compatibilidade ao executar esta versao sobre uma base anterior.
+alter table public.squad_months add column if not exists score_settings jsonb not null default '{}'::jsonb;
+alter table public.squad_months add column if not exists is_closed boolean not null default false;
+alter table public.squad_months add column if not exists closed_at timestamptz;
+alter table public.squad_months add column if not exists closed_by uuid references auth.users(id) on delete set null;
+alter table public.squad_months add column if not exists closed_snapshot jsonb not null default '{}'::jsonb;
 
 create table if not exists public.technician_monthly (
   id uuid primary key default gen_random_uuid(),
