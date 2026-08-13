@@ -35,7 +35,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.4.0 • multi-squad + usuários + recuperação de senha</small>
+      <small class="login-version">V2.5.0 • indicadores executivos + campanha Casa do Dragão</small>
     </div>
   </section>
 
@@ -52,17 +52,21 @@
       <nav>
         <button class="nav-btn active" data-view="individual"><span>◈</span> Meu desempenho</button>
         <button class="nav-btn" data-view="team"><span>♛</span> Visão do Squad</button>
+        <button class="nav-btn super-only" data-view="indicators"><span>◔</span> Indicadores</button>
         <button class="nav-btn admin-only" data-view="users"><span>♟</span> Usuários</button>
         <button class="nav-btn admin-only" data-view="admin"><span>⚙</span> Administração</button>
         <button class="nav-btn" data-view="help"><span>?</span> Como usar</button>
       </nav>
-      <div class="side-card">
-        <span class="eyebrow">Campanha atual</span>
-        <strong id="campaignTitle">Dragão Vermithor</strong>
-        <small id="campaignTagline">Transforme números em conquista.</small>
+      <div class="side-card campaign-card">
+        <span class="eyebrow">Campanha do setor</span>
+        <strong id="campaignTitle">Casa do Dragão</strong>
+        <small id="campaignTagline">Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.</small>
+        <div class="campaign-gif-frame">
+          <img id="campaignVisual" src="assets/dragon-smoke.gif" alt="Dragão soltando fumaça">
+        </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.4.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.5.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -150,6 +154,71 @@
             </div>
             <article class="card leaderboard-card"><div class="section-title"><div><span class="eyebrow">CLASSIFICAÇÃO</span><h3>Ranking completo</h3></div><span class="muted">Atualizado pela última importação</span></div><div id="teamLeaderboard" class="leaderboard"></div></article>
           </div>
+        </div>
+      </section>
+
+
+      <section id="view-indicators" class="view super-only">
+        <div class="help-hero card glass indicator-hero">
+          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com visão mensal, semanal e produtividade por tempo trabalhado.</p></div>
+          <div class="help-role"><small>ESCOPO</small><strong id="indicatorScopeTitle">Todos os Squads</strong><span id="indicatorScopeText">Selecione um Squad no topo para aprofundar a análise.</span></div>
+        </div>
+
+        <article class="card indicator-toolbar">
+          <div class="section-title"><div><span class="eyebrow">FILTROS</span><h3>Período analisado</h3></div><span class="muted" id="indicatorPeriodLabel">Carregando período...</span></div>
+          <div class="indicator-filters">
+            <label class="control select-wrap"><span>De</span><select id="indicatorStartMonth"></select></label>
+            <label class="control select-wrap"><span>Até</span><select id="indicatorEndMonth"></select></label>
+          </div>
+        </article>
+
+        <div class="indicator-kpis">
+          <article class="card indicator-kpi">
+            <span>Atendimentos por hora</span>
+            <strong id="indicatorAttPerHour">0</strong>
+            <small id="indicatorAttPerMinute">0 por minuto</small>
+            <p id="indicatorWorkedHours">0 horas consideradas no período</p>
+          </article>
+          <article class="card indicator-kpi">
+            <span>Técnicos acima da referência</span>
+            <strong id="indicatorAboveRatio">0%</strong>
+            <small id="indicatorAboveCount">0 acima • 0 abaixo</small>
+            <p id="indicatorTechVolume">0 registros técnico-mês</p>
+          </article>
+          <article class="card indicator-kpi">
+            <span>Aproveitamento da campanha</span>
+            <strong id="indicatorCampaignHit">0%</strong>
+            <small id="indicatorCampaignDetail">0 squads/mês acima do objetivo</small>
+            <p id="indicatorCampaignSupport">Meta de equipe batida no período selecionado</p>
+          </article>
+          <article class="card indicator-kpi">
+            <span>Eficiência de excelência</span>
+            <strong id="indicatorExcellence">0%</strong>
+            <small id="indicatorAvgPoints">0 pts médios por técnico</small>
+            <p id="indicatorExcellenceSupport">Relação entre notas 5 e atendimentos</p>
+          </article>
+        </div>
+
+        <div class="indicator-grid">
+          <article class="card chart-card indicator-card">
+            <div class="section-title"><div><span class="eyebrow">ACIMA X ABAIXO</span><h3>Técnicos por mês</h3></div><div class="legend"><span><i class="dot note"></i>Acima</span><span><i class="dot att"></i>Abaixo</span></div></div>
+            <div id="indicatorStatusChart" class="chart chart-lg"></div>
+          </article>
+          <article class="card chart-card indicator-card">
+            <div class="section-title"><div><span class="eyebrow">% DE AVALIAÇÃO</span><h3>Comparativo mensal por grupo</h3></div><span class="muted" id="indicatorMonthlyLegend">Comparativo por Squad no período.</span></div>
+            <div id="indicatorMonthlyChart" class="chart chart-lg"></div>
+          </article>
+        </div>
+
+        <div class="indicator-grid bottom-grid">
+          <article class="card chart-card indicator-card">
+            <div class="section-title"><div><span class="eyebrow">VISÃO SEMANAL</span><h3>Proxy semanal de avaliação por grupo</h3></div><span class="muted" id="indicatorWeeklyNote">Proxy semanal usando notas 5 / atendimentos.</span></div>
+            <div id="indicatorWeeklyChart" class="chart chart-lg"></div>
+          </article>
+          <article class="card daily-card indicator-card">
+            <div class="section-title"><div><span class="eyebrow">INSIGHTS</span><h3>Destaques do período</h3></div><span class="muted">Leitura rápida para decisão</span></div>
+            <div id="indicatorInsights" class="insight-list"></div>
+          </article>
         </div>
       </section>
 

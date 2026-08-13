@@ -156,3 +156,15 @@ supabase/functions/create-user/   Criação segura de usuários
 - Admin geral pode administrar A, B, D e E;
 - importação e alterações mensais são ações exclusivas de Admin;
 - mês fechado precisa ser reaberto antes de qualquer correção pelo painel.
+
+
+## V2.5.0
+- Nova tela **Indicadores** exclusiva para **Admin geral**.
+- Filtros por período (de/até) para análises executivas.
+- Gráfico mensal de técnicos **ACIMA x ABAIXO**.
+- Gráfico de **% de avaliação mensal por grupo**.
+- Gráfico semanal com **proxy operacional de avaliação** por grupo (notas 5 / atendimentos).
+- Cards de **atendimentos por hora e por minuto trabalhado** considerando **8 horas por dia**.
+- Cards extras com aproveitamento da campanha, eficiência de excelência e média de pontos.
+- Ajuste visual da sidebar: card da campanha alterado para **Casa do Dragão** com GIF de dragão soltando fumaça.
+- Não exige nova migração de banco; atualização somente de frontend.

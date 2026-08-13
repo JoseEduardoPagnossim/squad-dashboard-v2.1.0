@@ -11,7 +11,7 @@
   const safe = n => Number.isFinite(Number(n)) ? Number(n) : 0;
   const clone = obj => JSON.parse(JSON.stringify(obj));
 
-  const DEFAULT_THEME = {name:'Vermithor',campaignTitle:'Dragão Vermithor',campaignTagline:'Transforme números em conquista.',preset:'vermithor',accent:'#f0a33a',secondary:'#ef5a29',bg:'#080b12',bg2:'#10141e',panel:'rgba(17,22,31,.88)',text:'#f5f6f8',background:'assets/vermithor.png',opacity:.28};
+  const DEFAULT_THEME = {name:'Casa do Dragão',campaignTitle:'Casa do Dragão',campaignTagline:'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.',preset:'vermithor',accent:'#f0a33a',secondary:'#ef5a29',bg:'#080b12',bg2:'#10141e',panel:'rgba(17,22,31,.88)',text:'#f5f6f8',background:'assets/vermithor.png',opacity:.28};
   const DEMO_USERS = [
     {email:'admin.geral@soften.local',password:'Admin123!',fullName:'Administrador Geral',role:'super_admin',squadCode:null,techName:null},
     {email:'admin.squadd@soften.local',password:'SquadD123!',fullName:'Administrador Squad D',role:'squad_admin',squadCode:'D',techName:null},
@@ -44,7 +44,9 @@
     userDirectory:[],
     userDirectoryLoaded:false,
     recoveryMode:false,
-    pendingCsv:null
+    pendingCsv:null,
+    indicatorStartId:null,
+    indicatorEndId:null
   };
 
   function loadDemoSquads(){
@@ -130,6 +132,8 @@
     $('#themeJsonInput').addEventListener('change',handleThemeJson);
     $('#exportThemeBtn').addEventListener('click',exportTheme);
     $('#removeBg').addEventListener('click',()=>{if(!isAdmin())return;state.theme.background=null;state.theme.preset='custom';document.documentElement.style.setProperty('--hero-img','none');saveTheme();toast('Fundo removido.');});
+    if($('#indicatorStartMonth'))$('#indicatorStartMonth').addEventListener('change',e=>{state.indicatorStartId=e.target.value;renderIndicators();});
+    if($('#indicatorEndMonth'))$('#indicatorEndMonth').addEventListener('change',e=>{state.indicatorEndId=e.target.value;renderIndicators();});
   }
 
   async function handleLogin(e){
@@ -227,14 +231,15 @@
 
   function showView(name){
     if((name==='admin'||name==='users')&&!isAdmin())return;
+    if(name==='indicators'&&!isSuperAdmin())return;
     if(name==='individual'&&state.squadCode==='all')name='team';
     state.currentView=name;
     $$('.view').forEach(v=>v.classList.remove('active')); $('#view-'+name).classList.add('active');
     $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
-    const titles={individual:'Meu desempenho',team:'Visão do Squad',users:'Usuários',admin:'Administração',help:'Como usar'};
+    const titles={individual:'Meu desempenho',team:'Visão do Squad',indicators:'Indicadores',users:'Usuários',admin:'Administração',help:'Como usar'};
     $('#pageTitle').textContent=titles[name]||'Performance Hub';
     $('.technician-control').classList.toggle('hidden',name!=='individual'||isTechnician()||state.squadCode==='all');
-    $('.month-control').classList.toggle('hidden',name==='users'||name==='help');
+    $('.month-control').classList.toggle('hidden',name==='users'||name==='help'||name==='indicators');
     $('.sidebar').classList.remove('open');
     render();
   }
@@ -252,6 +257,7 @@
     applyPermissions();
     if(state.currentView==='users')renderUsers().catch(err=>{console.error(err);toast('Não foi possível carregar os usuários.')});
     if(state.currentView==='help')renderHelp();
+    if(state.currentView==='indicators')renderIndicators();
     if(state.squadCode==='all'){renderTeam();renderAdmin();return}
     const m=currentMonth();
     $('#individualEmpty').classList.toggle('hidden',!!m);$('#individualContent').classList.toggle('hidden',!m);
@@ -309,6 +315,187 @@
     $('#squadPortfolio').innerHTML=Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code)).map(s=>{const ids=Object.keys(s.months||{}).sort().reverse(),m=ids.length?s.months[ids[0]]:null;if(!m)return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status-line">SEM DADOS</span></div><h3>${escapeHtml(s.name)}</h3><div class="squad-empty">Aguardando a primeira importação.</div></article>`;const totals=m.teamTotals||deriveTotals(m.technicians);return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status ${String(m.teamResult).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(m.teamResult||'—')}</span></div><h3>${escapeHtml(s.name)}</h3><div class="status-line">${m.monthName} ${m.year} • ${m.technicians.length} técnicos</div><div class="squad-summary"><div><span>Atend.</span><strong>${fmtInt(totals.att)}</strong></div><div><span>Aval.</span><strong>${fmtInt(totals.eval)}</strong></div><div><span>% Aval.</span><strong>${fmtPct(totals.evalPct)}</strong></div></div></article>`}).join('');
     $$('[data-squad-card]').forEach(el=>el.addEventListener('click',()=>selectSquad(el.dataset.squadCard)));
   }
+
+
+function indicatorScopeSquads(){
+  if(state.squadCode==='all') return Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code));
+  return [currentSquad()].filter(Boolean);
+}
+function monthLabelFromId(id){
+  if(!id)return '—';
+  const [y,m]=String(id).split('-').map(Number);
+  return `${MONTHS_PT[(m||1)-1]} ${y}`;
+}
+function indicatorMonthIds(squads=indicatorScopeSquads()){
+  const set=new Set();
+  squads.forEach(s=>Object.keys(s?.months||{}).forEach(id=>set.add(id)));
+  return [...set].sort();
+}
+function indicatorRangeIds(monthIds){
+  if(!monthIds.length){state.indicatorStartId=null;state.indicatorEndId=null;return [];}
+  if(!state.indicatorEndId||!monthIds.includes(state.indicatorEndId)) state.indicatorEndId=monthIds[monthIds.length-1];
+  if(!state.indicatorStartId||!monthIds.includes(state.indicatorStartId)) state.indicatorStartId=monthIds[Math.max(0,monthIds.length-3)]||monthIds[0];
+  let startIndex=monthIds.indexOf(state.indicatorStartId), endIndex=monthIds.indexOf(state.indicatorEndId);
+  if(startIndex===-1) startIndex=0;
+  if(endIndex===-1) endIndex=monthIds.length-1;
+  if(startIndex>endIndex){startIndex=endIndex;state.indicatorStartId=monthIds[startIndex];}
+  return monthIds.slice(startIndex,endIndex+1);
+}
+function fillIndicatorSelect(el,monthIds,selected){
+  if(!el)return;
+  el.innerHTML=monthIds.map(id=>`<option value="${id}" ${id===selected?'selected':''}>${escapeHtml(monthLabelFromId(id))}</option>`).join('');
+  el.disabled=!monthIds.length;
+}
+function renderIndicators(){
+  if(!isSuperAdmin()||!$('#view-indicators'))return;
+  const squads=indicatorScopeSquads(), monthIds=indicatorMonthIds(squads), rangeIds=indicatorRangeIds(monthIds);
+  fillIndicatorSelect($('#indicatorStartMonth'),monthIds,state.indicatorStartId);
+  fillIndicatorSelect($('#indicatorEndMonth'),monthIds,state.indicatorEndId);
+  $('#indicatorScopeTitle').textContent=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;
+  $('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;
+  $('#indicatorPeriodLabel').textContent=rangeIds.length?`${monthLabelFromId(rangeIds[0])} até ${monthLabelFromId(rangeIds[rangeIds.length-1])}`:'Sem dados importados';
+  if(!rangeIds.length){
+    ['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Importe dados para liberar os indicadores.</div>';});
+    if($('#indicatorInsights'))$('#indicatorInsights').innerHTML='<div class="insight-item"><strong>Sem dados</strong><small>Importe pelo menos um mês para exibir a análise executiva.</small></div>';
+    ['indicatorAttPerHour','indicatorAboveRatio','indicatorCampaignHit','indicatorExcellence'].forEach(id=>{if($('#'+id))$('#'+id).textContent='0';});
+    if($('#indicatorAttPerMinute'))$('#indicatorAttPerMinute').textContent='0 por minuto';
+    if($('#indicatorWorkedHours'))$('#indicatorWorkedHours').textContent='0 horas consideradas no período';
+    if($('#indicatorAboveCount'))$('#indicatorAboveCount').textContent='0 acima • 0 abaixo';
+    if($('#indicatorTechVolume'))$('#indicatorTechVolume').textContent='0 registros técnico-mês';
+    if($('#indicatorCampaignDetail'))$('#indicatorCampaignDetail').textContent='0 squads/mês acima do objetivo';
+    if($('#indicatorCampaignSupport'))$('#indicatorCampaignSupport').textContent='Meta de equipe batida no período selecionado';
+    if($('#indicatorAvgPoints'))$('#indicatorAvgPoints').textContent='0 pts médios por técnico';
+    if($('#indicatorExcellenceSupport'))$('#indicatorExcellenceSupport').textContent='Relação entre notas 5 e atendimentos';
+    return;
+  }
+
+  const statusItems=[], monthlySeries=[], distinctTechs=new Set(), techTotals=new Map();
+  let totalAtt=0,totalNotes5=0,totalPoints=0,totalEval=0,totalWorkedDays=0,totalTechRecords=0,totalAbove=0,totalBelow=0,squadMonthHits=0,squadMonthTotal=0;
+  const palette=['var(--accent)','var(--success)','#78b7ff','#ef5a29','#b18cff'];
+
+  squads.forEach((squad,sIndex)=>{
+    const series={name:`Squad ${squad.code}`,values:[]};
+    rangeIds.forEach(id=>{
+      const m=squad.months?.[id]||null;
+      if(!m){series.values.push(null);return;}
+      const totals=m.teamTotals||deriveTotals(m.technicians);
+      series.values.push(safe(totals.evalPct)*100);
+      squadMonthTotal++;
+      if(String(m.teamResult).toUpperCase()==='ACIMA') squadMonthHits++;
+      totalAtt+=safe(totals.att);
+      totalEval+=safe(totals.eval);
+      totalPoints+=safe(totals.points);
+      const monthAbove=(m.technicians||[]).filter(t=>String(t.status).toUpperCase()==='ACIMA').length;
+      const monthBelow=(m.technicians||[]).filter(t=>String(t.status).toUpperCase()==='ABAIXO').length;
+      totalAbove+=monthAbove; totalBelow+=monthBelow; totalTechRecords+=(m.technicians||[]).length;
+      totalNotes5+=(m.technicians||[]).reduce((sum,t)=>sum+safe(t.notes5),0);
+      (m.technicians||[]).forEach(t=>{
+        distinctTechs.add(`${squad.code}|${normalizeName(t.name)}`);
+        const key=`${squad.code}|${normalizeName(t.name)}`;
+        const prev=techTotals.get(key)||{name:t.name,squad:squad.code,points:0,months:0,evalPct:0};
+        prev.points+=safe(t.points); prev.months+=1; prev.evalPct+=safe(t.evalPct);
+        techTotals.set(key,prev);
+        totalWorkedDays += (t.daily||[]).filter(d=>d.day<=m.latestDay&&!d.off).length;
+      });
+    });
+    if(series.values.some(v=>v!=null)) monthlySeries.push({...series,color:palette[sIndex%palette.length]});
+  });
+
+  rangeIds.forEach(id=>{
+    let above=0,below=0;
+    squads.forEach(s=>{
+      const m=s.months?.[id]; if(!m)return;
+      (m.technicians||[]).forEach(t=>{if(String(t.status).toUpperCase()==='ACIMA')above++; else if(String(t.status).toUpperCase()==='ABAIXO')below++;});
+    });
+    statusItems.push({label:monthLabelFromId(id),above,below});
+  });
+
+  const totalHours=totalWorkedDays*8, totalMinutes=totalHours*60;
+  const attPerHour=totalHours?totalAtt/totalHours:0, attPerMinute=totalMinutes?totalAtt/totalMinutes:0;
+  const aboveRatio=(totalAbove+totalBelow)?totalAbove/(totalAbove+totalBelow):0;
+  const campaignHit=squadMonthTotal?squadMonthHits/squadMonthTotal:0;
+  const excellence=totalAtt?totalNotes5/totalAtt:0;
+  const avgPointsPerTech=totalTechRecords?totalPoints/totalTechRecords:0;
+  $('#indicatorAttPerHour').textContent=fmtNum(attPerHour);
+  $('#indicatorAttPerMinute').textContent=`${fmtNum(attPerMinute)} por minuto`;
+  $('#indicatorWorkedHours').textContent=`${fmtInt(totalHours)} horas consideradas no período`;
+  $('#indicatorAboveRatio').textContent=fmtPct(aboveRatio);
+  $('#indicatorAboveCount').textContent=`${fmtInt(totalAbove)} acima • ${fmtInt(totalBelow)} abaixo`;
+  $('#indicatorTechVolume').textContent=`${fmtInt(totalTechRecords)} registros técnico-mês`;
+  $('#indicatorCampaignHit').textContent=fmtPct(campaignHit);
+  $('#indicatorCampaignDetail').textContent=`${fmtInt(squadMonthHits)} squads/mês acima do objetivo`;
+  $('#indicatorCampaignSupport').textContent=`${fmtInt(squadMonthTotal)} leituras de equipe avaliadas`;
+  $('#indicatorExcellence').textContent=fmtPct(excellence);
+  $('#indicatorAvgPoints').textContent=`${fmtNum(avgPointsPerTech)} pts médios por técnico`;
+  $('#indicatorExcellenceSupport').textContent=`${fmtInt(distinctTechs.size)} técnicos únicos no período`;
+
+  renderIndicatorStatusChart(statusItems);
+  renderIndicatorLineChart($('#indicatorMonthlyChart'),rangeIds.map(monthLabelFromId),monthlySeries,{maxValue:100,percent:true});
+  $('#indicatorMonthlyLegend').textContent=monthlySeries.length>1?'Comparativo por Squad no período selecionado.':'Leitura mensal do grupo selecionado.';
+
+  const weeklyMonthId=rangeIds[rangeIds.length-1];
+  const weeklyLabels=['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5'];
+  const weeklySeries=[];
+  squads.forEach((squad,sIndex)=>{
+    const m=squad.months?.[weeklyMonthId]; if(!m)return;
+    const buckets=Array.from({length:5},()=>({att:0,notes5:0}));
+    (m.technicians||[]).forEach(t=>{
+      (t.daily||[]).forEach(d=>{
+        if(d.day>m.latestDay||d.off) return;
+        const idx=Math.min(4,Math.floor((safe(d.day)-1)/7));
+        buckets[idx].att+=safe(d.att); buckets[idx].notes5+=safe(d.notes5);
+      });
+    });
+    weeklySeries.push({name:`Squad ${squad.code}`,values:buckets.map(b=>b.att?(b.notes5/b.att)*100:0),color:palette[sIndex%palette.length]});
+  });
+  renderIndicatorLineChart($('#indicatorWeeklyChart'),weeklyLabels,weeklySeries,{maxValue:100,percent:true});
+  $('#indicatorWeeklyNote').textContent=`Referência semanal: ${monthLabelFromId(weeklyMonthId)} • proxy operacional usando notas 5 / atendimentos.`;
+
+  const techList=[...techTotals.values()];
+  const bestTech=techList.sort((a,b)=>(b.points/Math.max(1,b.months))-(a.points/Math.max(1,a.months)))[0];
+  let bestSquad={code:'—',score:-1};
+  squads.forEach(s=>{
+    const values=rangeIds.map(id=>s.months?.[id]).filter(Boolean).map(m=>safe((m.teamTotals||deriveTotals(m.technicians)).evalPct));
+    const avg=values.length?values.reduce((sum,v)=>sum+v,0)/values.length:0;
+    if(avg>bestSquad.score) bestSquad={code:s.code,score:avg};
+  });
+  const strongestMonth=[...statusItems].sort((a,b)=>(b.above-b.below)-(a.above-a.below))[0];
+  const weakestMonth=[...statusItems].sort((a,b)=>(a.above-a.below)-(b.above-b.below))[0];
+  $('#indicatorInsights').innerHTML=`
+    <div class="insight-item"><strong>Squad destaque</strong><small>${bestSquad.code==='—'?'Sem base suficiente.':`Squad ${bestSquad.code} lidera em % médio de avaliação com ${fmtPct(bestSquad.score)} no período.`}</small></div>
+    <div class="insight-item"><strong>Técnico com melhor média de pontos</strong><small>${bestTech?`${escapeHtml(titleWords(bestTech.name))} • Squad ${escapeHtml(bestTech.squad)} • ${fmtNum(bestTech.points/Math.max(1,bestTech.months))} pts/mês.`:'Sem dados suficientes para ranquear técnicos.'}</small></div>
+    <div class="insight-item"><strong>Momento mais forte</strong><small>${strongestMonth?`${escapeHtml(strongestMonth.label)} registrou saldo positivo de ${fmtInt(strongestMonth.above-strongestMonth.below)} técnicos acima.`:'Sem dados suficientes.'}</small></div>
+    <div class="insight-item"><strong>Ponto de atenção</strong><small>${weakestMonth?`${escapeHtml(weakestMonth.label)} apresentou o menor saldo, com ${fmtInt(Math.abs(weakestMonth.above-weakestMonth.below))} de diferença entre acima e abaixo.`:'Sem dados suficientes.'}</small></div>`;
+}
+function renderIndicatorStatusChart(items){
+  const el=$('#indicatorStatusChart'); if(!el)return;
+  if(!items.length){el.innerHTML='<div class="chart-empty">Sem dados para o período selecionado.</div>';return;}
+  const w=720,h=260,p={l:42,r:20,t:18,b:40},maxVal=Math.max(1,...items.map(x=>safe(x.above)+safe(x.below))),barW=Math.max(24,Math.min(48,((w-p.l-p.r)/Math.max(1,items.length))-16));
+  const x=i=>p.l+((w-p.l-p.r)/Math.max(1,items.length))*(i+.5);
+  const y=v=>p.t+(h-p.t-p.b)-(safe(v)/maxVal)*(h-p.t-p.b);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=Math.round(maxVal*f);return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${v}</text>`}).join('');
+  const bars=items.map((it,i)=>{const total=safe(it.above)+safe(it.below),belowH=((h-p.t-p.b)*(safe(it.below)/maxVal)),aboveH=((h-p.t-p.b)*(safe(it.above)/maxVal)),bx=x(i)-barW/2,bottom=h-p.b;return `<rect x="${bx}" y="${bottom-belowH}" width="${barW}" height="${belowH}" rx="8" class="chart-bar-below" opacity=".78"></rect><rect x="${bx}" y="${bottom-belowH-aboveH}" width="${barW}" height="${aboveH}" rx="8" class="chart-bar-above"></rect><text x="${x(i)}" y="${bottom-belowH-aboveH-8}" text-anchor="middle" class="axis-label">${total}</text><text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(it.label.split(' ')[0].slice(0,3))}</text>`;}).join('');
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${bars}</svg>`;
+}
+function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false}={}){
+  if(!el)return;
+  const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
+  if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
+  const w=720,h=260,p={l:42,r:20,t:18,b:44};
+  const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
+  const top=maxValue??Math.max(1,...vals); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:fmtNum(v); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
+  const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(label.split(' ')[0].slice(0,3))}</text>`).join('');
+  const paths=validSeries.map((s,idx)=>{
+    const segs=[]; let cur=[];
+    (s.values||[]).forEach((v,i)=>{ if(v==null){ if(cur.length>1) segs.push(cur); cur=[]; return;} cur.push(`${x(i)},${y(v)}`); });
+    if(cur.length>1) segs.push(cur); const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.color||'var(--accent)'}" class="chart-point"></circle>`).join('');
+    return `${segments}${dots}`;
+  }).join('');
+  const legend=`<div class="chart-legend-inline">${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg>${legend}`;
+}
 
   function renderHelp(){
     if(!state.user)return;
@@ -680,8 +867,9 @@
   function parseCsvDate(v){const m=String(v||'').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);if(month<1||month>12||day<1||day>31)return null;return{year,month,day}}
   function normalizeName(s){return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
 
+  function normalizeThemePayload(theme){const t=clone(theme||DEFAULT_THEME);if(t.preset==='vermithor'||(!t.preset&&(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor'))){if(!t.name||t.name==='Vermithor')t.name='Casa do Dragão';if(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor')t.campaignTitle='Casa do Dragão';if(!t.campaignTagline||t.campaignTagline==='Transforme números em conquista.')t.campaignTagline='Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.';}return t}
   function applyPreset(name){if(!isAdmin())return;const presets={vermithor:clone(DEFAULT_THEME),soften:{name:'Soften',campaignTitle:'Soften Performance',campaignTagline:'Tecnologia que impulsiona resultados.',preset:'soften',accent:'#20b7f5',secondary:'#176bd3',bg:'#06111f',bg2:'#0a2035',panel:'rgba(8,24,40,.9)',text:'#f3f8fc',background:null,opacity:.18},neon:{name:'Neon',campaignTitle:'Squad Neon',campaignTagline:'Acelere. Evolua. Conquiste.',preset:'neon',accent:'#c05cff',secondary:'#21dbc9',bg:'#090514',bg2:'#151029',panel:'rgba(23,15,42,.9)',text:'#faf5ff',background:null,opacity:.18},clean:{name:'Claro',campaignTitle:'Performance',campaignTagline:'Clareza para acompanhar cada resultado.',preset:'clean',accent:'#3157d5',secondary:'#6a7be8',bg:'#e9eef5',bg2:'#f7f9fc',panel:'rgba(255,255,255,.91)',text:'#172033',background:null,opacity:.06}};state.theme=presets[name]||presets.vermithor;saveTheme();applyTheme(state.theme);toast(`Tema ${state.theme.name} aplicado.`)}
-  function applyTheme(t){t=t||DEFAULT_THEME;const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Dragão Vermithor':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Transforme números em conquista.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;$('#campaignTitle').textContent=t.campaignTitle||fallbackTitle;$('#campaignTagline').textContent=t.campaignTagline||fallbackTagline;updateThemeName()}
+  function applyTheme(t){t=normalizeThemePayload(t||DEFAULT_THEME);const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Casa do Dragão':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;$('#campaignTitle').textContent=t.campaignTitle||fallbackTitle;$('#campaignTagline').textContent=t.campaignTagline||fallbackTagline;updateThemeName()}
   function updateThemeName(){if($('#themeName'))$('#themeName').textContent=state.theme?.name||state.theme?.campaignTitle||'Personalizado'}
   function handleBackground(e){if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Use uma imagem de até 5 MB.');return}const reader=new FileReader();reader.onload=()=>{state.theme.background=reader.result;state.theme.name=$('#campaignNameInput').value||'Personalizado';state.theme.campaignTitle=$('#campaignNameInput').value||state.theme.campaignTitle||`Squad ${state.squadCode}`;state.theme.campaignTagline=$('#campaignTaglineInput').value||state.theme.campaignTagline||'';state.theme.preset='custom';saveTheme();applyTheme(state.theme);toast('Fundo atualizado.')};reader.readAsDataURL(f)}
   function sanitizeThemeBackground(v){if(!v)return null;const s=String(v).trim();return/^(data:image\/(png|jpeg|jpg|webp|gif);base64,|https?:\/\/|assets\/)/i.test(s)?s:null}
