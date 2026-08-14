@@ -168,3 +168,14 @@ supabase/functions/create-user/   Criação segura de usuários
 - Cards extras com aproveitamento da campanha, eficiência de excelência e média de pontos.
 - Ajuste visual da sidebar: card da campanha alterado para **Casa do Dragão** com GIF de dragão soltando fumaça.
 - Não exige nova migração de banco; atualização somente de frontend.
+
+
+## V2.6.0
+
+- Gestão de usuários com **Editar** e **Excluir**.
+- E-mail e senha ficam imutáveis na edição; para trocar e-mail, exclua e crie um novo acesso.
+- Admin geral pode editar usuários do escopo da organização; Admin do Squad gerencia técnicos do próprio Squad.
+- Exclusão de técnico preserva os históricos mensais porque os registros mensais mantêm o nome e apenas perdem o vínculo `user_id`.
+- Novo visual lateral da campanha **Casa do Dragão**, sem caixa, com arte maior e integrada à sidebar.
+- Módulo **Como usar** atualizado com Indicadores, reimportação, fechamento mensal e manutenção de usuários.
+- Nova Edge Function: `manage-user`. Não exige migração SQL.

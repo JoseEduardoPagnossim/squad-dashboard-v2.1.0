@@ -110,6 +110,8 @@
     $('#newUserBtn').addEventListener('click',openCreateUser);
     $('#createUserForm').addEventListener('submit',handleCreateUser);
     $('#newUserRole').addEventListener('change',syncCreateUserFields);
+    $('#editUserForm').addEventListener('submit',handleEditUser);
+    $('#editUserRole').addEventListener('change',syncEditUserFields);
     $('#userSearchInput').addEventListener('input',renderUserRows);
     $('#userRoleFilter').addEventListener('change',renderUserRows);
     $('#chooseFileBtn').addEventListener('click',()=>$('#csvInput').click());
@@ -204,6 +206,7 @@
     $$('.admin-only').forEach(el=>el.classList.toggle('hidden',!admin));
     $$('.super-only').forEach(el=>el.classList.toggle('hidden',!superAdmin));
     $$('.admin-help').forEach(el=>el.classList.toggle('hidden',!admin));
+    $$('.super-help').forEach(el=>el.classList.toggle('hidden',!superAdmin));
     $('.technician-control').classList.toggle('hidden',isTechnician()||state.currentView!=='individual'||state.squadCode==='all');
     $('#sideUserName').textContent=state.user.fullName;$('#topUserName').textContent=state.user.fullName;
     $('#sideUserRole').textContent=roleLabel(state.user.role);$('#topUserScope').textContent=state.user.role==='super_admin'?'Acesso geral':`Squad ${state.user.squadCode}`;
@@ -538,9 +541,64 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false}
     $('#usersCountLabel').textContent=`${list.length} ${list.length===1?'usuário':'usuários'}`;
     const all=scopedUserDirectory(),counts={super_admin:0,squad_admin:0,technician:0};all.forEach(u=>{if(counts[u.role]!=null)counts[u.role]++});
     $('#userStats').innerHTML=`<div class="card user-stat"><span>Total no escopo</span><strong>${all.length}</strong></div><div class="card user-stat"><span>Admins gerais</span><strong>${counts.super_admin}</strong></div><div class="card user-stat"><span>Admins de Squad</span><strong>${counts.squad_admin}</strong></div><div class="card user-stat"><span>Técnicos</span><strong>${counts.technician}</strong></div>`;
-    if(!list.length){$('#userRows').innerHTML='<tr><td colspan="5"><div class="users-empty">Nenhum usuário encontrado neste filtro.</div></td></tr>';return}
-    $('#userRows').innerHTML=list.sort((a,b)=>String(a.fullName).localeCompare(String(b.fullName),'pt-BR')).map(u=>`<tr><td><div class="user-cell"><span class="user-avatar table-avatar">${escapeHtml((u.fullName||'U').charAt(0).toUpperCase())}</span><div><strong>${escapeHtml(u.fullName||'Sem nome')}</strong><small>${escapeHtml(u.email||'E-mail não informado')}</small></div></div></td><td><span class="role-pill ${u.role}">${escapeHtml(roleLabel(u.role))}</span></td><td>${u.squadCode?`Squad ${escapeHtml(u.squadCode)}`:'Todos'}</td><td>${escapeHtml(u.techName||'—')}</td><td><span class="status-dot ${u.active?'on':'off'}"></span>${u.active?'Ativo':'Inativo'}</td></tr>`).join('');
+    if(!list.length){$('#userRows').innerHTML='<tr><td colspan="6"><div class="users-empty">Nenhum usuário encontrado neste filtro.</div></td></tr>';return}
+    $('#userRows').innerHTML=list.sort((a,b)=>String(a.fullName).localeCompare(String(b.fullName),'pt-BR')).map(u=>{const manageable=canManageDirectoryUser(u),deletable=canDeleteDirectoryUser(u);return `<tr><td><div class="user-cell"><span class="user-avatar table-avatar">${escapeHtml((u.fullName||'U').charAt(0).toUpperCase())}</span><div><strong>${escapeHtml(u.fullName||'Sem nome')}</strong><small>${escapeHtml(u.email||'E-mail não informado')}</small></div></div></td><td><span class="role-pill ${u.role}">${escapeHtml(roleLabel(u.role))}</span></td><td>${u.squadCode?`Squad ${escapeHtml(u.squadCode)}`:'Todos'}</td><td>${escapeHtml(u.techName||'—')}</td><td><span class="status-dot ${u.active?'on':'off'}"></span>${u.active?'Ativo':'Inativo'}</td><td><div class="user-actions"><button class="table-action" data-edit-user="${escapeHtml(u.userId)}" ${manageable?'':'disabled'}>Editar</button><button class="table-action danger" data-delete-user="${escapeHtml(u.userId)}" ${deletable?'':'disabled'}>Excluir</button></div></td></tr>`}).join('');
+    $$('[data-edit-user]').forEach(b=>b.addEventListener('click',()=>openEditUser(b.dataset.editUser)));
+    $$('[data-delete-user]').forEach(b=>b.addEventListener('click',()=>deleteUser(b.dataset.deleteUser)));
   }
+  function directoryUserById(userId){return (state.userDirectory||[]).find(u=>String(u.userId)===String(userId))||null}
+  function canManageDirectoryUser(u){
+    if(!u||!isAdmin())return false;
+    if(String(u.userId)===String(state.user?.userId))return false;
+    if(isSuperAdmin())return true;
+    return u.role==='technician'&&u.squadCode===state.user.squadCode;
+  }
+  function canDeleteDirectoryUser(u){
+    if(!canManageDirectoryUser(u))return false;
+    if(u.role==='super_admin')return false;
+    return isSuperAdmin()||(u.role==='technician'&&u.squadCode===state.user.squadCode);
+  }
+  function openEditUser(userId){
+    const u=directoryUserById(userId);if(!canManageDirectoryUser(u))return;
+    $('#editUserError').textContent='';$('#editUserId').value=u.userId;$('#editUserName').value=u.fullName||'';$('#editUserEmail').value=u.email||'';$('#editUserActive').checked=u.active!==false;
+    const roleSel=$('#editUserRole'),squadSel=$('#editUserSquad');
+    if(isSuperAdmin()) roleSel.innerHTML='<option value="technician">Técnico</option><option value="squad_admin">Admin do Squad</option><option value="super_admin">Admin geral</option>';
+    else roleSel.innerHTML='<option value="technician">Técnico</option>';
+    roleSel.value=u.role;
+    const allowed=isSuperAdmin()?Object.values(state.squads):[state.squads[state.user.squadCode]].filter(Boolean);
+    squadSel.innerHTML='<option value="">Sem Squad</option>'+allowed.sort((a,b)=>a.code.localeCompare(b.code)).map(s=>`<option value="${escapeHtml(s.code)}">Squad ${escapeHtml(s.code)}</option>`).join('');
+    squadSel.value=u.squadCode||'';$('#editUserTechName').value=u.techName||'';syncEditUserFields();openModal('editUserModal');
+  }
+  function syncEditUserFields(){
+    const role=$('#editUserRole').value,isSuper=role==='super_admin';
+    $('#editUserSquad').disabled=isSuper||!isSuperAdmin();if(isSuper)$('#editUserSquad').value='';
+    $('#editTechnicianNameField').classList.toggle('hidden',role!=='technician');$('#editUserTechName').required=role==='technician';
+    if(!isSuperAdmin()){$('#editUserRole').disabled=true;$('#editUserSquad').disabled=true;}else $('#editUserRole').disabled=false;
+  }
+  async function handleEditUser(e){
+    e.preventDefault();const u=directoryUserById($('#editUserId').value);if(!canManageDirectoryUser(u))return;
+    const btn=$('#editUserSubmit');btn.disabled=true;btn.textContent='Salvando...';$('#editUserError').textContent='';
+    try{
+      const role=isSuperAdmin()?$('#editUserRole').value:u.role,squadCode=role==='super_admin'?null:(isSuperAdmin()?$('#editUserSquad').value:u.squadCode),techName=role==='technician'?$('#editUserTechName').value.trim().toUpperCase():null;
+      const payload={userId:u.userId,fullName:$('#editUserName').value.trim(),role,squadCode,techName,active:$('#editUserActive').checked};
+      if(!payload.fullName)throw new Error('Informe o nome completo.');if(role!=='super_admin'&&!state.squads[squadCode])throw new Error('Selecione um Squad válido.');if(role==='technician'&&!techName)throw new Error('Informe o nome do técnico como aparece no CSV.');
+      if(state.supabase)await manageSupabaseUser('update',payload);else updateDemoUser(payload);
+      state.userDirectoryLoaded=false;await loadUserDirectory();renderUserRows();closeModal('editUserModal');toast(`Usuário ${payload.fullName} atualizado.`);
+    }catch(err){console.error(err);$('#editUserError').textContent=humanManageUserError(err)}finally{btn.disabled=false;btn.textContent='Salvar alterações'}
+  }
+  async function deleteUser(userId){
+    const u=directoryUserById(userId);if(!canDeleteDirectoryUser(u))return;
+    if(!window.confirm(`Excluir o acesso de ${u.fullName}? O login será removido. O histórico mensal já importado continuará preservado, porém sem vínculo com este usuário.`))return;
+    try{if(state.supabase)await manageSupabaseUser('delete',{userId:u.userId});else deleteDemoUser(u);state.userDirectoryLoaded=false;await loadUserDirectory();renderUserRows();toast(`Usuário ${u.fullName} excluído.`)}catch(err){console.error(err);toast(humanManageUserError(err))}
+  }
+  async function manageSupabaseUser(action,payload){const {data,error}=await state.supabase.functions.invoke('manage-user',{body:{action,user_id:payload.userId,full_name:payload.fullName,role:payload.role,squad_code:payload.squadCode,technician_name:payload.techName,active:payload.active}});if(error)throw error;if(data?.error)throw new Error(data.error);return data}
+  function updateDemoUser(p){
+    const list=loadDemoCreatedUsers(),i=list.findIndex(x=>String(x.userId)===String(p.userId));if(i>=0){list[i]={...list[i],fullName:p.fullName,role:p.role,squadCode:p.squadCode,techName:p.techName,active:p.active};saveDemoCreatedUsers(list);return}
+    throw new Error('Usuários de demonstração padrão não são editáveis. Crie um usuário demo para testar esta função.');
+  }
+  function deleteDemoUser(u){const list=loadDemoCreatedUsers(),next=list.filter(x=>String(x.userId)!==String(u.userId));if(next.length===list.length)throw new Error('Usuários de demonstração padrão não podem ser excluídos.');saveDemoCreatedUsers(next)}
+  function humanManageUserError(err){const m=String(err?.message||err||'');if(/function|failed to fetch|non-2xx/i.test(m))return'Falha no servidor. Confira se a Edge Function manage-user foi publicada.';if(/self|próprio|proprio/i.test(m))return'Não é permitido alterar ou excluir o próprio acesso por esta tela.';return m||'Não foi possível concluir a operação.'}
+
   function openCreateUser(){
     if(!isAdmin())return;
     $('#createUserForm').reset();$('#createUserError').textContent='';
@@ -869,7 +927,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false}
 
   function normalizeThemePayload(theme){const t=clone(theme||DEFAULT_THEME);if(t.preset==='vermithor'||(!t.preset&&(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor'))){if(!t.name||t.name==='Vermithor')t.name='Casa do Dragão';if(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor')t.campaignTitle='Casa do Dragão';if(!t.campaignTagline||t.campaignTagline==='Transforme números em conquista.')t.campaignTagline='Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.';}return t}
   function applyPreset(name){if(!isAdmin())return;const presets={vermithor:clone(DEFAULT_THEME),soften:{name:'Soften',campaignTitle:'Soften Performance',campaignTagline:'Tecnologia que impulsiona resultados.',preset:'soften',accent:'#20b7f5',secondary:'#176bd3',bg:'#06111f',bg2:'#0a2035',panel:'rgba(8,24,40,.9)',text:'#f3f8fc',background:null,opacity:.18},neon:{name:'Neon',campaignTitle:'Squad Neon',campaignTagline:'Acelere. Evolua. Conquiste.',preset:'neon',accent:'#c05cff',secondary:'#21dbc9',bg:'#090514',bg2:'#151029',panel:'rgba(23,15,42,.9)',text:'#faf5ff',background:null,opacity:.18},clean:{name:'Claro',campaignTitle:'Performance',campaignTagline:'Clareza para acompanhar cada resultado.',preset:'clean',accent:'#3157d5',secondary:'#6a7be8',bg:'#e9eef5',bg2:'#f7f9fc',panel:'rgba(255,255,255,.91)',text:'#172033',background:null,opacity:.06}};state.theme=presets[name]||presets.vermithor;saveTheme();applyTheme(state.theme);toast(`Tema ${state.theme.name} aplicado.`)}
-  function applyTheme(t){t=normalizeThemePayload(t||DEFAULT_THEME);const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Casa do Dragão':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;$('#campaignTitle').textContent=t.campaignTitle||fallbackTitle;$('#campaignTagline').textContent=t.campaignTagline||fallbackTagline;updateThemeName()}
+  function applyTheme(t){t=normalizeThemePayload(t||DEFAULT_THEME);const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Casa do Dragão':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;updateThemeName()}
   function updateThemeName(){if($('#themeName'))$('#themeName').textContent=state.theme?.name||state.theme?.campaignTitle||'Personalizado'}
   function handleBackground(e){if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Use uma imagem de até 5 MB.');return}const reader=new FileReader();reader.onload=()=>{state.theme.background=reader.result;state.theme.name=$('#campaignNameInput').value||'Personalizado';state.theme.campaignTitle=$('#campaignNameInput').value||state.theme.campaignTitle||`Squad ${state.squadCode}`;state.theme.campaignTagline=$('#campaignTaglineInput').value||state.theme.campaignTagline||'';state.theme.preset='custom';saveTheme();applyTheme(state.theme);toast('Fundo atualizado.')};reader.readAsDataURL(f)}
   function sanitizeThemeBackground(v){if(!v)return null;const s=String(v).trim();return/^(data:image\/(png|jpeg|jpg|webp|gif);base64,|https?:\/\/|assets\/)/i.test(s)?s:null}

@@ -250,3 +250,16 @@ O tema é definido por administradores e pode ser diferente em cada Squad.
 - criação de usuários ocorre pela Edge Function;
 - controles administrativos são ocultos para técnicos;
 - o fechamento mensal adiciona uma proteção operacional para evitar alterações acidentais no histórico.
+
+
+## Gestão de usuários V2.6
+
+Além da função `create-user`, publique também a Edge Function `manage-user`. Ela realiza edição e exclusão usando `service_role` apenas no servidor.
+
+### Edição
+
+A interface permite alterar nome, vínculo do técnico no CSV, status e, para Admin geral, perfil/Squad. E-mail e senha não são alterados.
+
+### Exclusão
+
+Ao excluir um usuário, o acesso no Supabase Auth é removido. O perfil é removido pela FK `profiles.user_id -> auth.users(id) on delete cascade`. Em `technician_monthly`, o campo `user_id` usa `on delete set null`, portanto o histórico mensal permanece salvo.
