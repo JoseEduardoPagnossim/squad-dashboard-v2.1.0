@@ -139,7 +139,7 @@ body{background:#070c13}.main{max-width:none}.card{background:linear-gradient(14
 @media(max-width:1150px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.audit-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:720px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.audit-grid{grid-template-columns:1fr}}
 
-/* V2.9.0 - histórico multi-mês e grids de 4 cards */
+/* V2.10.0 - histórico multi-mês e grids de 4 cards */
 .team-kpis,.indicator-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .team-history-section,.indicator-history-section{margin-top:14px}
@@ -153,3 +153,46 @@ body{background:#070c13}.main{max-width:none}.card{background:linear-gradient(14
 @media(max-width:620px){.team-kpis,.indicator-kpis,.kpi-grid{grid-template-columns:1fr}.history-section-head{align-items:flex-start;flex-direction:column}.history-chart{height:300px}}
 
 .chart-legend-inline .legend-swatch.dashed{height:2px;width:16px;border-radius:0;background:transparent!important;border-top:2px dashed var(--accent2)}
+
+
+/* V2.10.0 - graficos interativos, legendas e matriz ACIMA/ABAIXO */
+.chart.interactive-chart{height:auto!important;min-height:410px;overflow:visible;position:relative}
+.history-chart.interactive-chart{height:auto!important;min-height:430px;overflow:visible}
+.chart-plot-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+.chart-plot-scroll svg{display:block;max-width:none!important;height:auto!important;min-width:900px!important}
+.chart-legend-visible{min-width:0!important;margin-top:14px!important;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.025);gap:12px 18px!important;position:relative;z-index:2}
+.chart-legend-visible span{font-size:11px!important;color:var(--text)!important}
+.chart-legend-visible .legend-swatch{width:11px;height:11px;flex:0 0 auto}
+.chart-hover-target{cursor:crosshair;transition:opacity .15s,filter .15s}
+.chart-hover-target:hover{filter:brightness(1.22);opacity:1!important}
+.chart-hover-tooltip{position:absolute;z-index:20;left:0;top:0;max-width:300px;padding:9px 11px;border-radius:10px;background:#070a10;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 10px 30px rgba(0,0,0,.45);color:var(--text);font-size:11px;font-weight:700;line-height:1.4;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s}
+.chart-hover-tooltip.show{opacity:1;transform:none}
+.history-x-label{font-size:11px;font-weight:700}
+.history-total-label{font-size:10px!important}
+
+.status-matrix-wrap{position:relative;margin-top:18px;min-height:340px}
+.status-matrix-scroll{overflow:auto;max-height:560px;border:1px solid var(--border);border-radius:14px}
+.status-matrix{min-width:max(820px,calc(250px + var(--status-cols)*82px + 112px));background:rgba(255,255,255,.012)}
+.status-matrix-head,.status-matrix-row{display:grid;grid-template-columns:250px repeat(var(--status-cols),minmax(72px,1fr)) 112px;align-items:stretch}
+.status-matrix-head{position:sticky;top:0;z-index:3;background:#111722;border-bottom:1px solid var(--border)}
+.status-matrix-head>div{padding:11px 8px;text-align:center;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.status-matrix-head .status-tech-name{text-align:left}
+.status-matrix-row{border-bottom:1px solid var(--border)}
+.status-matrix-row:last-child{border-bottom:0}
+.status-tech-name{padding:10px 12px;display:flex;align-items:center;min-width:0}
+.status-tech-name strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-cell{margin:6px;min-height:38px;border-radius:9px;display:grid;place-items:center;border:1px solid transparent;font-size:10px;font-weight:950;letter-spacing:.08em}
+.status-cell.above{background:color-mix(in srgb,var(--success) 20%,transparent);border-color:color-mix(in srgb,var(--success) 35%,transparent);color:var(--success)}
+.status-cell.below{background:color-mix(in srgb,var(--danger) 18%,transparent);border-color:color-mix(in srgb,var(--danger) 34%,transparent);color:#ff7b7b}
+.status-cell.empty{background:rgba(255,255,255,.025);color:var(--muted)}
+.status-summary{margin:6px;padding:6px;border-radius:9px;display:grid;place-items:center;font-size:9px;font-weight:950}
+.status-summary small{font-size:8px;font-weight:700;margin-top:2px;opacity:.8}
+.status-summary.above{background:rgba(54,201,143,.12);color:var(--success)}
+.status-summary.below{background:rgba(242,99,99,.12);color:var(--danger)}
+.status-summary.tie{background:rgba(242,193,78,.12);color:var(--warn)}
+.period-status-above{color:var(--success)!important}.period-status-below{color:var(--danger)!important}.period-status-tie{color:var(--warn)!important}
+
+/* Os quatro cards executivos permanecem em uma única linha em desktop/tablet largo. */
+.indicator-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+@media(max-width:720px){.indicator-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}.status-matrix-head,.status-matrix-row{grid-template-columns:190px repeat(var(--status-cols),70px) 100px}.status-matrix{min-width:max(720px,calc(190px + var(--status-cols)*70px + 100px))}}
+@media(max-width:480px){.indicator-kpis{grid-template-columns:1fr!important}}

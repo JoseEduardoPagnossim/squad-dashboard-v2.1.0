@@ -402,13 +402,14 @@ function renderIndicators(){
   if(!rangeIds.length){
     ['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart','indicatorHistoryAttChart','indicatorHistoryDailyAvgChart','indicatorHistoryEvalChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Importe dados para liberar os indicadores.</div>';});
     if($('#indicatorInsights'))$('#indicatorInsights').innerHTML='<div class="insight-item"><strong>Sem dados</strong><small>Importe pelo menos um mês para exibir a análise executiva.</small></div>';
-    ['indicatorAttPerHour','indicatorAboveRatio','indicatorCampaignHit','indicatorExcellence'].forEach(id=>{if($('#'+id))$('#'+id).textContent='0';});
+    ['indicatorAttPerHour','indicatorAboveRatio','indicatorExcellence'].forEach(id=>{if($('#'+id))$('#'+id).textContent='0';});
     if($('#indicatorAttPerMinute'))$('#indicatorAttPerMinute').textContent='0 por minuto';
     if($('#indicatorWorkedHours'))$('#indicatorWorkedHours').textContent='0 horas consideradas no período';
     if($('#indicatorAboveCount'))$('#indicatorAboveCount').textContent='0 acima • 0 abaixo';
     if($('#indicatorTechVolume'))$('#indicatorTechVolume').textContent='0 registros técnico-mês';
-    if($('#indicatorCampaignDetail'))$('#indicatorCampaignDetail').textContent='0 squads/mês acima do objetivo';
-    if($('#indicatorCampaignSupport'))$('#indicatorCampaignSupport').textContent='Meta de equipe batida no período selecionado';
+    if($('#indicatorPeriodStatus'))$('#indicatorPeriodStatus').textContent='—';
+    if($('#indicatorPeriodStatusDetail'))$('#indicatorPeriodStatusDetail').textContent='0 meses acima • 0 abaixo';
+    if($('#indicatorPeriodStatusSupport'))$('#indicatorPeriodStatusSupport').textContent='Sem dados no período selecionado';
     if($('#indicatorAvgPoints'))$('#indicatorAvgPoints').textContent='0 pts médios por técnico';
     if($('#indicatorExcellenceSupport'))$('#indicatorExcellenceSupport').textContent='Relação entre notas 5 e atendimentos';
     return;
@@ -467,14 +468,17 @@ function renderIndicators(){
   $('#indicatorAboveRatio').textContent=fmtPct(aboveRatio);
   $('#indicatorAboveCount').textContent=`${fmtInt(totalAbove)} acima • ${fmtInt(totalBelow)} abaixo`;
   $('#indicatorTechVolume').textContent=`${fmtInt(totalTechRecords)} registros técnico-mês`;
-  $('#indicatorCampaignHit').textContent=fmtPct(campaignHit);
-  $('#indicatorCampaignDetail').textContent=`${fmtInt(squadMonthHits)} squads/mês acima do objetivo`;
-  $('#indicatorCampaignSupport').textContent=`${fmtInt(squadMonthTotal)} leituras de equipe avaliadas`;
+  const periodAbove=squadMonthHits, periodBelow=Math.max(0,squadMonthTotal-squadMonthHits);
+  const periodStatus=periodAbove>periodBelow?'ACIMA':periodBelow>periodAbove?'ABAIXO':'EMPATE';
+  $('#indicatorPeriodStatus').textContent=periodStatus;
+  $('#indicatorPeriodStatus').className=periodStatus==='ACIMA'?'period-status-above':periodStatus==='ABAIXO'?'period-status-below':'period-status-tie';
+  $('#indicatorPeriodStatusDetail').textContent=`${fmtInt(periodAbove)} ${state.squadCode==='all'?'leituras':'meses'} acima • ${fmtInt(periodBelow)} abaixo`;
+  $('#indicatorPeriodStatusSupport').textContent=periodStatus==='EMPATE'?'Mesmo número de resultados ACIMA e ABAIXO no período.':`Predomínio de resultados ${periodStatus} no período selecionado.`;
   $('#indicatorExcellence').textContent=fmtPct(excellence);
   $('#indicatorAvgPoints').textContent=`${fmtNum(avgPointsPerTech)} pts médios por técnico`;
   $('#indicatorExcellenceSupport').textContent=`${fmtInt(distinctTechs.size)} técnicos únicos no período`;
 
-  renderIndicatorStatusChart(statusItems);
+  renderTechnicianStatusMatrix($('#indicatorStatusChart'),squads,rangeIds);
   renderIndicatorLineChart($('#indicatorMonthlyChart'),rangeIds.map(monthLabelFromId),monthlySeries,{maxValue:100,percent:true});
   $('#indicatorMonthlyLegend').textContent=monthlySeries.length>1?'Comparativo por Squad no período selecionado.':'Leitura mensal do grupo selecionado.';
 
@@ -594,58 +598,107 @@ function renderIndicatorHistoricalAnalytics(squads,rangeIds){
   renderIndicatorLineChart($('#indicatorHistoryDailyAvgChart'),data.labels,data.daily,{maxValue:null,percent:false,decimals:1});
   renderIndicatorLineChart($('#indicatorHistoryEvalChart'),data.labels,data.evaluation,{maxValue:null,percent:true});
 }
+function ensureChartTooltip(el){
+  if(!el)return null;
+  let tip=el.querySelector('.chart-hover-tooltip');
+  if(!tip){tip=document.createElement('div');tip.className='chart-hover-tooltip';el.appendChild(tip);}
+  return tip;
+}
+function bindChartTooltips(el){
+  if(!el)return;
+  const tip=ensureChartTooltip(el);
+  const targets=[...el.querySelectorAll('[data-chart-tip]')];
+  targets.forEach(node=>{
+    node.addEventListener('pointerenter',e=>{
+      tip.textContent=node.dataset.chartTip||'';tip.classList.add('show');
+    });
+    node.addEventListener('pointermove',e=>{
+      const r=el.getBoundingClientRect();
+      let x=e.clientX-r.left+14,y=e.clientY-r.top+14;
+      const maxX=Math.max(10,r.width-tip.offsetWidth-10),maxY=Math.max(10,r.height-tip.offsetHeight-10);
+      tip.style.left=Math.min(x,maxX)+'px';tip.style.top=Math.min(y,maxY)+'px';
+    });
+    node.addEventListener('pointerleave',()=>tip.classList.remove('show'));
+  });
+}
 function renderHistoryAttendanceChart(el,labels,totals,series){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!labels?.length||!validSeries.length){el.innerHTML='<div class="chart-empty">Importe pelo menos um mês com técnicos vinculados para visualizar o histórico.</div>';return;}
-  const w=Math.max(780,labels.length*118),h=300,p={l:46,r:58,t:22,b:48};
+  el.classList.add('interactive-chart','history-interactive-chart');
+  const w=Math.max(940,labels.length*136),h=340,p={l:52,r:64,t:30,b:58};
   const lineVals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const lineTop=Math.max(1,...lineVals)*1.12,totalTop=Math.max(1,...(totals||[]).map(safe))*1.12;
-  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(54,slot*.54);
+  const lineTop=Math.max(1,...lineVals)*1.14,totalTop=Math.max(1,...(totals||[]).map(safe))*1.14;
+  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(62,slot*.56);
   const x=i=>p.l+slot*(i+.5), yLine=v=>p.t+(h-p.t-p.b)-(safe(v)/lineTop)*(h-p.t-p.b), yTotal=v=>p.t+(h-p.t-p.b)-(safe(v)/totalTop)*(h-p.t-p.b);
   const leftGrid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),lv=lineTop*f,rv=totalTop*f;return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${fmtInt(lv)}</text><text x="${w-4}" y="${yy+4}" class="axis-label-right">${fmtInt(rv)}</text>`}).join('');
-  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="7" class="history-total-bar"><title>${labels[i]} • Total: ${fmtInt(v)}</title></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-6)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
+  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy,tip=`Total geral • ${labels[i]}: ${fmtInt(v)} atendimentos`;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="7" class="history-total-bar chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-7)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
   const paths=validSeries.map(s=>{
     const segs=[];let cur=[];
     (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${yLine(v)}`)});if(cur.length>1)segs.push(cur);
-    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="3.6" fill="${s.color}" class="chart-point"><title>${s.name} • ${labels[i]}: ${fmtInt(v)}</title></circle>`).join('');
+    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="5.2" fill="${s.color}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(`${s.name} • ${labels[i]}: ${fmtInt(v)} atendimentos`)}"></circle>`).join('');
     return lines+dots;
   }).join('');
-  const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-12}" text-anchor="middle" class="axis-label">${escapeHtml(label)}</text>`).join('');
-  const legend=`<div class="chart-legend-inline"><span><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
-  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="width:${w}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${xLabels}<text x="${p.l}" y="12" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="12" text-anchor="end" class="history-axis-title">Total geral</text></svg>${legend}`;
+  const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(label)}</text>`).join('');
+  const legend=`<div class="chart-legend-inline chart-legend-visible"><span><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:${w}px;height:${h}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${xLabels}<text x="${p.l}" y="16" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="16" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
+  bindChartTooltips(el);
 }
 
-function renderIndicatorStatusChart(items){
-  const el=$('#indicatorStatusChart'); if(!el)return;
-  if(!items.length){el.innerHTML='<div class="chart-empty">Sem dados para o período selecionado.</div>';return;}
-  const w=720,h=260,p={l:42,r:20,t:18,b:40},maxVal=Math.max(1,...items.map(x=>safe(x.above)+safe(x.below))),barW=Math.max(24,Math.min(48,((w-p.l-p.r)/Math.max(1,items.length))-16));
-  const x=i=>p.l+((w-p.l-p.r)/Math.max(1,items.length))*(i+.5);
-  const y=v=>p.t+(h-p.t-p.b)-(safe(v)/maxVal)*(h-p.t-p.b);
-  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=Math.round(maxVal*f);return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${v}</text>`}).join('');
-  const bars=items.map((it,i)=>{const total=safe(it.above)+safe(it.below),belowH=((h-p.t-p.b)*(safe(it.below)/maxVal)),aboveH=((h-p.t-p.b)*(safe(it.above)/maxVal)),bx=x(i)-barW/2,bottom=h-p.b;return `<rect x="${bx}" y="${bottom-belowH}" width="${barW}" height="${belowH}" rx="8" class="chart-bar-below" opacity=".78"></rect><rect x="${bx}" y="${bottom-belowH-aboveH}" width="${barW}" height="${aboveH}" rx="8" class="chart-bar-above"></rect><text x="${x(i)}" y="${bottom-belowH-aboveH-8}" text-anchor="middle" class="axis-label">${total}</text><text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(it.label.split(' ')[0].slice(0,3))}</text>`;}).join('');
-  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${bars}</svg>`;
+function buildStatusMatrix(squads,rangeIds){
+  const map=new Map();
+  const multi=(squads||[]).length>1;
+  (squads||[]).forEach(squad=>{
+    (rangeIds||[]).forEach(id=>{
+      const m=squad?.months?.[id];if(!m)return;
+      (m.technicians||[]).forEach(t=>{
+        const key=`${squad.code}|${historyTechKey(t)}`;
+        if(!map.has(key))map.set(key,{key,name:titleWords(t.name),squad:squad.code,statuses:{}});
+        map.get(key).statuses[id]=String(t.status||'').toUpperCase();
+      });
+    });
+  });
+  return [...map.values()].sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR')).map(x=>({...x,label:multi?`Squad ${x.squad} • ${x.name}`:x.name}));
 }
+function renderTechnicianStatusMatrix(el,squads,rangeIds){
+  if(!el)return;
+  const rows=buildStatusMatrix(squads,rangeIds);
+  if(!rows.length){el.innerHTML='<div class="chart-empty">Sem técnicos no período selecionado.</div>';return;}
+  const months=(rangeIds||[]).map(id=>({id,label:shortHistoryMonth(id)}));
+  const head=`<div class="status-matrix-head"><div class="status-tech-name">Técnico</div>${months.map(m=>`<div>${escapeHtml(m.label)}</div>`).join('')}<div>Resumo</div></div>`;
+  const body=rows.map(r=>{
+    let above=0,below=0;
+    const cells=months.map(m=>{const st=r.statuses[m.id]||'';if(st==='ACIMA')above++;if(st==='ABAIXO')below++;const cls=st==='ACIMA'?'above':st==='ABAIXO'?'below':'empty';const tip=`${r.label} • ${monthLabelFromId(m.id)}: ${st||'sem dados'}`;return `<div class="status-cell ${cls} chart-hover-target" data-chart-tip="${escapeHtml(tip)}"><span>${st==='ACIMA'?'A':st==='ABAIXO'?'B':'—'}</span></div>`}).join('');
+    const summary=above===below?'EMPATE':above>below?'ACIMA':'ABAIXO';
+    return `<div class="status-matrix-row"><div class="status-tech-name"><strong>${escapeHtml(r.label)}</strong></div>${cells}<div class="status-summary ${summary==='ACIMA'?'above':summary==='ABAIXO'?'below':'tie'}">${summary}<small>${above}A • ${below}B</small></div></div>`;
+  }).join('');
+  el.innerHTML=`<div class="status-matrix-scroll"><div class="status-matrix" style="--status-cols:${months.length}">${head}${body}</div></div>`;
+  bindChartTooltips(el);
+}
+
 function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,decimals=0}={}){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
-  const w=Math.max(720,(labels?.length||0)*105),h=260,p={l:42,r:20,t:18,b:44};
+  el.classList.add('interactive-chart');
+  const w=Math.max(900,(labels?.length||0)*124),h=340,p={l:52,r:28,t:28,b:58};
   const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const rawTop=Math.max(1,...vals); const top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.08); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
-  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals}); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
-  const xLabels=labels.map((label,i)=>{const raw=String(label||'');const shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(shown)}</text>`}).join('');
+  const rawTop=Math.max(1,...vals); const top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.12); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals}); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="6" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
+  const xLabels=labels.map((label,i)=>{const raw=String(label||'');const shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(shown)}</text>`}).join('');
   const paths=validSeries.map((s,idx)=>{
     const segs=[]; let cur=[];
     (s.values||[]).forEach((v,i)=>{ if(v==null){ if(cur.length>1) segs.push(cur); cur=[]; return;} cur.push(`${x(i)},${y(v)}`); });
-    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${s.dashed?2.5:3}" stroke-linecap="round" stroke-linejoin="round"${dash}></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.color||'var(--accent)'}" class="chart-point"></circle>`).join('');
+    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${s.dashed?2.8:3.4}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>{if(v==null)return'';const shown=percent?`${safe(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2})}%`:safe(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});const tip=`${s.name} • ${labels[i]}: ${shown}`;return `<circle cx="${x(i)}" cy="${y(v)}" r="5.4" fill="${s.color||'var(--accent)'}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></circle>`}).join('');
     return `${segments}${dots}`;
   }).join('');
-  const legend=`<div class="chart-legend-inline">${validSeries.map(s=>`<span><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
-  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="width:${w}px" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg>${legend}`;
+  const legend=`<div class="chart-legend-inline chart-legend-visible">${validSeries.map(s=>`<span><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:${w}px;height:${h}px" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg></div>${legend}`;
+  bindChartTooltips(el);
 }
+
 
   function renderHelp(){
     if(!state.user)return;

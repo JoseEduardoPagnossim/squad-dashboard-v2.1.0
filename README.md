@@ -207,7 +207,7 @@ supabase/functions/create-user/   Criação segura de usuários
 - Não exige nova migração SQL.
 
 
-## V2.9.0 — evolução histórica dos técnicos
+## V2.10.0 — evolução histórica dos técnicos
 
 - A **Visão do Squad** ganhou três análises multi-mês:
   - total de atendimentos por técnico/mês, com barra do total do Squad;
@@ -219,3 +219,14 @@ supabase/functions/create-user/   Criação segura de usuários
 - Os históricos usam até os **12 meses importados mais recentes** na Visão do Squad; no painel de Indicadores, respeitam o filtro **De / Até**.
 - Cards principais padronizados em **4 colunas no desktop**; somente quebram em resoluções menores ou quando houver novos cards.
 - Não há alteração de banco de dados nesta versão.
+
+
+## V2.10.0
+- Legendas dos gráficos históricos agora ficam sempre visíveis e mostram os nomes dos técnicos/Squads.
+- Gráficos históricos ficaram maiores e ganharam tooltip ao passar o mouse sobre linhas, pontos e barras.
+- O gráfico **ACIMA x ABAIXO** virou uma matriz técnico × mês, mostrando individualmente quando cada técnico ficou ACIMA ou ABAIXO.
+- Removido o card **Aproveitamento da campanha** da tela Indicadores.
+- **Eficiência de excelência** foi movida para a terceira posição.
+- Novo card **Status da equipe no período**: ACIMA quando há mais resultados mensais ACIMA; ABAIXO quando há mais resultados mensais ABAIXO; EMPATE quando iguais.
+- Os quatro cards executivos permanecem em uma única linha em telas de desktop/tablet largo.
+- Sem alteração de banco de dados ou Edge Functions.

@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.9.0 • visual renovado + vínculo CSV resiliente</small>
+      <small class="login-version">V2.10.0 • visual renovado + vínculo CSV resiliente</small>
     </div>
   </section>
 
@@ -77,7 +77,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.9.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.10.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -228,23 +228,23 @@
             <p id="indicatorTechVolume">0 registros técnico-mês</p>
           </article>
           <article class="card indicator-kpi">
-            <span>Aproveitamento da campanha</span>
-            <strong id="indicatorCampaignHit">0%</strong>
-            <small id="indicatorCampaignDetail">0 squads/mês acima do objetivo</small>
-            <p id="indicatorCampaignSupport">Meta de equipe batida no período selecionado</p>
-          </article>
-          <article class="card indicator-kpi">
             <span>Eficiência de excelência</span>
             <strong id="indicatorExcellence">0%</strong>
             <small id="indicatorAvgPoints">0 pts médios por técnico</small>
             <p id="indicatorExcellenceSupport">Relação entre notas 5 e atendimentos</p>
           </article>
+          <article class="card indicator-kpi status-period-card">
+            <span>Status da equipe no período</span>
+            <strong id="indicatorPeriodStatus">—</strong>
+            <small id="indicatorPeriodStatusDetail">0 meses acima • 0 abaixo</small>
+            <p id="indicatorPeriodStatusSupport">Compara o resultado mensal da equipe no período selecionado</p>
+          </article>
         </div>
 
         <div class="indicator-grid">
           <article class="card chart-card indicator-card">
-            <div class="section-title"><div><span class="eyebrow">ACIMA X ABAIXO</span><h3>Técnicos por mês</h3></div><div class="legend"><span><i class="dot note"></i>Acima</span><span><i class="dot att"></i>Abaixo</span></div></div>
-            <div id="indicatorStatusChart" class="chart chart-lg"></div>
+            <div class="section-title"><div><span class="eyebrow">ACIMA X ABAIXO</span><h3>Status de cada técnico por mês</h3></div><div class="legend"><span><i class="dot note"></i>Acima</span><span><i class="dot att"></i>Abaixo</span></div></div>
+            <div id="indicatorStatusChart" class="status-matrix-wrap"></div>
           </article>
           <article class="card chart-card indicator-card">
             <div class="section-title"><div><span class="eyebrow">% DE AVALIAÇÃO</span><h3>Comparativo mensal por grupo</h3></div><span class="muted" id="indicatorMonthlyLegend">Comparativo por Squad no período.</span></div>
