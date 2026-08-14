@@ -179,3 +179,16 @@ supabase/functions/create-user/   Criação segura de usuários
 - Novo visual lateral da campanha **Casa do Dragão**, sem caixa, com arte maior e integrada à sidebar.
 - Módulo **Como usar** atualizado com Indicadores, reimportação, fechamento mensal e manutenção de usuários.
 - Nova Edge Function: `manage-user`. Não exige migração SQL.
+
+
+## V2.7.0
+
+- Visual geral refinado para se aproximar do conceito visual **Casa do Dragão**.
+- Sidebar com arte integrada, tipografia maior e campanha sem aparência de caixa/cartão.
+- Tela **Como usar** refeita no mesmo conceito visual do mockup.
+- Nova tela de carregamento inicial para evitar o flash da tela de login quando uma sessão Supabase já está salva.
+- Importação CSV agora aplica limpeza robusta nos nomes dos técnicos: remove espaços no início/fim, espaços duplicados, espaços Unicode/invisíveis e compara o vínculo ignorando espaços.
+- Criação/edição de técnico também normaliza o campo “Nome do técnico no CSV”.
+- Modal de criação e edição de usuário não fecha mais por clique fora; fecha somente por X ou Cancelar.
+- A detecção de clique no backdrop dos demais modais passou a usar pointerdown + pointerup, evitando fechamento acidental durante seleção/cópia de texto.
+- Sem nova migração SQL.

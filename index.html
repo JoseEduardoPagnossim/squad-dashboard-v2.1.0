@@ -10,7 +10,18 @@
 <body>
   <div class="bg-layer"></div>
 
-  <section id="loginScreen" class="login-screen">
+  <section id="bootScreen" class="boot-screen" aria-live="polite">
+    <div class="boot-card">
+      <div class="boot-brand"><div class="brand-mark large">S</div><div><strong>SOFTEN</strong><span>Performance Hub</span></div></div>
+      <div class="boot-dragon"><img src="assets/casa-do-dragao-sidebar.png" alt=""></div>
+      <div class="boot-spinner" aria-hidden="true"></div>
+      <h1>Preparando seu painel</h1>
+      <p id="bootMessage">Validando sua sessão e carregando os dados...</p>
+      <small>CASA DO DRAGÃO • DISCIPLINA • FOCO • RESULTADO</small>
+    </div>
+  </section>
+
+  <section id="loginScreen" class="login-screen hidden">
     <div class="login-shell">
       <div class="login-brand">
         <div class="brand-mark large">S</div>
@@ -35,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.6.0 • gestão de usuários + campanha Casa do Dragão</small>
+      <small class="login-version">V2.7.0 • visual renovado + vínculo CSV resiliente</small>
     </div>
   </section>
 
@@ -66,7 +77,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.6.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.7.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -238,25 +249,48 @@
       </section>
 
       <section id="view-help" class="view">
-        <div class="help-hero card glass">
-          <div><span class="eyebrow">CENTRAL DE AJUDA • V2.6</span><h2>Como usar o Performance Hub</h2><p>Guia atualizado para cadastro, importação, metas, indicadores, fechamento mensal e manutenção de usuários.</p></div>
-          <div class="help-role"><small>SEU PERFIL</small><strong id="helpRoleName">Técnico</strong><span id="helpRoleScope">Squad D</span></div>
+        <div class="how-header">
+          <div><span class="eyebrow">GUIA COMPLETO • V2.7</span><h2>Como usar</h2><p>Fluxo atualizado do Performance Hub: acessos, importação, metas, pontuação, indicadores e fechamento mensal.</p></div>
+          <div class="how-profile"><span>SEU PERFIL</span><strong id="helpRoleName">Técnico</strong><small id="helpRoleScope">Squad D</small></div>
         </div>
-        <div class="help-grid help-grid-modern">
-          <article class="card help-card"><span class="help-step">01</span><h3>Meu desempenho</h3><p>Acompanhe atendimentos, notas 5, % avaliado, pontuação, ranking, metas, ritmo e conquistas do mês.</p><ul><li>Técnico vê somente o próprio desempenho.</li><li>Admins podem selecionar um técnico dentro do escopo permitido.</li><li>Meses fechados continuam disponíveis como histórico.</li></ul></article>
-          <article class="card help-card"><span class="help-step">02</span><h3>Visão do Squad</h3><p>Mostra consolidado do grupo, metas, quantidade de avaliações e ranking.</p><ul><li>Admin geral alterna entre A, B, D, E ou Todos os Squads.</li><li>Admin de Squad e técnico permanecem limitados ao próprio grupo.</li></ul></article>
-          <article class="card help-card super-help"><span class="help-step">03</span><h3>Indicadores executivos</h3><p>Exclusivo para Admin geral. Permite comparar períodos e grupos.</p><ul><li>Técnicos ACIMA x ABAIXO por mês.</li><li>% de avaliação mensal por Squad.</li><li>Visão semanal operacional, produtividade por hora/minuto e insights.</li></ul></article>
-          <article class="card help-card admin-help"><span class="help-step">04</span><h3>Importar CSV</h3><p>A atualização diária substitui o mesmo mês; ela <b>não soma</b> com a importação anterior.</p><ol><li>Abra Administração.</li><li>Clique em <b>Importar CSV</b>.</li><li>Selecione o arquivo e o mês.</li><li>Confirme os técnicos reconhecidos.</li><li>Se o mês estiver fechado, reabra antes de corrigir.</li></ol></article>
-          <article class="card help-card admin-help"><span class="help-step">05</span><h3>Metas e pontuação</h3><p>Metas individuais, bônus e descontos são mensais. Pontuação, status, metas batidas e ranking são automáticos.</p><ul><li>Referências vazias usam a média do Squad.</li><li>É possível copiar metas do mês anterior.</li><li>A pontuação acumulada considera o histórico preservado.</li></ul></article>
-          <article class="card help-card admin-help"><span class="help-step">06</span><h3>Fechar e reabrir mês</h3><p>Fechar o mês cria um histórico protegido das regras e resultados daquele período.</p><ul><li>Mês fechado bloqueia importação e edição.</li><li>Para corrigir: Reabrir → ajustar/importar → Fechar novamente.</li><li>Metas e referências antigas não são substituídas pelas do mês novo.</li></ul></article>
-          <article class="card help-card admin-help"><span class="help-step">07</span><h3>Usuários: criar, editar e excluir</h3><p>Administradores mantêm os acessos pelo próprio sistema.</p><ul><li><b>Editar:</b> nome, perfil/Squad conforme permissão, nome no CSV e status.</li><li><b>E-mail e senha:</b> não são editáveis após a criação.</li><li><b>Trocar e-mail:</b> exclua o acesso e crie outro.</li><li><b>Excluir:</b> remove o login; históricos mensais permanecem sem vínculo de usuário.</li></ul></article>
-          <article class="card help-card"><span class="help-step">08</span><h3>Entenda os indicadores</h3><dl><div><dt>Atendimentos</dt><dd>Realizado no mês comparado à meta individual.</dd></div><div><dt>Notas 5</dt><dd>Avaliações máximas comparadas à meta.</dd></div><div><dt>% Avaliado</dt><dd>Total de avaliações dividido pelos atendimentos.</dd></div><div><dt>Pontuação</dt><dd>Atendimentos × média, com bônus/penalidades pelas quatro referências do mês.</dd></div></dl></article>
+
+        <div class="how-primary-grid">
+          <article class="card how-primary orange">
+            <div class="how-primary-title"><b>01</b><div><h3>Cadastre os usuários</h3><p>Crie administradores e técnicos dentro do próprio sistema.</p></div></div>
+            <ol class="how-steps"><li>Abra <b>Usuários</b> no menu lateral.</li><li>Clique em <b>+ Criar usuário</b>.</li><li>Informe nome, e-mail, senha temporária, perfil e Squad.</li><li>Para técnico, informe o nome usado no CSV.</li></ol>
+            <div class="how-tip">💡 O vínculo do técnico agora remove espaços extras, espaços invisíveis e diferenças de acentuação antes da comparação.</div>
+          </article>
+          <article class="card how-primary blue admin-help">
+            <div class="how-primary-title"><b>02</b><div><h3>Importe os dados</h3><p>Atualize atendimentos e avaliações pelo CSV padronizado.</p></div></div>
+            <ol class="how-steps"><li>Acesse <b>Administração → Importar CSV</b>.</li><li>Selecione o arquivo exportado.</li><li>Escolha o mês que deseja atualizar.</li><li>Confira técnicos vinculados e confirme.</li></ol>
+            <div class="how-tip">ℹ️ Reimportar o mesmo mês <b>substitui</b> os dados operacionais; não soma com a importação anterior.</div>
+          </article>
+          <article class="card how-primary purple admin-help">
+            <div class="how-primary-title"><b>03</b><div><h3>Configure metas</h3><p>Defina metas, parâmetros e bonificações do período.</p></div></div>
+            <ol class="how-steps"><li>Abra <b>Administração</b>.</li><li>Defina metas do Squad e metas individuais.</li><li>Ajuste referências da pontuação apenas se necessário.</li><li>Configure bônus, descontos e tema do Squad.</li></ol>
+            <div class="how-tip">ℹ️ Parâmetros vazios usam automaticamente a média do próprio Squad.</div>
+          </article>
         </div>
-        <article class="card help-access">
-          <div class="section-title"><div><span class="eyebrow">PERMISSÕES</span><h3>Quem pode fazer o quê?</h3></div></div>
-          <div class="permission-matrix"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Importar CSV / metas / tema</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Criar usuários</div><div>✓</div><div>✓ técnicos</div><div>—</div><div>Editar / excluir usuários</div><div>✓</div><div>✓ técnicos próprios</div><div>—</div><div>Fechar / reabrir mês</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ no próprio</div><div>✓ próprio</div></div>
-        </article>
-        <article class="card help-tips"><span class="eyebrow">ROTINA RECOMENDADA</span><h3>Fluxo mensal</h3><p><b>Diariamente:</b> importe o CSV atualizado; o mês é substituído pelos dados mais recentes. <b>No início do mês:</b> defina metas e, se fizer sentido, copie as metas do período anterior. <b>Durante o mês:</b> acompanhe ranking e indicadores. <b>No fechamento:</b> valide bônus/descontos e feche o mês para congelar o histórico. <b>Usuários:</b> mantenha o “Nome do técnico no CSV” igual ao arquivo para garantir o vínculo automático.</p></article>
+
+        <div class="how-middle-grid">
+          <article class="card how-permissions">
+            <div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">PERMISSÕES</span><h3>Quem pode fazer o quê?</h3></div></div>
+            <div class="permission-matrix modern"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Importar CSV / metas / tema</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Criar usuários</div><div>✓</div><div>✓ técnicos</div><div>—</div><div>Editar / excluir usuários</div><div>✓</div><div>✓ técnicos próprios</div><div>—</div><div>Fechar / reabrir mês</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ no próprio</div><div>✓ próprio</div></div>
+          </article>
+          <article class="card how-flow admin-help">
+            <div class="how-section-title"><span class="how-icon blue">▣</span><div><span class="eyebrow">FLUXO MENSAL</span><h3>Rotina recomendada</h3></div></div>
+            <div class="flow-list"><div><i class="green">1</i><p><b>Importar CSV</b><span>Diariamente ou conforme atualização dos dados.</span></p></div><div><i class="orange">2</i><p><b>Ajustar metas</b><span>No início do mês ou quando a gestão definir mudanças.</span></p></div><div><i class="purple">3</i><p><b>Acompanhar</b><span>Use ranking, Visão do Squad e Indicadores.</span></p></div><div><i class="red">4</i><p><b>Fechar mês</b><span>Congele regras e histórico ao final do período.</span></p></div></div>
+            <div class="how-lock">🔒 <b>Mês fechado = histórico preservado.</b><span>Para corrigir, reabra o mês, ajuste e feche novamente.</span></div>
+          </article>
+        </div>
+
+        <div class="how-bottom-grid">
+          <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">USUÁRIOS</span><h3>Editar e excluir</h3></div></div><ul><li>Edite nome, perfil/Squad permitido, nome no CSV e status.</li><li>E-mail e senha não são alterados pelo administrador.</li><li>Para trocar e-mail, exclua o usuário e crie um novo.</li><li>Excluir remove o acesso; históricos mensais permanecem preservados.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon orange">◆</span><div><span class="eyebrow">PONTUAÇÃO</span><h3>Automática</h3></div></div><ul><li>Segue a fórmula de atendimentos × média + bônus/penalidades.</li><li>Metas batidas, status e ranking são automáticos.</li><li>Meses fechados preservam as referências usadas.</li><li>O acumulado considera histórico fechado + mês atual.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">♨</span><div><span class="eyebrow">CAMPANHA</span><h3>Casa do Dragão</h3></div></div><ul><li>A campanha do setor é fixa na lateral.</li><li>Cada Squad mantém seu próprio fundo e identidade visual.</li><li>O tema não altera permissões ou cálculos.</li><li>Performance que vira legado.</li></ul></article>
+        </div>
+
+        <div class="house-motto"><strong>DISCIPLINA • FOCO • RESULTADO</strong><span>Casa do Dragão — grandes conquistas nascem da constância.</span></div>
       </section>
 
       <section id="view-admin" class="view admin-only">
@@ -282,7 +316,7 @@
   <div id="themeModal" class="modal" aria-hidden="true"><div class="modal-card theme-modal"><button class="modal-close" data-close="themeModal">×</button><span class="eyebrow">TEMA DO SQUAD</span><h2>Personalizar aparência</h2><p>Somente administradores podem alterar esta configuração. A campanha do setor na lateral não é afetada.</p><div class="preset-grid"><button class="preset" data-theme="vermithor"><i class="swatch fire"></i><span>Vermithor</span></button><button class="preset" data-theme="soften"><i class="swatch soften"></i><span>Soften</span></button><button class="preset" data-theme="neon"><i class="swatch neon"></i><span>Neon</span></button><button class="preset" data-theme="clean"><i class="swatch clean"></i><span>Claro</span></button></div><div class="custom-theme"><label><span>Cor principal</span><input id="accentColor" type="color" value="#f0a33a"></label><label><span>Cor secundária</span><input id="secondaryColor" type="color" value="#ef5a29"></label><label><span>Nome do tema</span><input id="campaignNameInput" type="text"></label><label><span>Frase do tema</span><input id="campaignTaglineInput" type="text"></label><label><span>Imagem de fundo</span><input id="backgroundFile" type="file" accept="image/*"></label><button class="link-btn" id="removeBg">Remover fundo personalizado</button></div></div></div>
 
 
-  <div id="userModal" class="modal" aria-hidden="true"><div class="modal-card user-modal"><button class="modal-close" data-close="userModal">×</button><span class="eyebrow">NOVO ACESSO</span><h2>Criar usuário</h2><p id="userModalHint">Defina o acesso e o vínculo com o Squad.</p><form id="createUserForm" class="user-form">
+  <div id="userModal" class="modal" aria-hidden="true" data-static-backdrop="true"><div class="modal-card user-modal"><button class="modal-close" data-close="userModal">×</button><span class="eyebrow">NOVO ACESSO</span><h2>Criar usuário</h2><p id="userModalHint">Defina o acesso e o vínculo com o Squad.</p><form id="createUserForm" class="user-form">
     <label><span>Nome completo</span><input id="newUserName" type="text" required autocomplete="off" placeholder="Ex.: João da Silva"></label>
     <label><span>E-mail</span><input id="newUserEmail" type="email" required autocomplete="off" placeholder="joao@empresa.com"></label>
     <label><span>Senha temporária</span><input id="newUserPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
@@ -293,7 +327,7 @@
   </form></div></div>
 
 
-  <div id="editUserModal" class="modal" aria-hidden="true"><div class="modal-card user-modal"><button class="modal-close" data-close="editUserModal">×</button><span class="eyebrow">EDITAR USUÁRIO</span><h2>Dados e vínculo</h2><p>E-mail e senha não podem ser alterados por esta tela. Para trocar o e-mail, exclua o usuário e crie um novo acesso.</p><form id="editUserForm" class="user-form">
+  <div id="editUserModal" class="modal" aria-hidden="true" data-static-backdrop="true"><div class="modal-card user-modal"><button class="modal-close" data-close="editUserModal">×</button><span class="eyebrow">EDITAR USUÁRIO</span><h2>Dados e vínculo</h2><p>E-mail e senha não podem ser alterados por esta tela. Para trocar o e-mail, exclua o usuário e crie um novo acesso.</p><form id="editUserForm" class="user-form">
     <input id="editUserId" type="hidden">
     <label><span>Nome completo</span><input id="editUserName" type="text" required autocomplete="off"></label>
     <label><span>E-mail</span><input id="editUserEmail" type="email" disabled></label>
