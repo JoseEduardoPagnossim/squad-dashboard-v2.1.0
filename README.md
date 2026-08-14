@@ -13,7 +13,7 @@ Enquanto o mês estiver **ABERTO**:
 - o Admin pode reimportar o CSV diariamente;
 - os dados do mesmo mês são **substituídos**, nunca somados à importação anterior;
 - metas, bônus, desconto e parâmetros já preenchidos daquele mês são preservados;
-- pontuação, metas batidas, status e ranking são recalculados automaticamente.
+- pontuação, critérios atendidos, status e ranking são recalculados automaticamente.
 
 Ao clicar em **Fechar mês**:
 
@@ -22,7 +22,7 @@ Ao clicar em **Fechar mês**:
 - metas individuais e do Squad ficam bloqueadas;
 - parâmetros da fórmula ficam bloqueados;
 - bônus e descontos ficam bloqueados;
-- a pontuação, status, metas batidas e ranking são armazenados em um snapshot histórico;
+- a pontuação, status, critérios atendidos e ranking são armazenados em um snapshot histórico;
 - as referências automáticas usadas na pontuação ficam registradas no snapshot do fechamento.
 
 Se for necessário corrigir um histórico, o Admin usa **Reabrir**, faz a correção e fecha novamente.
@@ -205,3 +205,17 @@ supabase/functions/create-user/   Criação segura de usuários
 - O **status da equipe** passa a reproduzir a fórmula da planilha: média da pontuação do grupo e `ACIMA` quando pelo menos 50% dos técnicos têm pontuação **maior** que essa média.
 - A Visão do Squad mostra a média de pontos e a auditoria `X de Y técnicos acima da média`.
 - Não exige nova migração SQL.
+
+
+## V2.9.0 — evolução histórica dos técnicos
+
+- A **Visão do Squad** ganhou três análises multi-mês:
+  - total de atendimentos por técnico/mês, com barra do total do Squad;
+  - média de atendimentos por técnico por dia útil;
+  - percentual de avaliação por técnico.
+- A tela **Indicadores**, exclusiva do Admin geral, recebeu as mesmas análises dentro do período selecionado.
+  - em um Squad específico, as linhas são os técnicos;
+  - em **Todos os Squads**, as linhas são os Squads para evitar excesso de séries.
+- Os históricos usam até os **12 meses importados mais recentes** na Visão do Squad; no painel de Indicadores, respeitam o filtro **De / Até**.
+- Cards principais padronizados em **4 colunas no desktop**; somente quebram em resoluções menores ou quando houver novos cards.
+- Não há alteração de banco de dados nesta versão.

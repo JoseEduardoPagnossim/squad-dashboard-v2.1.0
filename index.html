@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.8.0 • visual renovado + vínculo CSV resiliente</small>
+      <small class="login-version">V2.9.0 • visual renovado + vínculo CSV resiliente</small>
     </div>
   </section>
 
@@ -77,7 +77,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.8.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.9.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -172,7 +172,29 @@
               <article class="card team-goal-card"><span>% de avaliação</span><div class="team-kpi-value"><strong id="teamPct">0%</strong><small>/ <b id="teamPctGoal">34,3%</b></small></div><div class="team-progress"><i id="teamPctBar"></i></div><small class="team-kpi-note" id="teamPctNote">Meta mensal</small></article>
               <article class="card"><span>Média de pontos</span><strong id="teamAvgPoints">0</strong><small class="team-kpi-note" id="teamAvgPointsNote">Referência usada no status da equipe</small></article>
             </div>
+
             <article class="card leaderboard-card"><div class="section-title"><div><span class="eyebrow">CLASSIFICAÇÃO</span><h3>Ranking completo</h3></div><span class="muted">Atualizado pela última importação</span></div><div id="teamLeaderboard" class="leaderboard"></div></article>
+
+            <section class="team-history-section">
+              <div class="history-section-head card">
+                <div><span class="eyebrow">EVOLUÇÃO HISTÓRICA</span><h2>Indicadores dos técnicos ao longo dos meses</h2><p id="teamHistorySubtitle">Comparativo construído com todos os meses importados deste Squad.</p></div>
+                <span class="history-chip" id="teamHistoryPeriod">Histórico</span>
+              </div>
+              <article class="card chart-card history-chart-card history-chart-wide">
+                <div class="section-title"><div><span class="eyebrow">ATENDIMENTOS</span><h3>Total de atendimentos por técnico / mês</h3></div><span class="muted">Barras = total do Squad • linhas = técnicos</span></div>
+                <div id="teamHistoryAttChart" class="chart history-chart"></div>
+              </article>
+              <div class="history-chart-grid">
+                <article class="card chart-card history-chart-card">
+                  <div class="section-title"><div><span class="eyebrow">PRODUTIVIDADE</span><h3>Média de atendimentos por dia útil</h3></div><span class="muted">Atendimentos ÷ dias úteis transcorridos</span></div>
+                  <div id="teamHistoryDailyAvgChart" class="chart history-chart"></div>
+                </article>
+                <article class="card chart-card history-chart-card">
+                  <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>% de avaliação por técnico</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+                  <div id="teamHistoryEvalChart" class="chart history-chart"></div>
+                </article>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -180,7 +202,7 @@
 
       <section id="view-indicators" class="view super-only">
         <div class="help-hero card glass indicator-hero">
-          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com visão mensal, semanal e produtividade por tempo trabalhado.</p></div>
+          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com visão mensal, semanal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.</p></div>
           <div class="help-role"><small>ESCOPO</small><strong id="indicatorScopeTitle">Todos os Squads</strong><span id="indicatorScopeText">Selecione um Squad no topo para aprofundar a análise.</span></div>
         </div>
 
@@ -240,6 +262,27 @@
             <div id="indicatorInsights" class="insight-list"></div>
           </article>
         </div>
+
+        <section class="indicator-history-section">
+          <div class="history-section-head card">
+            <div><span class="eyebrow">EVOLUÇÃO HISTÓRICA</span><h2 id="indicatorHistoryTitle">Atendimentos e avaliação no período</h2><p id="indicatorHistorySubtitle">Ao selecionar um Squad, as linhas representam os técnicos. Em Todos os Squads, representam cada grupo.</p></div>
+            <span class="history-chip" id="indicatorHistoryPeriod">Período</span>
+          </div>
+          <article class="card chart-card history-chart-card history-chart-wide">
+            <div class="section-title"><div><span class="eyebrow">ATENDIMENTOS</span><h3 id="indicatorHistoryAttTitle">Total de atendimentos por mês</h3></div><span class="muted" id="indicatorHistoryAttNote">Barras = total geral • linhas = comparativos</span></div>
+            <div id="indicatorHistoryAttChart" class="chart history-chart"></div>
+          </article>
+          <div class="history-chart-grid">
+            <article class="card chart-card history-chart-card">
+              <div class="section-title"><div><span class="eyebrow">PRODUTIVIDADE</span><h3 id="indicatorHistoryDailyTitle">Média de atendimentos por dia útil</h3></div><span class="muted">Normalizado pelo período útil</span></div>
+              <div id="indicatorHistoryDailyAvgChart" class="chart history-chart"></div>
+            </article>
+            <article class="card chart-card history-chart-card">
+              <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3 id="indicatorHistoryEvalTitle">% de avaliação</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+              <div id="indicatorHistoryEvalChart" class="chart history-chart"></div>
+            </article>
+          </div>
+        </section>
       </section>
 
 
@@ -310,7 +353,7 @@
           <article class="card admin-card full"><span class="eyebrow">PONTUAÇÃO AUTOMÁTICA</span><h2>Parâmetros da fórmula mensal</h2><p>A pontuação segue a mesma lógica da planilha: <b>Atendimentos × Média da avaliação</b> e quatro bônus/penalidades. Enquanto o mês estiver aberto, referências mensais manuais de <b>atendimentos</b> e <b>total de avaliações</b> são proporcionalizadas pelos dias úteis já transcorridos. Campos vazios usam a <b>média atual do Squad</b>. Média da avaliação e % avaliado são comparados diretamente, sem proporcionalização.</p><div class="admin-form scoring-grid"><label><span>Referência de atendimentos</span><input id="scoreRefAtt" type="number" min="0" step="0.01" placeholder="Automático: média do Squad"></label><label><span>Referência de total de avaliações</span><input id="scoreRefEval" type="number" min="0" step="0.01" placeholder="Automático: média do Squad"></label><label><span>Referência de média da avaliação</span><input id="scoreRefAvg" type="number" min="0" max="5" step="0.01" placeholder="Automático: média do Squad"></label><label><span>Referência de % avaliado</span><div class="input-suffix"><input id="scoreRefPct" type="number" min="0" max="100" step="0.01" placeholder="Automático"><b>%</b></div></label></div><div class="score-formula"><code>Pontos = Atend. × Média + (±20 atend.) + (±30 avaliações) + (±40 média) + (±35 % avaliado)</code><small>Critérios atendidos = referências atingidas (0 a 4). Status do técnico = ACIMA com 2 ou mais critérios; ABAIXO com 0 ou 1. No fechamento, as referências mensais completas são aplicadas e congeladas.</small></div><div class="auto-goal" id="scoreAutoHint">Importe um mês para calcular as referências automáticas.</div><div class="admin-actions"><button class="btn primary" id="saveScoreSettingsBtn">Salvar parâmetros e recalcular</button></div></article>
           <article class="card admin-card"><span class="eyebrow">APARÊNCIA • SOMENTE ADMIN</span><h2>Tema do Squad</h2><p>Cada Squad pode ter seu próprio fundo e identidade visual. A campanha do setor “Casa do Dragão” permanece fixa na lateral.</p><button class="btn secondary wide" id="adminThemeBtn">✦ Personalizar tema</button><div class="theme-file-actions"><button class="btn secondary" id="importThemeBtn">Importar tema JSON</button><button class="btn secondary" id="exportThemeBtn">Exportar tema</button></div><div class="theme-preview"><div><small>ATUAL</small><strong id="themeName">Vermithor</strong></div></div></article>
           <article class="card admin-card"><span class="eyebrow">ACESSOS</span><h2>Usuários e permissões</h2><p>Os cadastros agora são feitos diretamente pelo sistema. Admin geral gerencia todos os Squads; Admin do Squad pode cadastrar técnicos somente na própria equipe.</p><button class="btn secondary wide" id="openUsersBtn">♟ Abrir gestão de usuários</button><div class="role-cards"><div><b>Admin geral</b><span>Todos os Squads + admins + técnicos</span></div><div><b>Admin do Squad</b><span>Cria e consulta técnicos do próprio Squad</span></div><div><b>Técnico</b><span>Seu desempenho + visão do próprio Squad</span></div></div></article>
-          <article class="card admin-card full"><span class="eyebrow">MÉTRICAS INDIVIDUAIS</span><h2>Metas e bonificações do mês</h2><p>Atendimentos, avaliações, média, % avaliado, metas batidas, status, pontuação e ranking são calculados automaticamente. O administrador preenche somente as metas individuais, desconto e bônus quando aplicável.</p><div class="table-wrap monthly-metrics-wrap"><table class="monthly-metrics-table"><thead><tr><th>Técnico</th><th>Atend.</th><th>Avaliações</th><th>Média</th><th>% Aval.</th><th>Meta atend.</th><th>Meta notas 5</th><th>Status / critérios</th><th>Pontos mês</th><th>Acumulado</th><th>Desconto (R$)</th><th>Bônus (R$)</th></tr></thead><tbody id="monthlyMetricsRows"></tbody></table></div><div class="admin-actions"><span class="muted" id="monthlyMetricsHint">Importe um mês para preencher as métricas.</span><button class="btn secondary" id="copyPreviousGoalsBtn">↻ Copiar metas do mês anterior</button><button class="btn primary" id="saveMonthlyMetricsBtn">Salvar metas e bonificações</button></div></article>
+          <article class="card admin-card full"><span class="eyebrow">MÉTRICAS INDIVIDUAIS</span><h2>Metas e bonificações do mês</h2><p>Atendimentos, avaliações, nota média, % avaliado, critérios atendidos, status, pontuação e ranking são calculados automaticamente. O administrador preenche somente as metas individuais, desconto e bônus quando aplicável.</p><div class="table-wrap monthly-metrics-wrap"><table class="monthly-metrics-table"><thead><tr><th>Técnico</th><th>Atend.</th><th>Avaliações</th><th>Média</th><th>% Aval.</th><th>Meta atend.</th><th>Meta notas 5</th><th>Status / critérios</th><th>Pontos mês</th><th>Acumulado</th><th>Desconto (R$)</th><th>Bônus (R$)</th></tr></thead><tbody id="monthlyMetricsRows"></tbody></table></div><div class="admin-actions"><span class="muted" id="monthlyMetricsHint">Importe um mês para preencher as métricas.</span><button class="btn secondary" id="copyPreviousGoalsBtn">↻ Copiar metas do mês anterior</button><button class="btn primary" id="saveMonthlyMetricsBtn">Salvar metas e bonificações</button></div></article>
           <article class="card admin-card full"><span class="eyebrow">MESES IMPORTADOS</span><h2>Histórico</h2><p>Meses em andamento podem ser atualizados diariamente. Ao fechar um mês, dados, metas, pontuação, bônus e descontos ficam congelados. Para corrigir um histórico fechado, reabra o mês, ajuste e feche novamente.</p><div id="monthHistory" class="history-list"></div></article>
         </div>
       </section>

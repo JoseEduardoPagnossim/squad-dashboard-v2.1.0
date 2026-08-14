@@ -8,6 +8,7 @@
   const fmtMoney = n => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
   const fmtNum = n => (Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2});
   const clamp = (n,a,b) => Math.min(b,Math.max(a,n));
+  const HISTORY_COLORS = ['#f0a33a','#36c98f','#ff4ddb','#e6edf7','#9ea4ad','#2f78ff','#ff3b30','#9b6cff','#22c7d6','#f2c14e','#63d471','#ef7f4d'];
   const safe = n => Number.isFinite(Number(n)) ? Number(n) : 0;
   const clone = obj => JSON.parse(JSON.stringify(obj));
 
@@ -353,6 +354,7 @@
     $('#teamAvgPoints').textContent=fmtNum(statusInfo.avgPoints);$('#teamAvgPointsNote').textContent=`${statusInfo.aboveCount} de ${statusInfo.count} acima da média`;
     $('#teamStatusAudit').textContent=statusInfo.count?`${statusInfo.aboveCount} de ${statusInfo.count} técnicos acima de ${fmtNum(statusInfo.avgPoints)} pts • ${fmtPct(statusInfo.ratio)} • mínimo 50%`:'Sem técnicos com pontuação para calcular o status';
     const list=[...m.technicians].sort((a,b)=>(a.rank||99)-(b.rank||99));$('#teamLeaderboard').innerHTML=list.map(t=>`<div class="leader-item ${t.rank===1?'top1':''}"><div class="place">#${t.rank||'—'}</div><div class="name">${escapeHtml(t.name)}</div><div class="metric"><span>Atend.</span><strong>${fmtInt(t.att)}</strong></div><div class="metric"><span>Notas 5</span><strong>${fmtInt(t.notes5)}</strong></div><div class="metric hide-md"><span>% Aval.</span><strong>${fmtPct(t.evalPct)}</strong></div><div class="metric points"><span>Pontos</span><strong>${fmtNum(t.points)}</strong></div><div><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span></div></div>`).join('');
+    renderTeamHistoricalAnalytics(currentSquad());
   }
   function renderPortfolio(){
     $('#squadPortfolio').innerHTML=Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code)).map(s=>{const ids=Object.keys(s.months||{}).sort().reverse(),m=ids.length?s.months[ids[0]]:null;if(!m)return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status-line">SEM DADOS</span></div><h3>${escapeHtml(s.name)}</h3><div class="squad-empty">Aguardando a primeira importação.</div></article>`;const totals=m.teamTotals||deriveTotals(m.technicians);return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status ${String(m.teamResult).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(m.teamResult||'—')}</span></div><h3>${escapeHtml(s.name)}</h3><div class="status-line">${m.monthName} ${m.year} • ${m.technicians.length} técnicos</div><div class="squad-summary"><div><span>Atend.</span><strong>${fmtInt(totals.att)}</strong></div><div><span>Aval.</span><strong>${fmtInt(totals.eval)}</strong></div><div><span>% Aval.</span><strong>${fmtPct(totals.evalPct)}</strong></div></div></article>`}).join('');
@@ -398,7 +400,7 @@ function renderIndicators(){
   $('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;
   $('#indicatorPeriodLabel').textContent=rangeIds.length?`${monthLabelFromId(rangeIds[0])} até ${monthLabelFromId(rangeIds[rangeIds.length-1])}`:'Sem dados importados';
   if(!rangeIds.length){
-    ['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Importe dados para liberar os indicadores.</div>';});
+    ['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart','indicatorHistoryAttChart','indicatorHistoryDailyAvgChart','indicatorHistoryEvalChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Importe dados para liberar os indicadores.</div>';});
     if($('#indicatorInsights'))$('#indicatorInsights').innerHTML='<div class="insight-item"><strong>Sem dados</strong><small>Importe pelo menos um mês para exibir a análise executiva.</small></div>';
     ['indicatorAttPerHour','indicatorAboveRatio','indicatorCampaignHit','indicatorExcellence'].forEach(id=>{if($('#'+id))$('#'+id).textContent='0';});
     if($('#indicatorAttPerMinute'))$('#indicatorAttPerMinute').textContent='0 por minuto';
@@ -509,7 +511,112 @@ function renderIndicators(){
     <div class="insight-item"><strong>Técnico com melhor média de pontos</strong><small>${bestTech?`${escapeHtml(titleWords(bestTech.name))} • Squad ${escapeHtml(bestTech.squad)} • ${fmtNum(bestTech.points/Math.max(1,bestTech.months))} pts/mês.`:'Sem dados suficientes para ranquear técnicos.'}</small></div>
     <div class="insight-item"><strong>Momento mais forte</strong><small>${strongestMonth?`${escapeHtml(strongestMonth.label)} registrou saldo positivo de ${fmtInt(strongestMonth.above-strongestMonth.below)} técnicos acima.`:'Sem dados suficientes.'}</small></div>
     <div class="insight-item"><strong>Ponto de atenção</strong><small>${weakestMonth?`${escapeHtml(weakestMonth.label)} apresentou o menor saldo, com ${fmtInt(Math.abs(weakestMonth.above-weakestMonth.below))} de diferença entre acima e abaixo.`:'Sem dados suficientes.'}</small></div>`;
+  renderIndicatorHistoricalAnalytics(squads,rangeIds);
 }
+
+function shortHistoryMonth(id){
+  if(!id)return '—';
+  const [year,month]=String(id).split('-').map(Number);
+  const short=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Math.max(0,(month||1)-1)];
+  return `${short}/${String(year).slice(-2)}`;
+}
+function historyMonthIdsForSquad(squad,limit=12){
+  const ids=Object.keys(squad?.months||{}).sort();
+  return limit&&ids.length>limit?ids.slice(-limit):ids;
+}
+function historyTechKey(t){return t?.userId?`u:${t.userId}`:`n:${nameLinkKey(t?.name)}`}
+function historyBusinessDays(m){
+  if(!m)return 0;
+  const latest=Math.max(1,Math.min(safe(m.latestDay)||new Date(m.year,m.month,0).getDate(),new Date(m.year,m.month,0).getDate()));
+  return businessDaysElapsed(m.year,m.month,latest);
+}
+function buildTechnicianHistory(squad,ids){
+  const techMap=new Map();
+  ids.forEach(id=>{
+    const m=squad?.months?.[id];if(!m)return;
+    (m.technicians||[]).forEach(t=>{
+      const key=historyTechKey(t);if(!techMap.has(key))techMap.set(key,{key,name:t.name,userId:t.userId||null});
+    });
+  });
+  const entities=[...techMap.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
+  const totals=[];
+  const attendance=entities.map((e,i)=>({name:titleWords(e.name),color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:[]}));
+  const daily=entities.map((e,i)=>({name:titleWords(e.name),color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:[]}));
+  const evaluation=entities.map((e,i)=>({name:titleWords(e.name),color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:[]}));
+  ids.forEach(id=>{
+    const m=squad?.months?.[id];
+    totals.push(m?safe((m.teamTotals||deriveTotals(m.technicians)).att):0);
+    const days=m?Math.max(1,historyBusinessDays(m)):1;
+    entities.forEach((e,idx)=>{
+      const t=(m?.technicians||[]).find(x=>historyTechKey(x)===e.key);
+      attendance[idx].values.push(t?safe(t.att):null);
+      daily[idx].values.push(t?safe(t.att)/days:null);
+      evaluation[idx].values.push(t?safe(t.evalPct)*100:null);
+    });
+  });
+  const squadDaily={name:'Média Squad',color:'var(--accent2)',dashed:true,values:ids.map(id=>{const m=squad?.months?.[id];if(!m)return null;const totals=m.teamTotals||deriveTotals(m.technicians),days=Math.max(1,historyBusinessDays(m)),count=Math.max(1,(m.technicians||[]).length);return safe(totals.att)/(days*count)})};
+  const squadEval={name:'Total geral',color:'var(--accent2)',dashed:true,values:ids.map(id=>{const m=squad?.months?.[id];return m?safe((m.teamTotals||deriveTotals(m.technicians)).evalPct)*100:null})};
+  daily.unshift(squadDaily);evaluation.unshift(squadEval);
+  return{ids,labels:ids.map(shortHistoryMonth),totals,attendance,daily,evaluation,entityCount:entities.length};
+}
+function buildSquadHistory(squads,ids){
+  const active=(squads||[]).filter(Boolean).sort((a,b)=>a.code.localeCompare(b.code));
+  const totals=ids.map(id=>active.reduce((sum,s)=>sum+safe((s.months?.[id]?.teamTotals||deriveTotals(s.months?.[id]?.technicians||[])).att),0));
+  const attendance=active.map((s,i)=>({name:`Squad ${s.code}`,color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:ids.map(id=>{const m=s.months?.[id];return m?safe((m.teamTotals||deriveTotals(m.technicians)).att):null})}));
+  const daily=active.map((s,i)=>({name:`Squad ${s.code}`,color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:ids.map(id=>{const m=s.months?.[id];if(!m)return null;const techCount=Math.max(1,(m.technicians||[]).length),days=Math.max(1,historyBusinessDays(m));return safe((m.teamTotals||deriveTotals(m.technicians)).att)/(techCount*days)})}));
+  const evaluation=active.map((s,i)=>({name:`Squad ${s.code}`,color:HISTORY_COLORS[i%HISTORY_COLORS.length],values:ids.map(id=>{const m=s.months?.[id];return m?safe((m.teamTotals||deriveTotals(m.technicians)).evalPct)*100:null})}));
+  daily.unshift({name:'Média geral',color:'var(--accent2)',dashed:true,values:ids.map(id=>{let att=0,exposure=0;active.forEach(s=>{const m=s.months?.[id];if(!m)return;att+=safe((m.teamTotals||deriveTotals(m.technicians)).att);exposure+=Math.max(1,historyBusinessDays(m))*Math.max(1,(m.technicians||[]).length)});return exposure?att/exposure:null})});
+  evaluation.unshift({name:'Total geral',color:'var(--accent2)',dashed:true,values:ids.map(id=>{let att=0,evals=0;active.forEach(s=>{const m=s.months?.[id];if(!m)return;const t=m.teamTotals||deriveTotals(m.technicians);att+=safe(t.att);evals+=safe(t.eval)});return att?(evals/att)*100:null})});
+  return{ids,labels:ids.map(shortHistoryMonth),totals,attendance,daily,evaluation,entityCount:active.length};
+}
+function renderTeamHistoricalAnalytics(squad){
+  if(!squad||!$('#teamHistoryAttChart'))return;
+  const ids=historyMonthIdsForSquad(squad,12),data=buildTechnicianHistory(squad,ids);
+  $('#teamHistoryPeriod').textContent=ids.length?`${shortHistoryMonth(ids[0])} → ${shortHistoryMonth(ids[ids.length-1])}`:'Sem histórico';
+  $('#teamHistorySubtitle').textContent=ids.length>1?`${ids.length} meses importados • ${data.entityCount} técnicos encontrados no histórico.`:'Importe outros meses para formar a comparação histórica.';
+  renderHistoryAttendanceChart($('#teamHistoryAttChart'),data.labels,data.totals,data.attendance);
+  renderIndicatorLineChart($('#teamHistoryDailyAvgChart'),data.labels,data.daily,{maxValue:null,percent:false,decimals:1});
+  renderIndicatorLineChart($('#teamHistoryEvalChart'),data.labels,data.evaluation,{maxValue:null,percent:true});
+}
+function renderIndicatorHistoricalAnalytics(squads,rangeIds){
+  if(!$('#indicatorHistoryAttChart'))return;
+  const ids=[...(rangeIds||[])];
+  const specific=state.squadCode!=='all'&&squads.length===1;
+  const data=specific?buildTechnicianHistory(squads[0],ids):buildSquadHistory(squads,ids);
+  $('#indicatorHistoryTitle').textContent=specific?`Histórico dos técnicos do Squad ${state.squadCode}`:'Histórico comparativo dos Squads';
+  $('#indicatorHistorySubtitle').textContent=specific?'As linhas representam cada técnico do Squad dentro do período filtrado.':'No escopo geral, as linhas representam cada Squad para manter a leitura clara.';
+  $('#indicatorHistoryPeriod').textContent=ids.length?`${shortHistoryMonth(ids[0])} → ${shortHistoryMonth(ids[ids.length-1])}`:'Sem histórico';
+  $('#indicatorHistoryAttTitle').textContent=specific?'Total de atendimentos por técnico / mês':'Total de atendimentos por Squad / mês';
+  $('#indicatorHistoryDailyTitle').textContent=specific?'Média de atendimentos por técnico / dia útil':'Média de atendimentos por técnico / dia útil e Squad';
+  $('#indicatorHistoryEvalTitle').textContent=specific?'% de avaliação por técnico':'% de avaliação por Squad';
+  $('#indicatorHistoryAttNote').textContent=specific?'Barras = total do Squad • linhas = técnicos':'Barras = total geral • linhas = Squads';
+  renderHistoryAttendanceChart($('#indicatorHistoryAttChart'),data.labels,data.totals,data.attendance);
+  renderIndicatorLineChart($('#indicatorHistoryDailyAvgChart'),data.labels,data.daily,{maxValue:null,percent:false,decimals:1});
+  renderIndicatorLineChart($('#indicatorHistoryEvalChart'),data.labels,data.evaluation,{maxValue:null,percent:true});
+}
+function renderHistoryAttendanceChart(el,labels,totals,series){
+  if(!el)return;
+  const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
+  if(!labels?.length||!validSeries.length){el.innerHTML='<div class="chart-empty">Importe pelo menos um mês com técnicos vinculados para visualizar o histórico.</div>';return;}
+  const w=Math.max(780,labels.length*118),h=300,p={l:46,r:58,t:22,b:48};
+  const lineVals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
+  const lineTop=Math.max(1,...lineVals)*1.12,totalTop=Math.max(1,...(totals||[]).map(safe))*1.12;
+  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(54,slot*.54);
+  const x=i=>p.l+slot*(i+.5), yLine=v=>p.t+(h-p.t-p.b)-(safe(v)/lineTop)*(h-p.t-p.b), yTotal=v=>p.t+(h-p.t-p.b)-(safe(v)/totalTop)*(h-p.t-p.b);
+  const leftGrid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),lv=lineTop*f,rv=totalTop*f;return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${fmtInt(lv)}</text><text x="${w-4}" y="${yy+4}" class="axis-label-right">${fmtInt(rv)}</text>`}).join('');
+  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="7" class="history-total-bar"><title>${labels[i]} • Total: ${fmtInt(v)}</title></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-6)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
+  const paths=validSeries.map(s=>{
+    const segs=[];let cur=[];
+    (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${yLine(v)}`)});if(cur.length>1)segs.push(cur);
+    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="3.6" fill="${s.color}" class="chart-point"><title>${s.name} • ${labels[i]}: ${fmtInt(v)}</title></circle>`).join('');
+    return lines+dots;
+  }).join('');
+  const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-12}" text-anchor="middle" class="axis-label">${escapeHtml(label)}</text>`).join('');
+  const legend=`<div class="chart-legend-inline"><span><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="width:${w}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${xLabels}<text x="${p.l}" y="12" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="12" text-anchor="end" class="history-axis-title">Total geral</text></svg>${legend}`;
+}
+
 function renderIndicatorStatusChart(items){
   const el=$('#indicatorStatusChart'); if(!el)return;
   if(!items.length){el.innerHTML='<div class="chart-empty">Sem dados para o período selecionado.</div>';return;}
@@ -520,24 +627,24 @@ function renderIndicatorStatusChart(items){
   const bars=items.map((it,i)=>{const total=safe(it.above)+safe(it.below),belowH=((h-p.t-p.b)*(safe(it.below)/maxVal)),aboveH=((h-p.t-p.b)*(safe(it.above)/maxVal)),bx=x(i)-barW/2,bottom=h-p.b;return `<rect x="${bx}" y="${bottom-belowH}" width="${barW}" height="${belowH}" rx="8" class="chart-bar-below" opacity=".78"></rect><rect x="${bx}" y="${bottom-belowH-aboveH}" width="${barW}" height="${aboveH}" rx="8" class="chart-bar-above"></rect><text x="${x(i)}" y="${bottom-belowH-aboveH-8}" text-anchor="middle" class="axis-label">${total}</text><text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(it.label.split(' ')[0].slice(0,3))}</text>`;}).join('');
   el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${bars}</svg>`;
 }
-function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false}={}){
+function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,decimals=0}={}){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
-  const w=720,h=260,p={l:42,r:20,t:18,b:44};
+  const w=Math.max(720,(labels?.length||0)*105),h=260,p={l:42,r:20,t:18,b:44};
   const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const top=maxValue??Math.max(1,...vals); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
-  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:fmtNum(v); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
-  const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(label.split(' ')[0].slice(0,3))}</text>`).join('');
+  const rawTop=Math.max(1,...vals); const top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.08); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals}); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
+  const xLabels=labels.map((label,i)=>{const raw=String(label||'');const shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-10}" text-anchor="middle" class="axis-label">${escapeHtml(shown)}</text>`}).join('');
   const paths=validSeries.map((s,idx)=>{
     const segs=[]; let cur=[];
     (s.values||[]).forEach((v,i)=>{ if(v==null){ if(cur.length>1) segs.push(cur); cur=[]; return;} cur.push(`${x(i)},${y(v)}`); });
-    if(cur.length>1) segs.push(cur); const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`).join('');
+    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${s.dashed?2.5:3}" stroke-linecap="round" stroke-linejoin="round"${dash}></polyline>`).join('');
     const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.color||'var(--accent)'}" class="chart-point"></circle>`).join('');
     return `${segments}${dots}`;
   }).join('');
-  const legend=`<div class="chart-legend-inline">${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
-  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg>${legend}`;
+  const legend=`<div class="chart-legend-inline">${validSeries.map(s=>`<span><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="width:${w}px" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg>${legend}`;
 }
 
   function renderHelp(){
