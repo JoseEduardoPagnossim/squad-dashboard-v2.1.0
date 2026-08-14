@@ -192,3 +192,16 @@ supabase/functions/create-user/   Criação segura de usuários
 - Modal de criação e edição de usuário não fecha mais por clique fora; fecha somente por X ou Cancelar.
 - A detecção de clique no backdrop dos demais modais passou a usar pointerdown + pointerup, evitando fechamento acidental durante seleção/cópia de texto.
 - Sem nova migração SQL.
+
+
+## V2.8.0 — status diário e auditável
+
+- O técnico agora vê a **nota média** em um KPI próprio.
+- Nova área **Status auditável**, exibindo os 4 critérios, valor realizado, referência usada, origem da referência e resultado ✓/✕.
+- Em mês aberto, referências manuais mensais de **atendimentos** e **total de avaliações** são proporcionalizadas por `dias úteis transcorridos / dias úteis do mês`.
+- Referências de **nota média** e **% avaliado** não são proporcionalizadas.
+- Se um parâmetro estiver vazio, continua sendo usada a **média atual do Squad** naquele momento.
+- No fechamento mensal, referências manuais de volume usam 100% do valor mensal e são congeladas no snapshot.
+- O **status da equipe** passa a reproduzir a fórmula da planilha: média da pontuação do grupo e `ACIMA` quando pelo menos 50% dos técnicos têm pontuação **maior** que essa média.
+- A Visão do Squad mostra a média de pontos e a auditoria `X de Y técnicos acima da média`.
+- Não exige nova migração SQL.
