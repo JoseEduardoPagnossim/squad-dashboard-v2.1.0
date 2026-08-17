@@ -111,6 +111,8 @@
     $('#recoveryForm').addEventListener('submit',handleRecoveryPassword);
     $('#logoutBtn').addEventListener('click',logout);
     $$('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
+    ['#sideUserProfileBtn','#topUserProfileBtn'].forEach(sel=>{const el=$(sel);if(!el)return;el.addEventListener('click',()=>showView('profile'));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showView('profile')}})});
+    $('#profilePasswordForm').addEventListener('submit',handleProfilePasswordChange);
     $('#mobileMenu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
     $('#squadSelect').addEventListener('change',async e=>{await selectSquad(e.target.value);});
     $('#monthSelect').addEventListener('change',e=>{state.currentId=e.target.value; chooseDefaultTech(); refreshSelectors(); render();});
@@ -262,10 +264,10 @@
     state.currentView=name;
     $$('.view').forEach(v=>v.classList.remove('active')); $('#view-'+name).classList.add('active');
     $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
-    const titles={individual:'Meu desempenho',team:'Visão do Squad',indicators:'Indicadores',users:'Usuários',admin:'Administração',help:'Como usar'};
+    const titles={individual:'Meu desempenho',team:'Visão do Squad',indicators:'Indicadores',users:'Usuários',admin:'Administração',profile:'Meu perfil',help:'Como usar'};
     $('#pageTitle').textContent=titles[name]||'Performance Hub';
     $('.technician-control').classList.toggle('hidden',name!=='individual'||isTechnician()||state.squadCode==='all');
-    $('.month-control').classList.toggle('hidden',name==='users'||name==='help'||name==='indicators');
+    $('.month-control').classList.toggle('hidden',name==='users'||name==='profile'||name==='help'||name==='indicators');
     $('.sidebar').classList.remove('open');
     render();
   }
@@ -283,6 +285,7 @@
     applyPermissions();
     if(state.currentView==='users')renderUsers().catch(err=>{console.error(err);toast('Não foi possível carregar os usuários.')});
     if(state.currentView==='help')renderHelp();
+    if(state.currentView==='profile')renderProfile();
     if(state.currentView==='indicators')renderIndicators();
     if(state.squadCode==='all'){renderTeam();renderAdmin();return}
     const m=currentMonth();
@@ -793,6 +796,63 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   bindChartTooltips(el);
 }
 
+
+  function renderProfile(){
+    if(!state.user||!$('#view-profile'))return;
+    const u=state.user,role=roleLabel(u.role),scope=u.role==='super_admin'?'Todos os Squads':(u.squadCode?`Squad ${u.squadCode}`:'Sem Squad');
+    const initial=String(u.fullName||u.email||'U').charAt(0).toUpperCase();
+    $('#profileAvatar').textContent=initial;
+    $('#profileName').textContent=u.fullName||'Usuário';
+    $('#profileEmail').textContent=u.email||'E-mail não informado';
+    $('#profileRole').textContent=role;
+    $('#profileScope').textContent=scope;
+    $('#profileFullName').textContent=u.fullName||'—';
+    $('#profileAccountEmail').textContent=u.email||'—';
+    $('#profileAccountRole').textContent=role;
+    $('#profileAccountSquad').textContent=scope;
+    $('#profileTechRow').classList.toggle('hidden',u.role!=='technician');
+    $('#profileAccountTech').textContent=u.techName?titleWords(u.techName):'—';
+  }
+  async function handleProfilePasswordChange(e){
+    e.preventDefault();if(!state.user)return;
+    const current=$('#profileCurrentPassword').value,newPassword=$('#profileNewPassword').value,confirm=$('#profileConfirmPassword').value,msg=$('#profilePasswordMessage'),btn=$('#profilePasswordSubmit');
+    msg.className='profile-form-message';msg.textContent='';
+    if(!current){msg.textContent='Informe sua senha atual.';return;}
+    if(String(newPassword).length<8){msg.textContent='A nova senha precisa ter pelo menos 8 caracteres.';return;}
+    if(newPassword!==confirm){msg.textContent='A confirmação da nova senha não confere.';return;}
+    if(newPassword===current){msg.textContent='A nova senha precisa ser diferente da senha atual.';return;}
+    btn.disabled=true;btn.textContent='Atualizando...';
+    try{
+      if(state.supabase){
+        const {error:reauthError}=await state.supabase.auth.signInWithPassword({email:state.user.email,password:current});
+        if(reauthError)throw reauthError;
+        const {error:updateError}=await state.supabase.auth.updateUser({password:newPassword});
+        if(updateError)throw updateError;
+      }else{
+        updateCurrentDemoPassword(current,newPassword);
+      }
+      $('#profilePasswordForm').reset();
+      msg.className='profile-form-message success';msg.textContent='Senha atualizada com sucesso. Use a nova senha no próximo login.';
+      toast('Sua senha foi atualizada com sucesso.');
+    }catch(err){
+      console.error(err);msg.className='profile-form-message error';msg.textContent=humanProfilePasswordError(err);
+    }finally{btn.disabled=false;btn.textContent='Atualizar minha senha';}
+  }
+  function updateCurrentDemoPassword(currentPassword,newPassword){
+    const email=String(state.user?.email||'').toLowerCase(),u=findDemoUser(email);
+    if(!u||String(u.password)!==String(currentPassword))throw new Error('Senha atual incorreta.');
+    const list=loadDemoCreatedUsers().filter(x=>String(x.email||'').toLowerCase()!==email);
+    list.push({...u,email:u.email||email,password:newPassword,userId:u.userId||`demo-profile-${Date.now()}`});
+    saveDemoCreatedUsers(list);state.user.password=newPassword;
+  }
+  function humanProfilePasswordError(err){
+    const m=String(err?.message||err||'');
+    if(/invalid login|invalid.*credential/i.test(m))return'Senha atual incorreta.';
+    if(/same password|different from the old|different.*password/i.test(m))return'A nova senha precisa ser diferente da senha atual.';
+    if(/password.*(least|characters|short)/i.test(m))return'A nova senha não atende aos requisitos de segurança. Use pelo menos 8 caracteres.';
+    if(/rate limit/i.test(m))return'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
+    return m||'Não foi possível alterar a senha.';
+  }
 
   function renderHelp(){
     if(!state.user)return;

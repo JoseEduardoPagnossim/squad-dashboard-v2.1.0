@@ -239,3 +239,25 @@ supabase/functions/create-user/   Criação segura de usuários
 - A chave histórica ignora espaços, espaços especiais e acentuação, usando a mesma normalização já aplicada no vínculo do CSV.
 - Não é necessário apagar nem reimportar meses anteriores.
 - Sem alteração de banco de dados e sem nova Edge Function.
+
+
+## V2.11.0 — visão consolidada do setor
+
+- Dois novos gráficos consolidados por Squad: **quantidade de atendimentos por mês** e **taxa de avaliação mensal**.
+- Os gráficos aparecem no **Meu desempenho** e em **Indicadores**.
+- Para técnicos e Admins de Squad, os comparativos entre equipes usam uma RPC segura que entrega somente **totais agregados da organização**, sem expor o desempenho individual de outros Squads.
+- Admin geral ganhou o botão **Todos os técnicos em tela cheia** na tela Indicadores.
+- O gráfico fullscreen compara todos os técnicos dos Squads no período selecionado e permite alternar entre **Pontuação, Atendimentos, % de avaliação e Nota média**.
+- Tooltip permanece disponível ao passar o mouse sobre linhas e pontos.
+- Requer executar `MIGRACAO_V2.11.0.sql` uma vez no Supabase.
+
+
+## V2.12.0 — Meu perfil e alteração de senha
+
+- Nova tela **Meu perfil** disponível para técnico, Admin de Squad e Admin geral.
+- O usuário visualiza nome, e-mail, perfil, Squad e vínculo técnico.
+- Alteração da própria senha diretamente no Performance Hub, **sem recuperação por e-mail**.
+- A troca exige a **senha atual**, nova senha com no mínimo 8 caracteres e confirmação.
+- No Supabase a identidade é revalidada com `signInWithPassword` e a senha é atualizada com `auth.updateUser`.
+- A recuperação por e-mail continua disponível apenas como alternativa quando o usuário esquece a senha atual.
+- Não exige nova migração SQL nem Edge Function.

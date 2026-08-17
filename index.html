@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.11.0 • visão consolidada dos Squads</small>
+      <small class="login-version">V2.12.0 • Meu perfil + troca de senha</small>
     </div>
   </section>
 
@@ -56,7 +56,7 @@
         <div class="brand-mark">S</div>
         <div><strong>SOFTEN</strong><span>Performance Hub</span></div>
       </div>
-      <div class="user-mini">
+      <div class="user-mini profile-shortcut" id="sideUserProfileBtn" role="button" tabindex="0" title="Abrir meu perfil">
         <span class="user-avatar" id="sideAvatar">A</span>
         <div><strong id="sideUserName">Usuário</strong><small id="sideUserRole">Perfil</small></div>
       </div>
@@ -66,6 +66,7 @@
         <button class="nav-btn super-only" data-view="indicators"><span>◔</span> Indicadores</button>
         <button class="nav-btn admin-only" data-view="users"><span>♟</span> Usuários</button>
         <button class="nav-btn admin-only" data-view="admin"><span>⚙</span> Administração</button>
+        <button class="nav-btn" data-view="profile"><span>◉</span> Meu perfil</button>
         <button class="nav-btn" data-view="help"><span>?</span> Como usar</button>
       </nav>
       <div class="campaign-visual" aria-label="Campanha Casa do Dragão">
@@ -77,7 +78,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.11.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.12.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -100,7 +101,7 @@
             <span>Técnico</span>
             <select id="techSelect"></select>
           </label>
-          <div class="top-user"><span class="user-avatar" id="topAvatar">A</span><div><b id="topUserName">Usuário</b><small id="topUserScope">Squad</small></div></div>
+          <div class="top-user profile-shortcut" id="topUserProfileBtn" role="button" tabindex="0" title="Abrir meu perfil"><span class="user-avatar" id="topAvatar">A</span><div><b id="topUserName">Usuário</b><small id="topUserScope">Squad</small></div></div>
         </div>
       </header>
 
@@ -335,9 +336,54 @@
         </article>
       </section>
 
+
+      <section id="view-profile" class="view">
+        <div class="profile-hero card glass">
+          <div class="profile-identity">
+            <span class="profile-avatar-large" id="profileAvatar">U</span>
+            <div><span class="eyebrow">MINHA CONTA</span><h2 id="profileName">Usuário</h2><p id="profileEmail">email@exemplo.com</p></div>
+          </div>
+          <div class="profile-scope-card"><small>PERFIL DE ACESSO</small><strong id="profileRole">Técnico</strong><span id="profileScope">Squad D</span></div>
+        </div>
+
+        <div class="profile-grid">
+          <article class="card profile-account-card">
+            <div class="section-title"><div><span class="eyebrow">DADOS DA CONTA</span><h3>Seu cadastro</h3></div><span class="profile-lock-icon">🔒</span></div>
+            <p class="profile-description">Estas informações identificam seu acesso no Performance Hub. Alterações de cadastro são feitas pelo administrador responsável.</p>
+            <div class="profile-data-list">
+              <div><span>Nome</span><strong id="profileFullName">—</strong></div>
+              <div><span>E-mail</span><strong id="profileAccountEmail">—</strong></div>
+              <div><span>Perfil</span><strong id="profileAccountRole">—</strong></div>
+              <div><span>Squad</span><strong id="profileAccountSquad">—</strong></div>
+              <div id="profileTechRow"><span>Técnico vinculado</span><strong id="profileAccountTech">—</strong></div>
+            </div>
+          </article>
+
+          <article class="card profile-password-card">
+            <div class="section-title"><div><span class="eyebrow">SEGURANÇA</span><h3>Alterar minha senha</h3></div><span class="profile-security-badge">ACESSO SEGURO</span></div>
+            <p class="profile-description">Troque sua senha diretamente pelo sistema, sem precisar solicitar recuperação por e-mail. Para confirmar sua identidade, informe primeiro a senha atual.</p>
+            <form id="profilePasswordForm" class="user-form profile-password-form">
+              <label><span>Senha atual</span><input id="profileCurrentPassword" type="password" required autocomplete="current-password" placeholder="Digite sua senha atual"></label>
+              <div class="user-form-grid">
+                <label><span>Nova senha</span><input id="profileNewPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
+                <label><span>Confirmar nova senha</span><input id="profileConfirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Repita a nova senha"></label>
+              </div>
+              <div class="profile-password-rules"><span>✓ Pelo menos 8 caracteres</span><span>✓ Diferente da senha atual</span><span>✓ A alteração vale no próximo login</span></div>
+              <div id="profilePasswordMessage" class="profile-form-message" aria-live="polite"></div>
+              <button class="btn primary profile-password-submit" id="profilePasswordSubmit" type="submit">Atualizar minha senha</button>
+            </form>
+          </article>
+        </div>
+
+        <article class="card profile-security-note">
+          <div class="profile-security-icon">◆</div>
+          <div><strong>Sua senha é pessoal</strong><p>Administradores não visualizam sua senha. Se você esquecer a senha atual, a recuperação por e-mail continua disponível na tela de login como alternativa.</p></div>
+        </article>
+      </section>
+
       <section id="view-help" class="view">
         <div class="how-header">
-          <div><span class="eyebrow">GUIA COMPLETO • V2.11</span><h2>Como usar</h2><p>Fluxo atualizado do Performance Hub: acessos, importação, status auditável, pontuação diária, indicadores e fechamento mensal.</p></div>
+          <div><span class="eyebrow">GUIA COMPLETO • V2.12</span><h2>Como usar</h2><p>Fluxo atualizado do Performance Hub: acessos, perfil e senha, importação, status auditável, pontuação diária, indicadores e fechamento mensal.</p></div>
           <div class="how-profile"><span>SEU PERFIL</span><strong id="helpRoleName">Técnico</strong><small id="helpRoleScope">Squad D</small></div>
         </div>
 
@@ -362,7 +408,7 @@
         <div class="how-middle-grid">
           <article class="card how-permissions">
             <div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">PERMISSÕES</span><h3>Quem pode fazer o quê?</h3></div></div>
-            <div class="permission-matrix modern"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Importar CSV / metas / tema</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Criar usuários</div><div>✓</div><div>✓ técnicos</div><div>—</div><div>Editar / excluir usuários</div><div>✓</div><div>✓ técnicos próprios</div><div>—</div><div>Fechar / reabrir mês</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ no próprio</div><div>✓ próprio</div></div>
+            <div class="permission-matrix modern"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Importar CSV / metas / tema</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Criar usuários</div><div>✓</div><div>✓ técnicos</div><div>—</div><div>Editar / excluir usuários</div><div>✓</div><div>✓ técnicos próprios</div><div>—</div><div>Fechar / reabrir mês</div><div>✓</div><div>✓ no próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ no próprio</div><div>✓ próprio</div><div>Alterar a própria senha</div><div>✓</div><div>✓</div><div>✓</div></div>
           </article>
           <article class="card how-flow admin-help">
             <div class="how-section-title"><span class="how-icon blue">▣</span><div><span class="eyebrow">FLUXO MENSAL</span><h3>Rotina recomendada</h3></div></div>
@@ -372,9 +418,9 @@
         </div>
 
         <div class="how-bottom-grid">
-          <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">USUÁRIOS</span><h3>Editar e excluir</h3></div></div><ul><li>Edite nome, perfil/Squad permitido, nome no CSV e status.</li><li>E-mail e senha não são alterados pelo administrador.</li><li>Para trocar e-mail, exclua o usuário e crie um novo.</li><li>Excluir remove o acesso; históricos mensais permanecem preservados.</li></ul></article>
+          <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">USUÁRIOS</span><h3>Editar e excluir</h3></div></div><ul><li>Edite nome, perfil/Squad permitido, nome no CSV e status.</li><li>E-mail e senha não são alterados pelo administrador.</li><li>Cada usuário pode trocar a própria senha em <b>Meu perfil</b>, informando a senha atual.</li><li>Para trocar e-mail, exclua o usuário e crie um novo.</li><li>Excluir remove o acesso; históricos mensais permanecem preservados.</li></ul></article>
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon orange">◆</span><div><span class="eyebrow">PONTUAÇÃO</span><h3>Automática</h3></div></div><ul><li>Segue a fórmula de atendimentos × média + bônus/penalidades.</li><li>O técnico vê a nota média e os 4 critérios do status de forma auditável.</li><li>Volume mensal manual é proporcional aos dias úteis no mês aberto; no fechamento usa o valor mensal integral.</li><li>O status da equipe replica a planilha: ACIMA quando pelo menos 50% dos técnicos têm pontuação acima da média do grupo.</li></ul></article>
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">♨</span><div><span class="eyebrow">CAMPANHA</span><h3>Casa do Dragão</h3></div></div><ul><li>A campanha do setor é fixa na lateral.</li><li>Cada Squad mantém seu próprio fundo e identidade visual.</li><li>O tema não altera permissões ou cálculos.</li><li>Performance que vira legado.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">MEU PERFIL</span><h3>Senha sem e-mail</h3></div></div><ul><li>Abra <b>Meu perfil</b> pelo menu lateral ou clicando no seu nome.</li><li>Informe a senha atual para validar sua identidade.</li><li>Digite e confirme a nova senha com no mínimo 8 caracteres.</li><li>Se não lembrar a senha atual, use a recuperação por e-mail no login.</li></ul></article><article class="card how-mini"><div class="how-section-title"><span class="how-icon red">♨</span><div><span class="eyebrow">CAMPANHA</span><h3>Casa do Dragão</h3></div></div><ul><li>A campanha do setor é fixa na lateral.</li><li>Cada Squad mantém seu próprio fundo e identidade visual.</li><li>O tema não altera permissões ou cálculos.</li><li>Performance que vira legado.</li></ul></article>
         </div>
 
         <div class="house-motto"><strong>DISCIPLINA • FOCO • RESULTADO</strong><span>Casa do Dragão — grandes conquistas nascem da constância.</span></div>
