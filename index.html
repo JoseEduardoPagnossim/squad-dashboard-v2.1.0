@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.10.1 • histórico consolidado por técnico</small>
+      <small class="login-version">V2.11.0 • visão consolidada dos Squads</small>
     </div>
   </section>
 
@@ -77,7 +77,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.10.1 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.11.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -154,6 +154,23 @@
             <article class="card daily-card"><div class="section-title"><div><span class="eyebrow">DIA A DIA</span><h3>Histórico do mês</h3></div><span class="muted" id="dailySummary"></span></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Atendimentos</th><th>Notas 5</th><th>% aval.</th><th>Ritmo</th></tr></thead><tbody id="dailyRows"></tbody></table></div></article>
             <article class="card compact-ranking"><div class="section-title"><div><span class="eyebrow">TOP DO SQUAD</span><h3>Ranking atual</h3></div></div><div id="miniRanking" class="ranking-list"></div></article>
           </div>
+
+          <section class="sector-overview-section">
+            <div class="history-section-head card sector-overview-head">
+              <div><span class="eyebrow">VISÃO DO SETOR</span><h2>Comparativo consolidado dos Squads</h2><p>Indicadores agregados por equipe. Nenhum detalhe individual de outros Squads é exibido nesta visão.</p></div>
+              <span class="history-chip" id="individualSectorPeriod">Últimos meses</span>
+            </div>
+            <div class="sector-chart-grid">
+              <article class="card chart-card history-chart-card">
+                <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total mensal consolidado</span></div>
+                <div id="individualSquadAttendanceChart" class="chart history-chart"></div>
+              </article>
+              <article class="card chart-card history-chart-card">
+                <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação mensal por Squad</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+                <div id="individualSquadEvaluationChart" class="chart history-chart"></div>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -211,6 +228,7 @@
           <div class="indicator-filters">
             <label class="control select-wrap"><span>De</span><select id="indicatorStartMonth"></select></label>
             <label class="control select-wrap"><span>Até</span><select id="indicatorEndMonth"></select></label>
+            <button class="btn primary indicator-fullscreen-btn" id="openAllTechniciansChartBtn" type="button">⛶ Todos os técnicos em tela cheia</button>
           </div>
         </article>
 
@@ -240,6 +258,23 @@
             <p id="indicatorPeriodStatusSupport">Compara o resultado mensal da equipe no período selecionado</p>
           </article>
         </div>
+
+        <section class="sector-overview-section indicator-sector-overview">
+          <div class="history-section-head card sector-overview-head">
+            <div><span class="eyebrow">CONSOLIDADO POR SQUAD</span><h2>Volume e taxa de avaliação das equipes</h2><p>Comparação mensal de todos os Squads dentro do período selecionado.</p></div>
+            <span class="history-chip" id="indicatorSectorPeriod">Período</span>
+          </div>
+          <div class="sector-chart-grid">
+            <article class="card chart-card history-chart-card">
+              <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total mensal por equipe</span></div>
+              <div id="indicatorSquadAttendanceChart" class="chart history-chart"></div>
+            </article>
+            <article class="card chart-card history-chart-card">
+              <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação mensal por Squad</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+              <div id="indicatorSquadEvaluationChart" class="chart history-chart"></div>
+            </article>
+          </div>
+        </section>
 
         <div class="indicator-grid">
           <article class="card chart-card indicator-card">
@@ -302,7 +337,7 @@
 
       <section id="view-help" class="view">
         <div class="how-header">
-          <div><span class="eyebrow">GUIA COMPLETO • V2.8</span><h2>Como usar</h2><p>Fluxo atualizado do Performance Hub: acessos, importação, status auditável, pontuação diária, indicadores e fechamento mensal.</p></div>
+          <div><span class="eyebrow">GUIA COMPLETO • V2.11</span><h2>Como usar</h2><p>Fluxo atualizado do Performance Hub: acessos, importação, status auditável, pontuação diária, indicadores e fechamento mensal.</p></div>
           <div class="how-profile"><span>SEU PERFIL</span><strong id="helpRoleName">Técnico</strong><small id="helpRoleScope">Squad D</small></div>
         </div>
 
@@ -390,6 +425,21 @@
     <div id="editUserError" class="login-error"></div>
     <div class="modal-actions"><button class="btn secondary" type="button" data-close="editUserModal">Cancelar</button><button class="btn primary" id="editUserSubmit" type="submit">Salvar alterações</button></div>
   </form></div></div>
+
+  <div id="allTechniciansModal" class="modal fullscreen-modal super-only" aria-hidden="true" data-static-backdrop="true">
+    <div class="modal-card fullscreen-chart-modal">
+      <button class="modal-close" data-close="allTechniciansModal">×</button>
+      <div class="fullscreen-chart-head">
+        <div><span class="eyebrow">TODOS OS SQUADS</span><h2>Todos os técnicos em tela cheia</h2><p id="allTechniciansSubtitle">Comparativo mensal de todos os técnicos dos Squads A, B, D e E.</p></div>
+        <div class="fullscreen-chart-controls">
+          <label class="control select-wrap"><span>Métrica</span><select id="allTechniciansMetric"><option value="points">Pontuação</option><option value="att">Atendimentos</option><option value="evalPct">% de avaliação</option><option value="avg">Nota média</option></select></label>
+          <span class="history-chip" id="allTechniciansPeriod">Período</span>
+        </div>
+      </div>
+      <div id="allTechniciansFullscreenChart" class="chart fullscreen-chart-canvas"></div>
+      <div class="fullscreen-chart-foot"><span>💡 Passe o mouse sobre uma linha ou ponto para ver técnico, Squad, mês e valor.</span><span id="allTechniciansCount">0 técnicos</span></div>
+    </div>
+  </div>
 
   <div id="recoveryModal" class="modal" aria-hidden="true"><div class="modal-card recovery-modal"><button class="modal-close" data-close="recoveryModal">×</button><span class="eyebrow">RECUPERAÇÃO DE ACESSO</span><h2>Definir nova senha</h2><p>Digite uma nova senha para sua conta. Use pelo menos 8 caracteres.</p><form id="recoveryForm" class="user-form">
     <label><span>Nova senha</span><input id="recoveryPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
