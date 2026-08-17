@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.12.0 • Meu perfil + troca de senha</small>
+      <small class="login-version">V2.13.0 • Meu perfil + troca de senha</small>
     </div>
   </section>
 
@@ -78,7 +78,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.12.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.13.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -210,6 +210,26 @@
                 <article class="card chart-card history-chart-card">
                   <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>% de avaliação por técnico</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
                   <div id="teamHistoryEvalChart" class="chart history-chart"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="sector-overview-section team-sector-overview">
+              <div class="history-section-head card sector-overview-head">
+                <div><span class="eyebrow">VISÃO DO SETOR</span><h2>Comparativo consolidado dos Squads</h2><p>Todos os perfis podem acompanhar os resultados agregados das equipes. O detalhamento individual entre Squads fica disponível somente no gráfico geral em tela cheia.</p></div>
+                <div class="sector-head-actions">
+                  <span class="history-chip" id="teamSectorPeriod">Últimos meses</span>
+                  <button class="btn primary" id="openAllTechniciansChartTeamBtn" type="button">⛶ Todos os técnicos</button>
+                </div>
+              </div>
+              <div class="sector-chart-grid">
+                <article class="card chart-card history-chart-card">
+                  <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total mensal consolidado</span></div>
+                  <div id="teamSquadAttendanceChart" class="chart history-chart"></div>
+                </article>
+                <article class="card chart-card history-chart-card">
+                  <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa média de avaliação mensal por Squad</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+                  <div id="teamSquadEvaluationChart" class="chart history-chart"></div>
                 </article>
               </div>
             </section>
@@ -472,11 +492,11 @@
     <div class="modal-actions"><button class="btn secondary" type="button" data-close="editUserModal">Cancelar</button><button class="btn primary" id="editUserSubmit" type="submit">Salvar alterações</button></div>
   </form></div></div>
 
-  <div id="allTechniciansModal" class="modal fullscreen-modal super-only" aria-hidden="true" data-static-backdrop="true">
+  <div id="allTechniciansModal" class="modal fullscreen-modal" aria-hidden="true" data-static-backdrop="true">
     <div class="modal-card fullscreen-chart-modal">
       <button class="modal-close" data-close="allTechniciansModal">×</button>
       <div class="fullscreen-chart-head">
-        <div><span class="eyebrow">TODOS OS SQUADS</span><h2>Todos os técnicos em tela cheia</h2><p id="allTechniciansSubtitle">Comparativo mensal de todos os técnicos dos Squads A, B, D e E.</p></div>
+        <div><span class="eyebrow">TODOS OS SQUADS</span><h2>Todos os técnicos em tela cheia</h2><p id="allTechniciansSubtitle">Comparativo mensal de todos os técnicos dos Squads A, B, D e E, disponível para todos os usuários autenticados.</p></div>
         <div class="fullscreen-chart-controls">
           <label class="control select-wrap"><span>Métrica</span><select id="allTechniciansMetric"><option value="points">Pontuação</option><option value="att">Atendimentos</option><option value="evalPct">% de avaliação</option><option value="avg">Nota média</option></select></label>
           <span class="history-chip" id="allTechniciansPeriod">Período</span>

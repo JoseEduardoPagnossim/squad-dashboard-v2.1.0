@@ -252,7 +252,7 @@ supabase/functions/create-user/   Criação segura de usuários
 - Requer executar `MIGRACAO_V2.11.0.sql` uma vez no Supabase.
 
 
-## V2.12.0 — Meu perfil e alteração de senha
+## V2.13.0 — Meu perfil e alteração de senha
 
 - Nova tela **Meu perfil** disponível para técnico, Admin de Squad e Admin geral.
 - O usuário visualiza nome, e-mail, perfil, Squad e vínculo técnico.
@@ -261,3 +261,8 @@ supabase/functions/create-user/   Criação segura de usuários
 - No Supabase a identidade é revalidada com `signInWithPassword` e a senha é atualizada com `auth.updateUser`.
 - A recuperação por e-mail continua disponível apenas como alternativa quando o usuário esquece a senha atual.
 - Não exige nova migração SQL nem Edge Function.
+
+
+## V2.13.0
+
+A **Visão do Squad** passou a disponibilizar para todos os usuários autenticados os dois gráficos consolidados por Squad e o comparativo fullscreen de todos os técnicos. Para o Supabase, execute `MIGRACAO_V2.13.0.sql`.

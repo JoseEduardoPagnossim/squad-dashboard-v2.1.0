@@ -49,7 +49,9 @@
     indicatorStartId:null,
     indicatorEndId:null,
     orgOverview:[],
-    allTechniciansMetric:'points'
+    orgTechnicianOverview:[],
+    allTechniciansMetric:'points',
+    allTechniciansRangeIds:[]
   };
 
   function loadDemoSquads(){
@@ -158,8 +160,9 @@
     $('#removeBg').addEventListener('click',()=>{if(!isAdmin())return;state.theme.background=null;state.theme.preset='custom';document.documentElement.style.setProperty('--hero-img','none');saveTheme();toast('Fundo removido.');});
     if($('#indicatorStartMonth'))$('#indicatorStartMonth').addEventListener('change',e=>{state.indicatorStartId=e.target.value;renderIndicators();});
     if($('#indicatorEndMonth'))$('#indicatorEndMonth').addEventListener('change',e=>{state.indicatorEndId=e.target.value;renderIndicators();});
-    if($('#openAllTechniciansChartBtn'))$('#openAllTechniciansChartBtn').addEventListener('click',openAllTechniciansChart);
-    if($('#allTechniciansMetric'))$('#allTechniciansMetric').addEventListener('change',e=>{state.allTechniciansMetric=e.target.value;renderAllTechniciansFullscreenChart();});
+    if($('#openAllTechniciansChartBtn'))$('#openAllTechniciansChartBtn').addEventListener('click',()=>openAllTechniciansChart('indicator'));
+    if($('#openAllTechniciansChartTeamBtn'))$('#openAllTechniciansChartTeamBtn').addEventListener('click',()=>openAllTechniciansChart('team'));
+    if($('#allTechniciansMetric'))$('#allTechniciansMetric').addEventListener('change',e=>{state.allTechniciansMetric=e.target.value;renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds);});
   }
 
   async function handleLogin(e){
@@ -222,7 +225,7 @@
     state.squadCode=user.role==='super_admin'?'D':(user.squadCode||'D');
     chooseLatestMonth(); chooseDefaultTech();
     state.theme=state.squads[state.squadCode]?.theme||loadThemeForSquad(state.squadCode); applyTheme(state.theme);
-    if((window.APP_CONFIG?.mode||'demo')==='demo')state.orgOverview=buildOrgOverviewFromState();
+    if((window.APP_CONFIG?.mode||'demo')==='demo'){state.orgOverview=buildOrgOverviewFromState();state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();}
     applyPermissions(); refreshSelectors(); render();
     hideBoot();$('#loginScreen').classList.add('hidden');$('#appShell').classList.remove('hidden');
   }
@@ -363,6 +366,7 @@
     $('#teamStatusAudit').textContent=statusInfo.count?`${statusInfo.aboveCount} de ${statusInfo.count} técnicos acima de ${fmtNum(statusInfo.avgPoints)} pts • ${fmtPct(statusInfo.ratio)} • mínimo 50%`:'Sem técnicos com pontuação para calcular o status';
     const list=[...m.technicians].sort((a,b)=>(a.rank||99)-(b.rank||99));$('#teamLeaderboard').innerHTML=list.map(t=>`<div class="leader-item ${t.rank===1?'top1':''}"><div class="place">#${t.rank||'—'}</div><div class="name">${escapeHtml(t.name)}</div><div class="metric"><span>Atend.</span><strong>${fmtInt(t.att)}</strong></div><div class="metric"><span>Notas 5</span><strong>${fmtInt(t.notes5)}</strong></div><div class="metric hide-md"><span>% Aval.</span><strong>${fmtPct(t.evalPct)}</strong></div><div class="metric points"><span>Pontos</span><strong>${fmtNum(t.points)}</strong></div><div><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span></div></div>`).join('');
     renderTeamHistoricalAnalytics(currentSquad());
+    renderTeamSquadOverview();
   }
   function renderPortfolio(){
     $('#squadPortfolio').innerHTML=Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code)).map(s=>{const ids=Object.keys(s.months||{}).sort().reverse(),m=ids.length?s.months[ids[0]]:null;if(!m)return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status-line">SEM DADOS</span></div><h3>${escapeHtml(s.name)}</h3><div class="squad-empty">Aguardando a primeira importação.</div></article>`;const totals=m.teamTotals||deriveTotals(m.technicians);return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status ${String(m.teamResult).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(m.teamResult||'—')}</span></div><h3>${escapeHtml(s.name)}</h3><div class="status-line">${m.monthName} ${m.year} • ${m.technicians.length} técnicos</div><div class="squad-summary"><div><span>Atend.</span><strong>${fmtInt(totals.att)}</strong></div><div><span>Aval.</span><strong>${fmtInt(totals.eval)}</strong></div><div><span>% Aval.</span><strong>${fmtPct(totals.evalPct)}</strong></div></div></article>`}).join('');
@@ -543,6 +547,27 @@ function orgOverviewRows(){
   if((window.APP_CONFIG?.mode||'demo')==='demo'||isSuperAdmin())return buildOrgOverviewFromState();
   return (state.orgOverview||[]).length?state.orgOverview:buildOrgOverviewFromState();
 }
+function buildOrgTechnicianOverviewFromState(){
+  const rows=[];
+  Object.values(state.squads||{}).filter(Boolean).forEach(squad=>{
+    Object.values(squad.months||{}).forEach(m=>{
+      (m.technicians||[]).forEach(t=>rows.push({
+        squadCode:squad.code,squadName:squad.name,id:m.id,year:m.year,month:m.month,
+        technicianName:t.name,att:safe(t.att),totalEval:safe(t.totalEval),avg:safe(t.avg),
+        evalPct:safe(t.evalPct),points:safe(t.points),status:String(t.status||'').toUpperCase()
+      }));
+    });
+  });
+  return rows.sort((a,b)=>String(a.id).localeCompare(String(b.id))||String(a.squadCode).localeCompare(String(b.squadCode))||String(a.technicianName).localeCompare(String(b.technicianName),'pt-BR'));
+}
+function orgTechnicianRows(){
+  if((window.APP_CONFIG?.mode||'demo')==='demo')return buildOrgTechnicianOverviewFromState();
+  return (state.orgTechnicianOverview||[]).length?state.orgTechnicianOverview:buildOrgTechnicianOverviewFromState();
+}
+function orgTechnicianMonthIds(rows=orgTechnicianRows(),limit=12){
+  const ids=[...new Set((rows||[]).map(r=>r.id).filter(Boolean))].sort();
+  return limit&&ids.length>limit?ids.slice(-limit):ids;
+}
 function orgOverviewMonthIds(rows=orgOverviewRows(),limit=12){
   const ids=[...new Set((rows||[]).map(r=>r.id).filter(Boolean))].sort();
   return limit&&ids.length>limit?ids.slice(-limit):ids;
@@ -561,6 +586,13 @@ function renderIndividualSquadOverview(){
   renderIndicatorLineChart($('#individualSquadAttendanceChart'),labels,series.attendance,{maxValue:null,percent:false,decimals:0,height:390});
   renderIndicatorLineChart($('#individualSquadEvaluationChart'),labels,series.evaluation,{maxValue:null,percent:true,decimals:1,height:390});
 }
+function renderTeamSquadOverview(){
+  if(!$('#teamSquadAttendanceChart'))return;
+  const rows=orgOverviewRows(),ids=orgOverviewMonthIds(rows,12),series=buildOrgSquadSeries(ids,rows),labels=ids.map(shortHistoryMonth);
+  $('#teamSectorPeriod').textContent=ids.length?`${shortHistoryMonth(ids[0])} → ${shortHistoryMonth(ids[ids.length-1])}`:'Sem histórico';
+  renderIndicatorLineChart($('#teamSquadAttendanceChart'),labels,series.attendance,{maxValue:null,percent:false,decimals:0,height:390});
+  renderIndicatorLineChart($('#teamSquadEvaluationChart'),labels,series.evaluation,{maxValue:null,percent:true,decimals:1,height:390});
+}
 function renderIndicatorSquadOverview(rangeIds){
   if(!$('#indicatorSquadAttendanceChart'))return;
   const rows=orgOverviewRows(),available=orgOverviewMonthIds(rows,0),ids=(rangeIds||[]).filter(id=>available.includes(id)),series=buildOrgSquadSeries(ids,rows),labels=ids.map(shortHistoryMonth);
@@ -578,39 +610,41 @@ function allTechnicianMetricConfig(metric=state.allTechniciansMetric){
   return configs[metric]||configs.points;
 }
 function allTechnicianSeries(rangeIds,metric=state.allTechniciansMetric){
-  const cfg=allTechnicianMetricConfig(metric),map=new Map();
-  Object.values(state.squads||{}).filter(Boolean).sort((a,b)=>a.code.localeCompare(b.code)).forEach(squad=>{
-    (rangeIds||[]).forEach(id=>{
-      const m=squad.months?.[id];if(!m)return;
-      (m.technicians||[]).forEach(t=>{
-        const key=`${squad.code}|${historyTechKey(t)}`;
-        if(!map.has(key))map.set(key,{key,squad:squad.code,name:titleWords(t.name),values:new Map()});
-        map.get(key).values.set(id,cfg.get(t));
-      });
-    });
+  const cfg=allTechnicianMetricConfig(metric),map=new Map(),rows=orgTechnicianRows();
+  const getValue=r=>metric==='points'?safe(r.points):metric==='att'?safe(r.att):metric==='evalPct'?safe(r.evalPct)*100:safe(r.avg);
+  (rows||[]).filter(r=>(rangeIds||[]).includes(r.id)).forEach(r=>{
+    const key=`${r.squadCode}|${nameLinkKey(r.technicianName)}`;
+    if(!map.has(key))map.set(key,{key,squad:r.squadCode,name:titleWords(r.technicianName),values:new Map()});
+    map.get(key).values.set(r.id,getValue(r));
   });
   const list=[...map.values()].sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR'));
-  const total=Math.max(1,list.length);
   const color=i=>`hsl(${Math.round((i*137.508)%360)} 78% 64%)`;
-  return list.map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:color(i,total),values:(rangeIds||[]).map(id=>e.values.has(id)?e.values.get(id):null)}));
+  return list.map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:color(i),values:(rangeIds||[]).map(id=>e.values.has(id)?e.values.get(id):null)}));
 }
-function currentIndicatorRangeForFullscreen(){
-  const squads=Object.values(state.squads||{}).filter(Boolean),ids=indicatorMonthIds(squads);
-  return indicatorRangeIds(ids);
+function currentIndicatorRangeForFullscreen(source='team'){
+  const ids=orgTechnicianMonthIds(orgTechnicianRows(),0);
+  if(!ids.length)return [];
+  if(source==='indicator'&&isSuperAdmin()){
+    const start=state.indicatorStartId&&ids.includes(state.indicatorStartId)?ids.indexOf(state.indicatorStartId):Math.max(0,ids.length-12);
+    const end=state.indicatorEndId&&ids.includes(state.indicatorEndId)?ids.indexOf(state.indicatorEndId):ids.length-1;
+    return ids.slice(Math.min(start,end),Math.max(start,end)+1);
+  }
+  return ids.slice(-12);
 }
-function openAllTechniciansChart(){
-  if(!isSuperAdmin())return;
-  const rangeIds=currentIndicatorRangeForFullscreen();
-  if(!rangeIds.length){toast('Não há dados no período selecionado.');return;}
+function openAllTechniciansChart(source='team'){
+  const rangeIds=currentIndicatorRangeForFullscreen(source);
+  if(!rangeIds.length){toast('Não há dados de técnicos disponíveis para o período.');return;}
+  state.allTechniciansRangeIds=[...rangeIds];
   state.allTechniciansMetric=$('#allTechniciansMetric')?.value||state.allTechniciansMetric||'points';
   renderAllTechniciansFullscreenChart(rangeIds);openModal('allTechniciansModal');
 }
 function renderAllTechniciansFullscreenChart(explicitRange=null){
-  if(!isSuperAdmin()||!$('#allTechniciansFullscreenChart'))return;
-  const rangeIds=explicitRange||currentIndicatorRangeForFullscreen(),cfg=allTechnicianMetricConfig(state.allTechniciansMetric),series=allTechnicianSeries(rangeIds,state.allTechniciansMetric),labels=rangeIds.map(shortHistoryMonth);
+  if(!$('#allTechniciansFullscreenChart'))return;
+  const rangeIds=(explicitRange&&explicitRange.length)?explicitRange:(state.allTechniciansRangeIds?.length?state.allTechniciansRangeIds:currentIndicatorRangeForFullscreen('team'));
+  const cfg=allTechnicianMetricConfig(state.allTechniciansMetric),series=allTechnicianSeries(rangeIds,state.allTechniciansMetric),labels=rangeIds.map(shortHistoryMonth);
   $('#allTechniciansMetric').value=state.allTechniciansMetric;
   $('#allTechniciansPeriod').textContent=rangeIds.length?`${shortHistoryMonth(rangeIds[0])} → ${shortHistoryMonth(rangeIds[rangeIds.length-1])}`:'Sem período';
-  $('#allTechniciansSubtitle').textContent=`${cfg.label} mensal de todos os técnicos dos Squads disponíveis. Cada linha representa um técnico.`;
+  $('#allTechniciansSubtitle').textContent=`${cfg.label} mensal de todos os técnicos dos Squads A, B, D e E. Cada linha representa um técnico.`;
   $('#allTechniciansCount').textContent=`${series.length} ${series.length===1?'técnico':'técnicos'} • ${rangeIds.length} ${rangeIds.length===1?'mês':'meses'}`;
   renderIndicatorLineChart($('#allTechniciansFullscreenChart'),labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:620});
 }
@@ -1336,13 +1370,21 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     await loadSupabaseData();await enterApp(state.user);
   }
   async function loadSupabaseData(){
-    const {data:squads,error}=await state.supabase.from('squads').select('id,code,name').eq('active',true).order('code');if(error)throw error;state.squads={};state.orgOverview=[];
+    const {data:squads,error}=await state.supabase.from('squads').select('id,code,name').eq('active',true).order('code');if(error)throw error;state.squads={};state.orgOverview=[];state.orgTechnicianOverview=[];
     for(const s of squads){state.squads[s.code]={code:s.code,name:s.name,dbId:s.id,months:{}};const {data:themes}=await state.supabase.from('squad_themes').select('theme').eq('squad_id',s.id).maybeSingle();if(themes?.theme)state.squads[s.code].theme=themes.theme;const {data:months,error:me}=await state.supabase.from('squad_months').select('id,year,month,source_file,latest_day,imported_at,team_result,redistributed,team_goal_att,team_goal_eval_pct,score_settings,is_closed,closed_at,closed_by,closed_snapshot,technician_monthly(id,user_id,technician_name,att,notes5,notes4,notes3,notes2,notes1,total_eval,avg_rating,eval_pct,status,goals_hit,points,rank,discount,point_bonus,goal_att,goal_eval,daily_metrics(day,att,notes5,off))').eq('squad_id',s.id).order('year',{ascending:false}).order('month',{ascending:false});if(me)throw me;for(const row of months||[]){const id=`${row.year}-${String(row.month).padStart(2,'0')}`,technicians=(row.technician_monthly||[]).map(t=>({dbId:t.id,userId:t.user_id,name:t.technician_name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.total_eval),avg:safe(t.avg_rating),evalPct:safe(t.eval_pct),status:t.status||'',goalsHit:safe(t.goals_hit),points:safe(t.points),rank:safe(t.rank)||null,discount:safe(t.discount),pointBonus:safe(t.point_bonus),goalAtt:safe(t.goal_att),goalEval:safe(t.goal_eval),daily:(t.daily_metrics||[]).map(d=>({day:d.day,att:safe(d.att),notes5:safe(d.notes5),off:!!d.off})).sort((a,b)=>a.day-b.day)}));const totals=deriveTotals(technicians);const monthData={dbId:row.id,id,year:row.year,month:row.month,monthName:MONTHS_PT[row.month-1],sourceFile:row.source_file||'Supabase',latestDay:row.latest_day||1,importedAt:row.imported_at,teamResult:row.team_result||'',redistributed:safe(row.redistributed),teamTotals:totals,settings:{teamGoalAtt:safe(row.team_goal_att),teamGoalEvalPct:Number(row.team_goal_eval_pct??.343)},scoreSettings:row.score_settings||{},isClosed:!!row.is_closed,closedAt:row.closed_at||null,closedBy:row.closed_by||null,closedSnapshot:row.closed_snapshot||{},technicians};recalculateMonth(monthData);state.squads[s.code].months[id]=monthData}}
     try{
       const {data:overview,error:overviewError}=await state.supabase.rpc('get_org_squad_monthly_overview');
       if(overviewError)throw overviewError;
       state.orgOverview=(overview||[]).map(r=>({squadCode:r.squad_code,squadName:r.squad_name,id:`${r.year}-${String(r.month).padStart(2,'0')}`,year:safe(r.year),month:safe(r.month),totalAtt:safe(r.total_att),totalEval:safe(r.total_eval),evalPct:safe(r.eval_pct),technicianCount:safe(r.technician_count)}));
     }catch(err){console.warn('Visão consolidada por Squad indisponível; usando dados já permitidos pela sessão.',err);state.orgOverview=buildOrgOverviewFromState();}
+    try{
+      const {data:techOverview,error:techOverviewError}=await state.supabase.rpc('get_org_technician_monthly_overview');
+      if(techOverviewError)throw techOverviewError;
+      state.orgTechnicianOverview=(techOverview||[]).map(r=>({
+        squadCode:r.squad_code,squadName:r.squad_name,id:`${r.year}-${String(r.month).padStart(2,'0')}`,year:safe(r.year),month:safe(r.month),
+        technicianName:r.technician_name||'',att:safe(r.att),totalEval:safe(r.total_eval),avg:safe(r.avg_rating),evalPct:safe(r.eval_pct),points:safe(r.points),status:String(r.status||'').toUpperCase()
+      }));
+    }catch(err){console.warn('Visão geral dos técnicos indisponível; usando apenas os dados permitidos pela sessão.',err);state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();}
   }
   async function persistImportedMonth(m,squad){
     const payload={squad_id:squad.dbId,year:m.year,month:m.month,source_file:m.sourceFile,latest_day:m.latestDay,team_result:m.teamResult,redistributed:m.redistributed,team_goal_att:m.settings?.teamGoalAtt||autoTeamAttGoal(m),team_goal_eval_pct:m.settings?.teamGoalEvalPct??.343,score_settings:m.scoreSettings||{},imported_by:state.user.userId,imported_at:new Date().toISOString()};
