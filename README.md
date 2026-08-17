@@ -266,3 +266,11 @@ supabase/functions/create-user/   Criação segura de usuários
 ## V2.13.0
 
 A **Visão do Squad** passou a disponibilizar para todos os usuários autenticados os dois gráficos consolidados por Squad e o comparativo fullscreen de todos os técnicos. Para o Supabase, execute `MIGRACAO_V2.13.0.sql`.
+
+
+## V2.14.0
+
+- Removeu a visão consolidada dos Squads de **Meu desempenho** e manteve-a em **Visão do Squad**.
+- Adicionou o gráfico **Atendimentos diários consolidados x média do período** em Visão do Squad e Indicadores.
+- Para usuários restritos ao próprio Squad, o consolidado diário usa a RPC segura `get_org_daily_attendance_overview`.
+- Execute `MIGRACAO_V2.14.0.sql` uma vez no Supabase.

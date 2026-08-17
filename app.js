@@ -50,6 +50,7 @@
     indicatorEndId:null,
     orgOverview:[],
     orgTechnicianOverview:[],
+    orgDailyOverview:[],
     allTechniciansMetric:'points',
     allTechniciansRangeIds:[]
   };
@@ -225,7 +226,7 @@
     state.squadCode=user.role==='super_admin'?'D':(user.squadCode||'D');
     chooseLatestMonth(); chooseDefaultTech();
     state.theme=state.squads[state.squadCode]?.theme||loadThemeForSquad(state.squadCode); applyTheme(state.theme);
-    if((window.APP_CONFIG?.mode||'demo')==='demo'){state.orgOverview=buildOrgOverviewFromState();state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();}
+    if((window.APP_CONFIG?.mode||'demo')==='demo'){state.orgOverview=buildOrgOverviewFromState();state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();state.orgDailyOverview=buildOrgDailyOverviewFromState();}
     applyPermissions(); refreshSelectors(); render();
     hideBoot();$('#loginScreen').classList.add('hidden');$('#appShell').classList.remove('hidden');
   }
@@ -312,7 +313,7 @@
     $('#kpiPoints').textContent=fmtNum(t.points);$('#goalsHit').textContent=`${fmtInt(t.goalsHit)}/4 critérios • acumulado ${fmtNum(cumulativePointsForTech(t))} pts`;$('#discountValue').textContent=`Desconto ${fmtMoney(t.discount)}`;$('#bonusValue').textContent=`Bônus ${fmtMoney(t.pointBonus)}`;
     $('#attGoalPct').textContent=fmtPct(attPct);$('#noteGoalPct').textContent=fmtPct(notePct);$('#attGoalText').textContent=goalLine('atendimentos',t.att,t.goalAtt);$('#noteGoalText').textContent=goalLine('notas',t.notes5,t.goalEval);
     $('#goalOrb').style.background=overallColor(attPct,notePct);$('#goalOrb').style.boxShadow=`0 0 18px ${overallColor(attPct,notePct)}`;const coach=coachText(t,m,attPct,notePct);$('#coachTitle').textContent=coach.title;$('#coachText').textContent=coach.text;
-    renderStatusAudit(t,m,audit);renderGamification(t,m,attPct,notePct);renderChart(t,m);renderDaily(t,m);renderMiniRanking(m,t.name);renderIndividualSquadOverview();
+    renderStatusAudit(t,m,audit);renderGamification(t,m,attPct,notePct);renderChart(t,m);renderDaily(t,m);renderMiniRanking(m,t.name);
   }
 
   function technicianStatusAudit(t,m){
@@ -367,6 +368,7 @@
     const list=[...m.technicians].sort((a,b)=>(a.rank||99)-(b.rank||99));$('#teamLeaderboard').innerHTML=list.map(t=>`<div class="leader-item ${t.rank===1?'top1':''}"><div class="place">#${t.rank||'—'}</div><div class="name">${escapeHtml(t.name)}</div><div class="metric"><span>Atend.</span><strong>${fmtInt(t.att)}</strong></div><div class="metric"><span>Notas 5</span><strong>${fmtInt(t.notes5)}</strong></div><div class="metric hide-md"><span>% Aval.</span><strong>${fmtPct(t.evalPct)}</strong></div><div class="metric points"><span>Pontos</span><strong>${fmtNum(t.points)}</strong></div><div><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span></div></div>`).join('');
     renderTeamHistoricalAnalytics(currentSquad());
     renderTeamSquadOverview();
+    renderTeamOrgDailyComparison();
   }
   function renderPortfolio(){
     $('#squadPortfolio').innerHTML=Object.values(state.squads).sort((a,b)=>a.code.localeCompare(b.code)).map(s=>{const ids=Object.keys(s.months||{}).sort().reverse(),m=ids.length?s.months[ids[0]]:null;if(!m)return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status-line">SEM DADOS</span></div><h3>${escapeHtml(s.name)}</h3><div class="squad-empty">Aguardando a primeira importação.</div></article>`;const totals=m.teamTotals||deriveTotals(m.technicians);return `<article class="card squad-card" data-squad-card="${s.code}"><div class="squad-card-head"><div class="squad-letter">${s.code}</div><span class="status ${String(m.teamResult).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(m.teamResult||'—')}</span></div><h3>${escapeHtml(s.name)}</h3><div class="status-line">${m.monthName} ${m.year} • ${m.technicians.length} técnicos</div><div class="squad-summary"><div><span>Atend.</span><strong>${fmtInt(totals.att)}</strong></div><div><span>Aval.</span><strong>${fmtInt(totals.eval)}</strong></div><div><span>% Aval.</span><strong>${fmtPct(totals.evalPct)}</strong></div></div></article>`}).join('');
@@ -412,6 +414,7 @@ function renderIndicators(){
   $('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;
   $('#indicatorPeriodLabel').textContent=rangeIds.length?`${monthLabelFromId(rangeIds[0])} até ${monthLabelFromId(rangeIds[rangeIds.length-1])}`:'Sem dados importados';
   renderIndicatorSquadOverview(rangeIds);
+  renderIndicatorOrgDailyComparison(rangeIds);
   if(!rangeIds.length){
     ['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart','indicatorHistoryAttChart','indicatorHistoryDailyAvgChart','indicatorHistoryEvalChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Importe dados para liberar os indicadores.</div>';});
     if($('#indicatorInsights'))$('#indicatorInsights').innerHTML='<div class="insight-item"><strong>Sem dados</strong><small>Importe pelo menos um mês para exibir a análise executiva.</small></div>';
@@ -579,12 +582,65 @@ function buildOrgSquadSeries(ids,rows=orgOverviewRows()){
   const evaluation=codes.map((code,i)=>({name:`Squad ${code}`,color:palette[i%palette.length],values:ids.map(id=>{const r=rows.find(x=>x.id===id&&x.squadCode===code);return r?safe(r.evalPct)*100:null})}));
   return{codes,attendance,evaluation};
 }
-function renderIndividualSquadOverview(){
-  if(!$('#individualSquadAttendanceChart'))return;
-  const rows=orgOverviewRows(),ids=orgOverviewMonthIds(rows,12),series=buildOrgSquadSeries(ids,rows),labels=ids.map(shortHistoryMonth);
-  $('#individualSectorPeriod').textContent=ids.length?`${shortHistoryMonth(ids[0])} → ${shortHistoryMonth(ids[ids.length-1])}`:'Sem histórico';
-  renderIndicatorLineChart($('#individualSquadAttendanceChart'),labels,series.attendance,{maxValue:null,percent:false,decimals:0,height:390});
-  renderIndicatorLineChart($('#individualSquadEvaluationChart'),labels,series.evaluation,{maxValue:null,percent:true,decimals:1,height:390});
+function buildOrgDailyOverviewFromState(){
+  const rows=[];
+  Object.values(state.squads||{}).filter(Boolean).forEach(squad=>{
+    Object.values(squad.months||{}).forEach(m=>{
+      if(!m)return;
+      const maxDay=Math.max(1,safe(m.latestDay));
+      const byDay=new Map();
+      (m.technicians||[]).forEach(t=>{
+        (t.daily||[]).forEach(d=>{
+          if(safe(d.day)>maxDay||d.off)return;
+          byDay.set(safe(d.day),(byDay.get(safe(d.day))||0)+safe(d.att));
+        });
+      });
+      [...byDay.entries()].forEach(([day,totalAtt])=>rows.push({squadCode:squad.code,id:m.id,year:safe(m.year),month:safe(m.month),day:safe(day),totalAtt:safe(totalAtt)}));
+    });
+  });
+  return rows.sort((a,b)=>String(a.id).localeCompare(String(b.id))||safe(a.day)-safe(b.day)||String(a.squadCode).localeCompare(String(b.squadCode)));
+}
+function orgDailyRows(){
+  if((window.APP_CONFIG?.mode||'demo')==='demo'||isSuperAdmin())return buildOrgDailyOverviewFromState();
+  return (state.orgDailyOverview||[]).length?state.orgDailyOverview:buildOrgDailyOverviewFromState();
+}
+function aggregateOrgDaily(rows,ids){
+  const allowed=new Set((ids||[]).filter(Boolean)),totals=new Map();
+  (rows||[]).forEach(r=>{
+    if(!allowed.has(r.id))return;
+    const key=`${r.id}|${safe(r.day)}`;
+    totals.set(key,(totals.get(key)||0)+safe(r.totalAtt));
+  });
+  return totals;
+}
+function buildOrgDailyComparison(monthId,periodIds){
+  const rows=orgDailyRows();
+  if(!monthId)return{labels:[],series:[],average:0,days:0};
+  const monthTotals=aggregateOrgDaily(rows,[monthId]);
+  const monthDays=[...monthTotals.entries()].filter(([key])=>key.startsWith(monthId+'|')).map(([key,value])=>({day:safe(key.split('|')[1]),value:safe(value)})).sort((a,b)=>a.day-b.day);
+  const periodTotals=aggregateOrgDaily(rows,(periodIds||[]).length?periodIds:[monthId]);
+  const periodValues=[...periodTotals.values()].map(safe);
+  const average=periodValues.length?periodValues.reduce((sum,v)=>sum+v,0)/periodValues.length:0;
+  const labels=monthDays.map(x=>String(x.day).padStart(2,'0'));
+  return{labels,series:[
+    {name:'Atendimentos diários do setor',color:'var(--accent)',values:monthDays.map(x=>x.value)},
+    {name:'Média diária do período',color:'var(--accent2)',dashed:true,values:monthDays.map(()=>average)}
+  ],average,days:periodValues.length};
+}
+function renderTeamOrgDailyComparison(){
+  const el=$('#teamOrgDailyChart');if(!el)return;
+  const monthId=state.currentId||currentMonth()?.id;
+  const data=buildOrgDailyComparison(monthId,[monthId]);
+  if($('#teamOrgDailyNote'))$('#teamOrgDailyNote').textContent=monthId?`${monthLabelFromId(monthId)} • média ${fmtNum(data.average)} atend./dia • A+B+D+E`:'Sem mês selecionado';
+  renderIndicatorLineChart(el,data.labels,data.series,{maxValue:null,percent:false,decimals:0,height:390});
+}
+function renderIndicatorOrgDailyComparison(rangeIds){
+  const el=$('#indicatorOrgDailyChart');if(!el)return;
+  const ids=[...(rangeIds||[])];
+  const monthId=ids.length?ids[ids.length-1]:null;
+  const data=buildOrgDailyComparison(monthId,ids);
+  if($('#indicatorOrgDailyNote'))$('#indicatorOrgDailyNote').textContent=monthId?`${monthLabelFromId(monthId)} x média de ${ids.length} ${ids.length===1?'mês':'meses'} • ${fmtNum(data.average)} atend./dia`:'Sem período selecionado';
+  renderIndicatorLineChart(el,data.labels,data.series,{maxValue:null,percent:false,decimals:0,height:390});
 }
 function renderTeamSquadOverview(){
   if(!$('#teamSquadAttendanceChart'))return;
@@ -1370,7 +1426,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     await loadSupabaseData();await enterApp(state.user);
   }
   async function loadSupabaseData(){
-    const {data:squads,error}=await state.supabase.from('squads').select('id,code,name').eq('active',true).order('code');if(error)throw error;state.squads={};state.orgOverview=[];state.orgTechnicianOverview=[];
+    const {data:squads,error}=await state.supabase.from('squads').select('id,code,name').eq('active',true).order('code');if(error)throw error;state.squads={};state.orgOverview=[];state.orgTechnicianOverview=[];state.orgDailyOverview=[];
     for(const s of squads){state.squads[s.code]={code:s.code,name:s.name,dbId:s.id,months:{}};const {data:themes}=await state.supabase.from('squad_themes').select('theme').eq('squad_id',s.id).maybeSingle();if(themes?.theme)state.squads[s.code].theme=themes.theme;const {data:months,error:me}=await state.supabase.from('squad_months').select('id,year,month,source_file,latest_day,imported_at,team_result,redistributed,team_goal_att,team_goal_eval_pct,score_settings,is_closed,closed_at,closed_by,closed_snapshot,technician_monthly(id,user_id,technician_name,att,notes5,notes4,notes3,notes2,notes1,total_eval,avg_rating,eval_pct,status,goals_hit,points,rank,discount,point_bonus,goal_att,goal_eval,daily_metrics(day,att,notes5,off))').eq('squad_id',s.id).order('year',{ascending:false}).order('month',{ascending:false});if(me)throw me;for(const row of months||[]){const id=`${row.year}-${String(row.month).padStart(2,'0')}`,technicians=(row.technician_monthly||[]).map(t=>({dbId:t.id,userId:t.user_id,name:t.technician_name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.total_eval),avg:safe(t.avg_rating),evalPct:safe(t.eval_pct),status:t.status||'',goalsHit:safe(t.goals_hit),points:safe(t.points),rank:safe(t.rank)||null,discount:safe(t.discount),pointBonus:safe(t.point_bonus),goalAtt:safe(t.goal_att),goalEval:safe(t.goal_eval),daily:(t.daily_metrics||[]).map(d=>({day:d.day,att:safe(d.att),notes5:safe(d.notes5),off:!!d.off})).sort((a,b)=>a.day-b.day)}));const totals=deriveTotals(technicians);const monthData={dbId:row.id,id,year:row.year,month:row.month,monthName:MONTHS_PT[row.month-1],sourceFile:row.source_file||'Supabase',latestDay:row.latest_day||1,importedAt:row.imported_at,teamResult:row.team_result||'',redistributed:safe(row.redistributed),teamTotals:totals,settings:{teamGoalAtt:safe(row.team_goal_att),teamGoalEvalPct:Number(row.team_goal_eval_pct??.343)},scoreSettings:row.score_settings||{},isClosed:!!row.is_closed,closedAt:row.closed_at||null,closedBy:row.closed_by||null,closedSnapshot:row.closed_snapshot||{},technicians};recalculateMonth(monthData);state.squads[s.code].months[id]=monthData}}
     try{
       const {data:overview,error:overviewError}=await state.supabase.rpc('get_org_squad_monthly_overview');
@@ -1385,6 +1441,11 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
         technicianName:r.technician_name||'',att:safe(r.att),totalEval:safe(r.total_eval),avg:safe(r.avg_rating),evalPct:safe(r.eval_pct),points:safe(r.points),status:String(r.status||'').toUpperCase()
       }));
     }catch(err){console.warn('Visão geral dos técnicos indisponível; usando apenas os dados permitidos pela sessão.',err);state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();}
+    try{
+      const {data:dailyOverview,error:dailyOverviewError}=await state.supabase.rpc('get_org_daily_attendance_overview');
+      if(dailyOverviewError)throw dailyOverviewError;
+      state.orgDailyOverview=(dailyOverview||[]).map(r=>({squadCode:r.squad_code,id:`${r.year}-${String(r.month).padStart(2,'0')}`,year:safe(r.year),month:safe(r.month),day:safe(r.day),totalAtt:safe(r.total_att)}));
+    }catch(err){console.warn('Consolidado diário do setor indisponível; usando apenas os dados permitidos pela sessão.',err);state.orgDailyOverview=buildOrgDailyOverviewFromState();}
   }
   async function persistImportedMonth(m,squad){
     const payload={squad_id:squad.dbId,year:m.year,month:m.month,source_file:m.sourceFile,latest_day:m.latestDay,team_result:m.teamResult,redistributed:m.redistributed,team_goal_att:m.settings?.teamGoalAtt||autoTeamAttGoal(m),team_goal_eval_pct:m.settings?.teamGoalEvalPct??.343,score_settings:m.scoreSettings||{},imported_by:state.user.userId,imported_at:new Date().toISOString()};

@@ -46,7 +46,7 @@
           <small>Estas senhas existem somente no protótipo local. Na produção, o login usa Supabase Auth.</small>
         </details>
       </div>
-      <small class="login-version">V2.13.0 • Meu perfil + troca de senha</small>
+      <small class="login-version">V2.14.0 • consolidado diário do setor</small>
     </div>
   </section>
 
@@ -78,7 +78,7 @@
         </div>
       </div>
       <button class="logout-link" id="logoutBtn">↪ Sair</button>
-      <div class="sidebar-footer">V2.13.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.14.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -156,22 +156,6 @@
             <article class="card compact-ranking"><div class="section-title"><div><span class="eyebrow">TOP DO SQUAD</span><h3>Ranking atual</h3></div></div><div id="miniRanking" class="ranking-list"></div></article>
           </div>
 
-          <section class="sector-overview-section">
-            <div class="history-section-head card sector-overview-head">
-              <div><span class="eyebrow">VISÃO DO SETOR</span><h2>Comparativo consolidado dos Squads</h2><p>Indicadores agregados por equipe. Nenhum detalhe individual de outros Squads é exibido nesta visão.</p></div>
-              <span class="history-chip" id="individualSectorPeriod">Últimos meses</span>
-            </div>
-            <div class="sector-chart-grid">
-              <article class="card chart-card history-chart-card">
-                <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total mensal consolidado</span></div>
-                <div id="individualSquadAttendanceChart" class="chart history-chart"></div>
-              </article>
-              <article class="card chart-card history-chart-card">
-                <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação mensal por Squad</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
-                <div id="individualSquadEvaluationChart" class="chart history-chart"></div>
-              </article>
-            </div>
-          </section>
         </div>
       </section>
 
@@ -232,6 +216,10 @@
                   <div id="teamSquadEvaluationChart" class="chart history-chart"></div>
                 </article>
               </div>
+              <article class="card chart-card history-chart-card sector-daily-card">
+                <div class="section-title"><div><span class="eyebrow">RITMO DIÁRIO DO SETOR</span><h3>Atendimentos diários consolidados x média do período</h3></div><span class="muted" id="teamOrgDailyNote">Todos os Squads • mês selecionado</span></div>
+                <div id="teamOrgDailyChart" class="chart history-chart org-daily-chart"></div>
+              </article>
             </section>
           </div>
         </div>
@@ -295,6 +283,10 @@
               <div id="indicatorSquadEvaluationChart" class="chart history-chart"></div>
             </article>
           </div>
+          <article class="card chart-card history-chart-card sector-daily-card">
+            <div class="section-title"><div><span class="eyebrow">RITMO DIÁRIO DO SETOR</span><h3>Atendimentos diários consolidados x média do período</h3></div><span class="muted" id="indicatorOrgDailyNote">Mês final do filtro x média diária do período</span></div>
+            <div id="indicatorOrgDailyChart" class="chart history-chart org-daily-chart"></div>
+          </article>
         </section>
 
         <div class="indicator-grid">
@@ -432,7 +424,7 @@
           </article>
           <article class="card how-flow admin-help">
             <div class="how-section-title"><span class="how-icon blue">▣</span><div><span class="eyebrow">FLUXO MENSAL</span><h3>Rotina recomendada</h3></div></div>
-            <div class="flow-list"><div><i class="green">1</i><p><b>Importar CSV</b><span>Diariamente ou conforme atualização dos dados.</span></p></div><div><i class="orange">2</i><p><b>Ajustar metas</b><span>No início do mês ou quando a gestão definir mudanças.</span></p></div><div><i class="purple">3</i><p><b>Acompanhar</b><span>Use ranking, Status auditável, Visão do Squad e Indicadores.</span></p></div><div><i class="red">4</i><p><b>Fechar mês</b><span>Congele regras e histórico ao final do período.</span></p></div></div>
+            <div class="flow-list"><div><i class="green">1</i><p><b>Importar CSV</b><span>Diariamente ou conforme atualização dos dados.</span></p></div><div><i class="orange">2</i><p><b>Ajustar metas</b><span>No início do mês ou quando a gestão definir mudanças.</span></p></div><div><i class="purple">3</i><p><b>Acompanhar</b><span>Use ranking, Status auditável, Visão do Squad, consolidado diário do setor e Indicadores.</span></p></div><div><i class="red">4</i><p><b>Fechar mês</b><span>Congele regras e histórico ao final do período.</span></p></div></div>
             <div class="how-lock">🔒 <b>Mês fechado = histórico preservado.</b><span>Para corrigir, reabra o mês, ajuste e feche novamente.</span></div>
           </article>
         </div>
