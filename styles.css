@@ -220,3 +220,18 @@ body{background:#070c13}.main{max-width:none}.card{background:linear-gradient(14
 /* V2.14.0 - consolidado diario do setor */
 .sector-daily-card{margin-top:0}.sector-daily-card .org-daily-chart{min-height:410px}.team-sector-overview>.sector-daily-card,.indicator-sector-overview>.sector-daily-card{width:100%}.org-daily-chart .chart-legend-visible{justify-content:flex-start}.org-daily-chart .chart-plot-scroll{overflow-x:auto}
 @media(max-width:720px){.sector-daily-card .org-daily-chart{min-height:360px}}
+
+
+/* V2.14.1 - melhor aproveitamento do grafico fullscreen de todos os tecnicos */
+.fullscreen-modal{padding:6px}
+.fullscreen-chart-modal{width:calc(100vw - 12px);height:calc(100vh - 12px);padding:18px 20px 14px;border-radius:18px}
+.fullscreen-chart-canvas{padding:10px 12px 8px;overflow:hidden}
+.fullscreen-chart-canvas .chart-plot-scroll{width:100%;min-height:0;overflow-x:auto;overflow-y:hidden}
+.fullscreen-chart-canvas .chart-plot-scroll svg{display:block;max-width:none}
+.fullscreen-chart-canvas.chart-emphasis .axis-label{font-size:12px}
+.fullscreen-chart-canvas.chart-emphasis .history-x-label{font-size:12px;font-weight:800}
+.fullscreen-chart-canvas.chart-emphasis .grid-line{opacity:.72}
+.fullscreen-chart-canvas.chart-emphasis .chart-legend-visible{font-size:11px;gap:10px 14px;max-height:92px}
+.fullscreen-chart-canvas.chart-emphasis .chart-legend-visible span{font-size:10px}
+.fullscreen-chart-foot{font-size:11px;padding:8px 2px 0}
+@media(max-width:720px){.fullscreen-modal{padding:0}.fullscreen-chart-modal{width:100vw;height:100vh;border-radius:0;padding:14px 10px}.fullscreen-chart-canvas{padding:6px}.fullscreen-chart-canvas.chart-emphasis .axis-label{font-size:11px}}

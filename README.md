@@ -274,3 +274,9 @@ A **Visão do Squad** passou a disponibilizar para todos os usuários autenticad
 - Adicionou o gráfico **Atendimentos diários consolidados x média do período** em Visão do Squad e Indicadores.
 - Para usuários restritos ao próprio Squad, o consolidado diário usa a RPC segura `get_org_daily_attendance_overview`.
 - Execute `MIGRACAO_V2.14.0.sql` uma vez no Supabase.
+
+
+## V2.14.1
+- Melhor aproveitamento de tela no gráfico fullscreen de todos os técnicos.
+- Gráfico responsivo à largura real do modal, com maior altura, linhas, pontos, eixos e legendas mais legíveis.
+- Sem alteração de banco de dados.

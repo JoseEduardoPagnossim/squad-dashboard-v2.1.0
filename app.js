@@ -164,6 +164,7 @@
     if($('#openAllTechniciansChartBtn'))$('#openAllTechniciansChartBtn').addEventListener('click',()=>openAllTechniciansChart('indicator'));
     if($('#openAllTechniciansChartTeamBtn'))$('#openAllTechniciansChartTeamBtn').addEventListener('click',()=>openAllTechniciansChart('team'));
     if($('#allTechniciansMetric'))$('#allTechniciansMetric').addEventListener('change',e=>{state.allTechniciansMetric=e.target.value;renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds);});
+    let allTechResizeTimer=null;window.addEventListener('resize',()=>{if(!$('#allTechniciansModal')?.classList.contains('open'))return;clearTimeout(allTechResizeTimer);allTechResizeTimer=setTimeout(()=>renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds),120);});
   }
 
   async function handleLogin(e){
@@ -692,7 +693,9 @@ function openAllTechniciansChart(source='team'){
   if(!rangeIds.length){toast('Não há dados de técnicos disponíveis para o período.');return;}
   state.allTechniciansRangeIds=[...rangeIds];
   state.allTechniciansMetric=$('#allTechniciansMetric')?.value||state.allTechniciansMetric||'points';
-  renderAllTechniciansFullscreenChart(rangeIds);openModal('allTechniciansModal');
+  openModal('allTechniciansModal');
+  // Renderiza depois que o modal estiver visível para usar toda a largura real da tela.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>renderAllTechniciansFullscreenChart(rangeIds)));
 }
 function renderAllTechniciansFullscreenChart(explicitRange=null){
   if(!$('#allTechniciansFullscreenChart'))return;
@@ -702,7 +705,8 @@ function renderAllTechniciansFullscreenChart(explicitRange=null){
   $('#allTechniciansPeriod').textContent=rangeIds.length?`${shortHistoryMonth(rangeIds[0])} → ${shortHistoryMonth(rangeIds[rangeIds.length-1])}`:'Sem período';
   $('#allTechniciansSubtitle').textContent=`${cfg.label} mensal de todos os técnicos dos Squads A, B, D e E. Cada linha representa um técnico.`;
   $('#allTechniciansCount').textContent=`${series.length} ${series.length===1?'técnico':'técnicos'} • ${rangeIds.length} ${rangeIds.length===1?'mês':'meses'}`;
-  renderIndicatorLineChart($('#allTechniciansFullscreenChart'),labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:620});
+  const viewportHeight=Math.max(620,Math.min(790,(window.innerHeight||900)-235));
+  renderIndicatorLineChart($('#allTechniciansFullscreenChart'),labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:viewportHeight,fitWidth:true,emphasis:true});
 }
 
 function shortHistoryMonth(id){
@@ -864,12 +868,13 @@ function renderTechnicianStatusMatrix(el,squads,rangeIds){
   bindChartTooltips(el);
 }
 
-function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,decimals=0,height=340}={}){
+function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,decimals=0,height=340,fitWidth=false,emphasis=false}={}){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
   el.classList.add('interactive-chart');
-  const w=Math.max(900,(labels?.length||0)*124),h=Math.max(300,safe(height)||340),p={l:52,r:28,t:28,b:58};
+  const containerWidth=fitWidth?Math.max(0,Math.floor(el.clientWidth||el.getBoundingClientRect?.().width||0)-18):0;
+  const w=Math.max(900,(labels?.length||0)*124,containerWidth),h=Math.max(300,safe(height)||340),p=emphasis?{l:68,r:38,t:34,b:70}:{l:52,r:28,t:28,b:58};
   const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
   const rawTop=Math.max(1,...vals); const top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.12); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
   const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals}); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="6" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
@@ -877,11 +882,12 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   const paths=validSeries.map((s,idx)=>{
     const segs=[]; let cur=[];
     (s.values||[]).forEach((v,i)=>{ if(v==null){ if(cur.length>1) segs.push(cur); cur=[]; return;} cur.push(`${x(i)},${y(v)}`); });
-    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${s.dashed?2.8:3.4}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>{if(v==null)return'';const shown=percent?`${safe(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2})}%`:safe(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});const tip=`${s.name} • ${labels[i]}: ${shown}`;return `<circle cx="${x(i)}" cy="${y(v)}" r="5.4" fill="${s.color||'var(--accent)'}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></circle>`}).join('');
+    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const lineWidth=emphasis?(s.dashed?3.2:4.1):(s.dashed?2.8:3.4); const pointRadius=emphasis?6.4:5.4; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>{if(v==null)return'';const shown=percent?`${safe(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2})}%`:safe(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});const tip=`${s.name} • ${labels[i]}: ${shown}`;return `<circle cx="${x(i)}" cy="${y(v)}" r="${pointRadius}" fill="${s.color||'var(--accent)'}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></circle>`}).join('');
     return `${segments}${dots}`;
   }).join('');
   const legend=`<div class="chart-legend-inline chart-legend-visible">${validSeries.map(s=>`<span><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  el.classList.toggle('chart-emphasis',!!emphasis);
   el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:${w}px;height:${h}px" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg></div>${legend}`;
   bindChartTooltips(el);
 }
