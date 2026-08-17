@@ -1,8 +1,8 @@
 {
   "schema": "squad-theme-v1",
-  "name": "Nome do tema",
-  "campaignTitle": "Nome da campanha",
-  "campaignTagline": "Frase curta da campanha",
+  "name": "Casa do Dragão",
+  "campaignTitle": "Casa do Dragão",
+  "campaignTagline": "Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.",
   "accent": "#f0a33a",
   "secondary": "#ef5a29",
   "bg": "#080b12",
@@ -11,5 +11,6 @@
   "text": "#f5f6f8",
   "background": null,
   "opacity": 0.28,
-  "_instrucoes": "Envie este arquivo para a IA e peça um novo tema. O campo background pode ser null, uma URL http(s), um caminho assets/ ou uma imagem incorporada como data:image/png;base64,..."
+  "_instrucoes": "O campo favicon aceita assets/..., URL http(s) ou data:image PNG/JPEG/WEBP/GIF. No painel, o upload de favicon é limitado a 750 KB.",
+  "favicon": "assets/favicon-dragon.png"
 }

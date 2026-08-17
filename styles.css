@@ -235,3 +235,24 @@ body{background:#070c13}.main{max-width:none}.card{background:linear-gradient(14
 .fullscreen-chart-canvas.chart-emphasis .chart-legend-visible span{font-size:10px}
 .fullscreen-chart-foot{font-size:11px;padding:8px 2px 0}
 @media(max-width:720px){.fullscreen-modal{padding:0}.fullscreen-chart-modal{width:100vw;height:100vh;border-radius:0;padding:14px 10px}.fullscreen-chart-canvas{padding:6px}.fullscreen-chart-canvas.chart-emphasis .axis-label{font-size:11px}}
+
+
+/* V2.15.0 - favicon por tema, graficos responsivos e campos numericos modernos */
+/* Os graficos passam a se ajustar ao card sem barras de rolagem horizontais. */
+.history-chart,.history-chart.interactive-chart,.org-daily-chart{overflow:hidden!important}
+.chart-plot-scroll,.org-daily-chart .chart-plot-scroll,.fullscreen-chart-canvas .chart-plot-scroll{width:100%;overflow:hidden!important;padding-bottom:0}
+.chart-plot-scroll svg,.history-chart svg,.fullscreen-chart-canvas .chart-plot-scroll svg{width:100%!important;min-width:0!important;max-width:100%!important;display:block}
+.history-chart .chart-legend-inline{min-width:0;width:100%}
+.history-x-label{font-size:9px}
+
+/* Remove os spinners nativos dos inputs numericos e preserva digitacao/teclado. */
+input[type="number"]{-moz-appearance:textfield;appearance:textfield;font-variant-numeric:tabular-nums}
+input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.admin-form input[type="number"],.monthly-metrics-table input[type="number"]{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.028));border:1px solid color-mix(in srgb,var(--border) 88%,var(--accent) 12%);box-shadow:inset 0 1px 0 rgba(255,255,255,.025);transition:border-color .18s,box-shadow .18s,background .18s}
+.admin-form input[type="number"]:hover,.monthly-metrics-table input[type="number"]:hover{border-color:color-mix(in srgb,var(--accent) 28%,var(--border));background:rgba(255,255,255,.055)}
+.admin-form input[type="number"]:focus,.monthly-metrics-table input[type="number"]:focus{border-color:color-mix(in srgb,var(--accent) 65%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 10%,transparent);outline:0}
+
+.favicon-theme-row{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:13px 0 4px;border-top:1px solid var(--border);margin-top:3px}
+.favicon-theme-row>div:first-child>span{display:block;color:var(--muted);font-size:12px}.favicon-theme-row>div:first-child>small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.45;max-width:260px}
+.favicon-theme-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.favicon-preview{width:42px;height:42px;border-radius:12px;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 26%,var(--border));background:rgba(255,255,255,.035);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.22)}.favicon-preview img{width:100%;height:100%;object-fit:cover}.btn.compact{padding:8px 10px;font-size:10px}.favicon-theme-actions .link-btn{font-size:9px;padding:7px 0}
+@media(max-width:620px){.favicon-theme-row{grid-template-columns:1fr}.favicon-theme-actions{justify-content:flex-start}}
