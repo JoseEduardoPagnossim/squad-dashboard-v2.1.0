@@ -1,10 +1,10 @@
-# Soften Performance Hub V2.15.0
+# Soften Performance Hub V2.16.0
 
 Painel web multi-Squad da Soften Sistemas para acompanhamento diário e mensal de desempenho dos técnicos, com autenticação Supabase, histórico mensal, indicadores executivos e visão consolidada do setor.
 
 **Squads atuais:** A, B, D e E.
 
-## O que existe na V2.15.0
+## O que existe na V2.16.0
 
 ### Perfis e acessos
 
@@ -95,13 +95,13 @@ O favicon padrão é um dragão (`assets/favicon-dragon.png`). Em **Administraç
 
 A campanha **Casa do Dragão** da barra lateral continua sendo uma identidade do setor e não muda com o tema individual do Squad.
 
-## Atualização para V2.15.0
+## Atualização para V2.16.0
 
-Esta versão é somente frontend/tema. **Não existe nova migração SQL nem nova Edge Function.**
+Esta versão é somente frontend. **Não existe nova migração SQL nem nova Edge Function.**
 
 1. Preserve o seu `config.js` atual, que contém a URL e a Publishable/Anon Key do Supabase.
-2. Substitua os arquivos da aplicação pelos da V2.15.0.
-3. Garanta que `assets/favicon-dragon.png` seja publicado junto com os demais assets.
+2. Substitua os arquivos da aplicação pelos da V2.16.0.
+3. Garanta que `assets/favicon-dragon.png` continue publicado junto com os demais assets.
 4. Publique no GitHub Pages.
 5. Faça `Ctrl + F5` no navegador.
 
@@ -143,3 +143,19 @@ supabase/functions/manage-user/   Edição/exclusão segura de usuários
 - gráficos históricos e consolidados sem scroll horizontal;
 - eixo temporal reduz automaticamente a quantidade de rótulos em séries longas;
 - inputs numéricos sem os spinners nativos do navegador, com visual alinhado aos componentes modernos do sistema.
+
+
+## V2.16.0 — gráficos e comparação no hover
+
+A V2.16.0 moderniza os gráficos de linha com foco em leitura de séries múltiplas:
+
+- linhas mais leves e com menor poluição visual;
+- grade horizontal mais discreta;
+- régua vertical ao passar o mouse por um período;
+- **tooltip compartilhado por período**, exibindo todas as séries daquele mês/dia, inclusive quando dois técnicos ou Squads têm exatamente o mesmo ponto;
+- valores do tooltip ordenados do maior para o menor;
+- legendas interativas: passe o mouse para destacar uma série e clique para mantê-la em foco;
+- em gráficos com muitas séries, o tooltip usa duas colunas para manter todos os técnicos visíveis;
+- o comportamento também é aplicado ao gráfico em tela cheia de todos os técnicos e aos históricos de atendimento.
+
+Não há alteração de banco de dados nesta versão.

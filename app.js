@@ -796,49 +796,105 @@ function renderIndicatorHistoricalAnalytics(squads,rangeIds){
 function ensureChartTooltip(el){
   if(!el)return null;
   let tip=el.querySelector('.chart-hover-tooltip');
-  if(!tip){tip=document.createElement('div');tip.className='chart-hover-tooltip';el.appendChild(tip);}
+  if(!tip){tip=document.createElement('div');tip.className='chart-hover-tooltip';tip.setAttribute('role','tooltip');tip.setAttribute('aria-hidden','true');el.appendChild(tip);}
   return tip;
+}
+function positionChartTooltip(el,tip,e){
+  const r=el.getBoundingClientRect();
+  const gap=18,px=e.clientX-r.left,py=e.clientY-r.top;
+  const tw=tip.offsetWidth||300,th=tip.offsetHeight||120;
+  let x=px+gap,y=py+gap;
+  if(x+tw>r.width-10)x=px-tw-gap;
+  if(y+th>r.height-10)y=py-th-gap;
+  tip.style.left=Math.max(10,Math.min(x,Math.max(10,r.width-tw-10)))+'px';
+  tip.style.top=Math.max(10,Math.min(y,Math.max(10,r.height-th-10)))+'px';
+}
+function chartValueText(value,{percent=false,decimals=0,suffix=''}={}){
+  const n=safe(value);
+  if(percent)return `${n.toLocaleString('pt-BR',{minimumFractionDigits:decimals?1:0,maximumFractionDigits:Math.max(1,decimals||1)})}%`;
+  return `${n.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals})}${suffix||''}`;
+}
+function sharedTooltipHtml(label,entries){
+  const valid=(entries||[]).filter(x=>x&&x.value!=null&&!Number.isNaN(Number(x.value))).sort((a,b)=>safe(b.value)-safe(a.value)||String(a.name).localeCompare(String(b.name),'pt-BR'));
+  const dense=valid.length>10?' dense':'';
+  return `<div class="chart-tooltip-head"><strong>${escapeHtml(label||'')}</strong><span>${valid.length} ${valid.length===1?'série':'séries'}</span></div><div class="chart-tooltip-list${dense}">${valid.map((x,i)=>`<div class="chart-tooltip-row${i===0&&valid.length>1?' leader':''}"><i style="background:${x.color||'var(--accent)'}"></i><span>${escapeHtml(x.name)}</span><strong>${escapeHtml(x.text)}</strong></div>`).join('')}</div>`;
+}
+function setChartRulerState(el,index,show=true){
+  el.querySelectorAll('[data-ruler-index]').forEach(n=>n.classList.toggle('is-active',show&&Number(n.dataset.rulerIndex)===Number(index)));
+  el.querySelectorAll('[data-point-index]').forEach(n=>n.classList.toggle('is-active',show&&Number(n.dataset.pointIndex)===Number(index)));
+}
+function focusChartSeries(el,index=null,locked=false){
+  const has=index!=null&&index!=='';
+  el.classList.toggle('has-series-focus',has);
+  el.dataset.lockedSeries=locked&&has?String(index):'';
+  el.querySelectorAll('[data-series-index]').forEach(n=>{
+    const same=has&&String(n.dataset.seriesIndex)===String(index);
+    n.classList.toggle('is-focused',same);
+    n.classList.toggle('is-muted',has&&!same);
+    if(n.classList.contains('chart-legend-item'))n.setAttribute('aria-pressed',same&&locked?'true':'false');
+  });
+}
+function bindInteractiveLegend(el){
+  if(!el)return;
+  const items=[...el.querySelectorAll('.chart-legend-item[data-series-index]')];
+  items.forEach(item=>{
+    const idx=item.dataset.seriesIndex;
+    item.addEventListener('pointerenter',()=>{if(!el.dataset.lockedSeries)focusChartSeries(el,idx,false)});
+    item.addEventListener('pointerleave',()=>{if(!el.dataset.lockedSeries)focusChartSeries(el,null,false)});
+    item.addEventListener('click',()=>{const locked=el.dataset.lockedSeries===String(idx);focusChartSeries(el,locked?null:idx,!locked)});
+    item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click()}});
+  });
+}
+function bindSharedChartTooltip(el,model){
+  if(!el)return;
+  const tip=ensureChartTooltip(el),zones=[...el.querySelectorAll('[data-chart-index]')];
+  const show=(node,e)=>{
+    const index=Number(node.dataset.chartIndex),label=model.labels?.[index]||'';
+    const entries=(model.entriesForIndex?.(index)||[]).filter(Boolean);
+    tip.innerHTML=sharedTooltipHtml(label,entries);tip.classList.add('show','shared');tip.setAttribute('aria-hidden','false');
+    setChartRulerState(el,index,true);positionChartTooltip(el,tip,e);
+  };
+  zones.forEach(node=>{
+    node.addEventListener('pointerenter',e=>show(node,e));
+    node.addEventListener('pointermove',e=>show(node,e));
+    node.addEventListener('pointerleave',()=>{tip.classList.remove('show','shared');tip.setAttribute('aria-hidden','true');setChartRulerState(el,-1,false)});
+  });
+  bindInteractiveLegend(el);
 }
 function bindChartTooltips(el){
   if(!el)return;
-  const tip=ensureChartTooltip(el);
-  const targets=[...el.querySelectorAll('[data-chart-tip]')];
+  const tip=ensureChartTooltip(el),targets=[...el.querySelectorAll('[data-chart-tip]')];
   targets.forEach(node=>{
-    node.addEventListener('pointerenter',e=>{
-      tip.textContent=node.dataset.chartTip||'';tip.classList.add('show');
-    });
-    node.addEventListener('pointermove',e=>{
-      const r=el.getBoundingClientRect();
-      let x=e.clientX-r.left+14,y=e.clientY-r.top+14;
-      const maxX=Math.max(10,r.width-tip.offsetWidth-10),maxY=Math.max(10,r.height-tip.offsetHeight-10);
-      tip.style.left=Math.min(x,maxX)+'px';tip.style.top=Math.min(y,maxY)+'px';
-    });
-    node.addEventListener('pointerleave',()=>tip.classList.remove('show'));
+    node.addEventListener('pointerenter',e=>{tip.textContent=node.dataset.chartTip||'';tip.classList.add('show');tip.setAttribute('aria-hidden','false');positionChartTooltip(el,tip,e)});
+    node.addEventListener('pointermove',e=>positionChartTooltip(el,tip,e));
+    node.addEventListener('pointerleave',()=>{tip.classList.remove('show');tip.setAttribute('aria-hidden','true')});
   });
 }
 function renderHistoryAttendanceChart(el,labels,totals,series){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!labels?.length||!validSeries.length){el.innerHTML='<div class="chart-empty">Importe pelo menos um mês com técnicos vinculados para visualizar o histórico.</div>';return;}
-  el.classList.add('interactive-chart','history-interactive-chart');
-  const w=Math.max(940,labels.length*136),h=340,p={l:52,r:64,t:30,b:58};
+  el.classList.add('interactive-chart','history-interactive-chart','chart-modern');
+  const w=Math.max(940,labels.length*136),h=360,p={l:58,r:68,t:34,b:60};
   const lineVals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const lineTop=Math.max(1,...lineVals)*1.14,totalTop=Math.max(1,...(totals||[]).map(safe))*1.14;
-  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(62,slot*.56);
+  const lineTop=Math.max(1,...lineVals)*1.12,totalTop=Math.max(1,...(totals||[]).map(safe))*1.12;
+  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(58,slot*.48);
   const x=i=>p.l+slot*(i+.5), yLine=v=>p.t+(h-p.t-p.b)-(safe(v)/lineTop)*(h-p.t-p.b), yTotal=v=>p.t+(h-p.t-p.b)-(safe(v)/totalTop)*(h-p.t-p.b);
-  const leftGrid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),lv=lineTop*f,rv=totalTop*f;return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="4" y="${yy+4}" class="axis-label">${fmtInt(lv)}</text><text x="${w-4}" y="${yy+4}" class="axis-label-right">${fmtInt(rv)}</text>`}).join('');
-  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy,tip=`Total geral • ${labels[i]}: ${fmtInt(v)} atendimentos`;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="7" class="history-total-bar chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-7)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
-  const paths=validSeries.map(s=>{
+  const leftGrid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),lv=lineTop*f,rv=totalTop*f;return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="6" y="${yy+4}" class="axis-label">${fmtInt(lv)}</text><text x="${w-6}" y="${yy+4}" class="axis-label-right">${fmtInt(rv)}</text>`}).join('');
+  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="9" class="history-total-bar chart-series-shape" opacity=".58"></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-8)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
+  const paths=validSeries.map((s,si)=>{
     const segs=[];let cur=[];
     (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${yLine(v)}`)});if(cur.length>1)segs.push(cur);
-    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="5.2" fill="${s.color}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(`${s.name} • ${labels[i]}: ${fmtInt(v)} atendimentos`)}"></circle>`).join('');
+    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="chart-series-shape" data-series-index="${si}"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="3.9" fill="${s.color}" class="chart-point chart-series-shape" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
     return lines+dots;
   }).join('');
+  const rulers=labels.map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${h-p.b}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
+  const zones=labels.map((_,i)=>`<rect x="${p.l+slot*i}" y="${p.t}" width="${slot}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`).join('');
   const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(label)}</text>`).join('');
-  const legend=`<div class="chart-legend-inline chart-legend-visible"><span><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map(s=>`<span><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${xLabels}<text x="${p.l}" y="16" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="16" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
-  bindChartTooltips(el);
+  const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive"><span class="chart-legend-total"><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
+  bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[{name:'Total geral',value:totals?.[i],text:`${fmtInt(totals?.[i])} atendimentos`,color:'var(--muted)'},...validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:`${fmtInt(s.values[i])} atendimentos`,color:s.color})]});
 }
 
 function buildStatusMatrix(squads,rangeIds){
@@ -876,24 +932,30 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
-  el.classList.add('interactive-chart');
+  el.classList.add('interactive-chart','chart-modern');
   const containerWidth=fitWidth?Math.max(0,Math.floor(el.clientWidth||el.getBoundingClientRect?.().width||0)-18):0;
-  const w=Math.max(900,(labels?.length||0)*124,containerWidth),h=Math.max(300,safe(height)||340),p=emphasis?{l:68,r:38,t:34,b:70}:{l:52,r:28,t:28,b:58};
+  const w=Math.max(900,(labels?.length||0)*124,containerWidth),h=Math.max(300,safe(height)||340),p=emphasis?{l:70,r:40,t:36,b:72}:{l:56,r:30,t:32,b:60};
   const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const rawTop=Math.max(1,...vals); const top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.12); const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)); const y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
-  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f; const label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals}); return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="6" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
-  const tickStep=labels.length>24?Math.ceil(labels.length/7):labels.length>16?Math.ceil(labels.length/8):labels.length>12?2:1;const xLabels=labels.map((label,i)=>{if(i!==0&&i!==labels.length-1&&i%tickStep!==0)return'';const raw=String(label||'');const shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(shown)}</text>`}).join('');
-  const paths=validSeries.map((s,idx)=>{
-    const segs=[]; let cur=[];
-    (s.values||[]).forEach((v,i)=>{ if(v==null){ if(cur.length>1) segs.push(cur); cur=[]; return;} cur.push(`${x(i)},${y(v)}`); });
-    if(cur.length>1) segs.push(cur); const dash=s.dashed?' stroke-dasharray="8 6"':''; const lineWidth=emphasis?(s.dashed?3.2:4.1):(s.dashed?2.8:3.4); const pointRadius=emphasis?6.4:5.4; const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-hover-target" data-chart-tip="${escapeHtml(s.name)}"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>{if(v==null)return'';const shown=percent?`${safe(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2})}%`:safe(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});const tip=`${s.name} • ${labels[i]}: ${shown}`;return `<circle cx="${x(i)}" cy="${y(v)}" r="${pointRadius}" fill="${s.color||'var(--accent)'}" class="chart-point chart-hover-target" data-chart-tip="${escapeHtml(tip)}"></circle>`}).join('');
-    return `${segments}${dots}`;
+  const rawTop=Math.max(1,...vals),top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.1);
+  const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)),y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f,label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="8" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
+  const tickStep=labels.length>24?Math.ceil(labels.length/7):labels.length>16?Math.ceil(labels.length/8):labels.length>12?2:1;
+  const xLabels=labels.map((label,i)=>{if(i!==0&&i!==labels.length-1&&i%tickStep!==0)return'';const raw=String(label||''),shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-17}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(shown)}</text>`}).join('');
+  const paths=validSeries.map((s,si)=>{
+    const segs=[];let cur=[];
+    (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${y(v)}`)});if(cur.length>1)segs.push(cur);
+    const dash=s.dashed?' stroke-dasharray="7 7"':'',lineWidth=emphasis?(s.dashed?2.5:2.9):(s.dashed?2.1:2.55),pointRadius=emphasis?4.6:3.8;
+    const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-series-shape" data-series-index="${si}"></polyline>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="${pointRadius}" fill="${s.color||'var(--accent)'}" class="chart-point chart-series-shape" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
+    return segments+dots;
   }).join('');
-  const legend=`<div class="chart-legend-inline chart-legend-visible">${validSeries.map(s=>`<span><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+  const rulers=(labels||[]).map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${h-p.b}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
+  const plotWidth=Math.max(1,w-p.l-p.r),zoneWidth=labels.length<=1?plotWidth:plotWidth/(labels.length-1);
+  const zones=(labels||[]).map((_,i)=>{const zx=labels.length<=1?p.l:Math.max(p.l,x(i)-zoneWidth/2),zw=labels.length<=1?plotWidth:(i===0||i===labels.length-1?zoneWidth/2:zoneWidth);return `<rect x="${zx}" y="${p.t}" width="${zw}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`}).join('');
+  const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive">${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
   el.classList.toggle('chart-emphasis',!!emphasis);
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${grid}${paths}${xLabels}</svg></div>${legend}`;
-  bindChartTooltips(el);
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${grid}${paths}${rulers}${zones}${xLabels}</svg></div>${legend}`;
+  bindSharedChartTooltip(el,{labels,entriesForIndex:i=>validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:chartValueText(s.values[i],{percent,decimals}),color:s.color||'var(--accent)'})});
 }
 
 
