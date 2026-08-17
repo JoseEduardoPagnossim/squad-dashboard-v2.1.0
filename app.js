@@ -528,7 +528,7 @@ function historyMonthIdsForSquad(squad,limit=12){
   const ids=Object.keys(squad?.months||{}).sort();
   return limit&&ids.length>limit?ids.slice(-limit):ids;
 }
-function historyTechKey(t){return t?.userId?`u:${t.userId}`:`n:${nameLinkKey(t?.name)}`}
+function historyTechKey(t){return `n:${nameLinkKey(t?.name)}`}
 function historyBusinessDays(m){
   if(!m)return 0;
   const latest=Math.max(1,Math.min(safe(m.latestDay)||new Date(m.year,m.month,0).getDate(),new Date(m.year,m.month,0).getDate()));

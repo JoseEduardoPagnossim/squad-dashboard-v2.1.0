@@ -230,3 +230,12 @@ supabase/functions/create-user/   Criação segura de usuários
 - Novo card **Status da equipe no período**: ACIMA quando há mais resultados mensais ACIMA; ABAIXO quando há mais resultados mensais ABAIXO; EMPATE quando iguais.
 - Os quatro cards executivos permanecem em uma única linha em telas de desktop/tablet largo.
 - Sem alteração de banco de dados ou Edge Functions.
+
+
+## V2.10.1 — correção de técnicos duplicados no histórico
+
+- Corrigida a identidade usada nos gráficos históricos e na matriz **ACIMA x ABAIXO**.
+- Meses antigos sem `user_id` e meses novos já vinculados ao usuário passam a ser reconhecidos como o **mesmo técnico** pelo nome normalizado.
+- A chave histórica ignora espaços, espaços especiais e acentuação, usando a mesma normalização já aplicada no vínculo do CSV.
+- Não é necessário apagar nem reimportar meses anteriores.
+- Sem alteração de banco de dados e sem nova Edge Function.
