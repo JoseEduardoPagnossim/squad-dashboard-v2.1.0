@@ -13,7 +13,9 @@
   const clone = obj => JSON.parse(JSON.stringify(obj));
 
   const DEFAULT_FAVICON = 'assets/favicon-dragon.png';
-  const DEFAULT_THEME = {favicon:DEFAULT_FAVICON,name:'Casa do Dragão',campaignTitle:'Casa do Dragão',campaignTagline:'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.',preset:'vermithor',accent:'#f0a33a',secondary:'#ef5a29',bg:'#080b12',bg2:'#10141e',panel:'rgba(17,22,31,.88)',text:'#f5f6f8',background:'assets/vermithor.png',opacity:.28};
+  const DEFAULT_SOUNDTRACK = 'assets/casa-do-dragao-ambient.mp3';
+  const DEFAULT_SOUNDTRACK_NAME = 'Fogo & Conquista';
+  const DEFAULT_THEME = {soundtrack:DEFAULT_SOUNDTRACK,soundtrackName:DEFAULT_SOUNDTRACK_NAME,soundtrackVolume:.18,favicon:DEFAULT_FAVICON,name:'Casa do Dragão',campaignTitle:'Casa do Dragão',campaignTagline:'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.',preset:'vermithor',accent:'#f0a33a',secondary:'#ef5a29',bg:'#080b12',bg2:'#10141e',panel:'rgba(17,22,31,.88)',text:'#f5f6f8',background:'assets/vermithor.png',opacity:.28};
   const DEMO_USERS = [
     {email:'admin.geral@soften.local',password:'Admin123!',fullName:'Administrador Geral',role:'super_admin',squadCode:null,techName:null},
     {email:'admin.squadd@soften.local',password:'SquadD123!',fullName:'Administrador Squad D',role:'squad_admin',squadCode:'D',techName:null},
@@ -53,7 +55,8 @@
     orgTechnicianOverview:[],
     orgDailyOverview:[],
     allTechniciansMetric:'points',
-    allTechniciansRangeIds:[]
+    allTechniciansRangeIds:[],
+    audio:{source:null,playing:false,pendingResume:false,previewing:false,previewBefore:null,fadeTimer:null}
   };
 
   function loadDemoSquads(){
@@ -80,7 +83,7 @@
   function loadThemeForSquad(code){const t=allThemes()[code];return t||clone(DEFAULT_THEME)}
   function saveTheme(){
     if(!state.squadCode||state.squadCode==='all')return;
-    const themes=allThemes(); themes[state.squadCode]=state.theme; localStorage.setItem('squadDashboardThemesV2',JSON.stringify(themes));
+    const themes=allThemes(); themes[state.squadCode]=state.theme; try{localStorage.setItem('squadDashboardThemesV2',JSON.stringify(themes));}catch(err){console.warn('Tema grande demais para o cache local; mantendo persistência no Supabase.',err);}
     if(state.supabase) persistThemeToSupabase().catch(console.error);
   }
 
@@ -155,6 +158,18 @@
     if($('#chooseFaviconBtn'))$('#chooseFaviconBtn').addEventListener('click',()=>$('#faviconFile')?.click());
     if($('#faviconFile'))$('#faviconFile').addEventListener('change',handleFavicon);
     if($('#resetFavicon'))$('#resetFavicon').addEventListener('click',resetFavicon);
+    if($('#chooseSoundtrackBtn'))$('#chooseSoundtrackBtn').addEventListener('click',()=>$('#soundtrackFile')?.click());
+    if($('#soundtrackFile'))$('#soundtrackFile').addEventListener('change',handleSoundtrackFile);
+    if($('#previewSoundtrackBtn'))$('#previewSoundtrackBtn').addEventListener('click',previewThemeSoundtrack);
+    if($('#resetSoundtrack'))$('#resetSoundtrack').addEventListener('click',resetSoundtrack);
+    if($('#removeSoundtrack'))$('#removeSoundtrack').addEventListener('click',removeSoundtrack);
+    if($('#soundtrackNameInput'))$('#soundtrackNameInput').addEventListener('input',e=>{if(!isAdmin())return;state.theme.soundtrackName=e.target.value.trim()||DEFAULT_SOUNDTRACK_NAME;state.theme.preset='custom';saveTheme();syncSoundPlayerUi();});
+    if($('#soundtrackDefaultVolume')){$('#soundtrackDefaultVolume').addEventListener('input',e=>{if(!isAdmin())return;const v=clamp(safe(e.target.value)/100,0,1);state.theme.soundtrackVolume=v;if($('#soundtrackDefaultVolumeLabel'))$('#soundtrackDefaultVolumeLabel').textContent=`${Math.round(v*100)}%`;});$('#soundtrackDefaultVolume').addEventListener('change',()=>{if(!isAdmin())return;state.theme.preset='custom';saveTheme();});}
+    if($('#soundToggleBtn'))$('#soundToggleBtn').addEventListener('click',toggleSoundPlayback);
+    if($('#soundMuteBtn'))$('#soundMuteBtn').addEventListener('click',toggleSoundMute);
+    if($('#soundVolume'))$('#soundVolume').addEventListener('input',handleSoundVolume);
+    if($('#soundEnterOn'))$('#soundEnterOn').addEventListener('click',()=>chooseSoundWelcome(true));
+    if($('#soundEnterOff'))$('#soundEnterOff').addEventListener('click',()=>chooseSoundWelcome(false));
     $('#campaignNameInput').addEventListener('input',e=>{if(!isAdmin())return;state.theme.campaignTitle=e.target.value;state.theme.name=e.target.value||'Personalizado';state.theme.preset='custom';saveTheme();applyTheme(state.theme);});
     $('#campaignTaglineInput').addEventListener('input',e=>{if(!isAdmin())return;state.theme.campaignTagline=e.target.value;state.theme.preset='custom';saveTheme();applyTheme(state.theme);});
     $('#saveGoalsBtn').addEventListener('click',saveTeamGoals);
@@ -222,7 +237,7 @@
   }
   function showLogin(message=''){ hideBoot();$('#loginScreen').classList.remove('hidden');$('#appShell').classList.add('hidden');if(message)$('#loginError').textContent=message; }
   async function logout(){
-    if(state.supabase) await state.supabase.auth.signOut(); sessionStorage.removeItem('squadDemoSession'); state.user=null;showLogin();
+    stopThemeAudio();if(state.supabase) await state.supabase.auth.signOut(); sessionStorage.removeItem('squadDemoSession'); state.user=null;showLogin();
   }
 
   async function enterApp(user){
@@ -234,6 +249,7 @@
     if((window.APP_CONFIG?.mode||'demo')==='demo'){state.orgOverview=buildOrgOverviewFromState();state.orgTechnicianOverview=buildOrgTechnicianOverviewFromState();state.orgDailyOverview=buildOrgDailyOverviewFromState();}
     applyPermissions(); refreshSelectors(); render();
     hideBoot();$('#loginScreen').classList.add('hidden');$('#appShell').classList.remove('hidden');
+    initializeThemeAudio();
   }
   function applyPermissions(){
     const admin=isAdmin(), superAdmin=isSuperAdmin();
@@ -260,7 +276,7 @@
 
   async function selectSquad(code){
     if(!isSuperAdmin())return; state.squadCode=code;
-    if(code==='all'){state.currentId=null;state.techName='';applyTheme(clone(DEFAULT_THEME));if(state.currentView==='individual')showView('team');}
+    if(code==='all'){state.currentId=null;state.techName='';state.theme=clone(DEFAULT_THEME);applyTheme(state.theme);if(state.currentView==='individual')showView('team');}
     else{chooseLatestMonth();chooseDefaultTech();state.theme=state.squads[code]?.theme||loadThemeForSquad(code);applyTheme(state.theme);}
     refreshSelectors();render();applyPermissions();
   }
@@ -1466,9 +1482,76 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   function nameLinkKey(s){return normalizeName(s).replace(/\s+/g,'')}
   function samePersonName(a,b){return nameLinkKey(a)===nameLinkKey(b)}
 
-  function normalizeThemePayload(theme){const t=clone(theme||DEFAULT_THEME);if(t.preset==='vermithor'||(!t.preset&&(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor'))){if(!t.name||t.name==='Vermithor')t.name='Casa do Dragão';if(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor')t.campaignTitle='Casa do Dragão';if(!t.campaignTagline||t.campaignTagline==='Transforme números em conquista.')t.campaignTagline='Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.';}if(!t.favicon)t.favicon=DEFAULT_FAVICON;return t}
-  function applyPreset(name){if(!isAdmin())return;const presets={vermithor:clone(DEFAULT_THEME),soften:{name:'Soften',campaignTitle:'Soften Performance',campaignTagline:'Tecnologia que impulsiona resultados.',preset:'soften',accent:'#20b7f5',secondary:'#176bd3',bg:'#06111f',bg2:'#0a2035',panel:'rgba(8,24,40,.9)',text:'#f3f8fc',background:null,favicon:DEFAULT_FAVICON,opacity:.18},neon:{name:'Neon',campaignTitle:'Squad Neon',campaignTagline:'Acelere. Evolua. Conquiste.',preset:'neon',accent:'#c05cff',secondary:'#21dbc9',bg:'#090514',bg2:'#151029',panel:'rgba(23,15,42,.9)',text:'#faf5ff',background:null,favicon:DEFAULT_FAVICON,opacity:.18},clean:{name:'Claro',campaignTitle:'Performance',campaignTagline:'Clareza para acompanhar cada resultado.',preset:'clean',accent:'#3157d5',secondary:'#6a7be8',bg:'#e9eef5',bg2:'#f7f9fc',panel:'rgba(255,255,255,.91)',text:'#172033',background:null,favicon:DEFAULT_FAVICON,opacity:.06}};state.theme=presets[name]||presets.vermithor;saveTheme();applyTheme(state.theme);toast(`Tema ${state.theme.name} aplicado.`)}
-  function applyTheme(t){t=normalizeThemePayload(t||DEFAULT_THEME);const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Casa do Dragão':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;applyFavicon(t.favicon);updateThemeName()}
+  function audioPrefsKey(){const who=state.user?.userId||state.user?.email||'browser';return `softenPerformanceAudioV1:${who}`}
+  function loadAudioPrefs(){try{return JSON.parse(localStorage.getItem(audioPrefsKey())||'{}')||{}}catch(e){return {}}}
+  function saveAudioPrefs(patch){const next={...loadAudioPrefs(),...patch};try{localStorage.setItem(audioPrefsKey(),JSON.stringify(next))}catch(e){}return next}
+  function sanitizeThemeAudio(v){if(!v)return null;const s=String(v).trim();return /^(data:audio\/(mpeg|mp3|ogg|wav|x-wav|mp4|m4a|aac);base64,|https?:\/\/|assets\/)/i.test(s)?s:null}
+  function themeAudioConfig(theme=state.theme){const t=theme||DEFAULT_THEME,hasTrack=Object.prototype.hasOwnProperty.call(t,'soundtrack');return{src:sanitizeThemeAudio(hasTrack?t.soundtrack:DEFAULT_SOUNDTRACK),name:t.soundtrackName||DEFAULT_SOUNDTRACK_NAME,volume:clamp(Number(t.soundtrackVolume??.18),0,1)}}
+  function initializeThemeAudio(){
+    applySoundtrack(state.theme,{preservePlayback:false});
+    const cfg=themeAudioConfig(),prefs=loadAudioPrefs();
+    if(!cfg.src)return;
+    if(prefs.chosen!==true){showSoundWelcome();return;}
+    if(prefs.enabled!==false){state.audio.pendingResume=true;syncSoundPlayerUi();armSoundResumeOnGesture();}
+  }
+  function showSoundWelcome(){const cfg=themeAudioConfig();if(!cfg.src)return;const el=$('#soundWelcome');if(!el)return;$('#soundWelcomeTrackName').textContent=cfg.name;el.classList.remove('hidden')}
+  function hideSoundWelcome(){const el=$('#soundWelcome');if(el)el.classList.add('hidden')}
+  async function chooseSoundWelcome(withSound){saveAudioPrefs({chosen:true,enabled:!!withSound});hideSoundWelcome();if(withSound){await playThemeAudio(true)}else{pauseThemeAudio();syncSoundPlayerUi()}}
+  function armSoundResumeOnGesture(){
+    if(!state.audio.pendingResume)return;
+    const resume=async e=>{if(e?.target?.closest?.('#soundPlayer,#soundWelcome,#themeModal'))return;document.removeEventListener('pointerdown',resume,true);document.removeEventListener('keydown',resume,true);if(loadAudioPrefs().enabled!==false)await playThemeAudio(false)};
+    document.addEventListener('pointerdown',resume,true);document.addEventListener('keydown',resume,true);
+  }
+  function applySoundtrack(theme,{preservePlayback=true}={}){
+    const audio=$('#themeAudio'),player=$('#soundPlayer');if(!audio||!player)return;
+    if(state.audio.previewing){state.audio.previewing=false;state.audio.previewBefore=null;if($('#previewSoundtrackBtn'))$('#previewSoundtrackBtn').textContent='▶ Ouvir trilha';}
+    const cfg=themeAudioConfig(theme),wasPlaying=!audio.paused&&!!audio.src;
+    player.classList.toggle('hidden',!cfg.src);
+    if(!cfg.src){pauseThemeAudio();audio.removeAttribute('src');audio.load();state.audio.source=null;syncSoundPlayerUi();return;}
+    if(state.audio.source!==cfg.src){audio.pause();audio.src=cfg.src;audio.load();state.audio.source=cfg.src;}
+    const prefs=loadAudioPrefs();audio.volume=clamp(prefs.volume!=null?Number(prefs.volume):cfg.volume,0,1);audio.muted=!!prefs.muted;
+    if($('#soundVolume'))$('#soundVolume').value=Math.round(audio.volume*100);
+    if(preservePlayback&&wasPlaying&&prefs.enabled!==false)playThemeAudio(false);else syncSoundPlayerUi();
+  }
+  function preferredAudioVolume(){const prefs=loadAudioPrefs(),cfg=themeAudioConfig();return clamp(prefs.volume!=null?Number(prefs.volume):cfg.volume,0,1)}
+  function cancelAudioFade(){if(state.audio.fadeTimer){clearInterval(state.audio.fadeTimer);state.audio.fadeTimer=null}}
+  function fadeAudioTo(target,duration=2200){const audio=$('#themeAudio');if(!audio)return;cancelAudioFade();const from=safe(audio.volume),to=clamp(target,0,1),started=performance.now();state.audio.fadeTimer=setInterval(()=>{const pct=Math.min(1,(performance.now()-started)/duration),eased=1-Math.pow(1-pct,3);audio.volume=from+(to-from)*eased;if(pct>=1)cancelAudioFade()},45)}
+  async function playThemeAudio(userGesture=false){
+    const audio=$('#themeAudio'),cfg=themeAudioConfig();if(!audio||!cfg.src)return;
+    if(state.audio.source!==cfg.src)applySoundtrack(state.theme,{preservePlayback:false});
+    const targetVolume=preferredAudioVolume();cancelAudioFade();audio.volume=0;
+    try{await audio.play();state.audio.playing=true;state.audio.pendingResume=false;saveAudioPrefs({chosen:true,enabled:true});if(!audio.muted)fadeAudioTo(targetVolume,2400);else audio.volume=targetVolume;syncSoundPlayerUi();}
+    catch(err){audio.volume=targetVolume;state.audio.playing=false;state.audio.pendingResume=true;syncSoundPlayerUi();if(userGesture)toast('O navegador bloqueou o áudio. Clique novamente em reproduzir.');}
+  }
+  function pauseThemeAudio(){const audio=$('#themeAudio');cancelAudioFade();if(audio)audio.pause();state.audio.playing=false;state.audio.pendingResume=false;syncSoundPlayerUi()}
+  function stopThemeAudio(){const audio=$('#themeAudio');cancelAudioFade();if(audio){audio.pause();try{audio.currentTime=0}catch(e){}}state.audio.playing=false;state.audio.pendingResume=false;hideSoundWelcome();syncSoundPlayerUi()}
+  async function toggleSoundPlayback(){const audio=$('#themeAudio');if(!audio?.src)return;if(audio.paused){await playThemeAudio(true)}else{pauseThemeAudio();saveAudioPrefs({enabled:false})}}
+  function toggleSoundMute(){const audio=$('#themeAudio');if(!audio)return;audio.muted=!audio.muted;saveAudioPrefs({muted:audio.muted});syncSoundPlayerUi()}
+  function handleSoundVolume(e){const audio=$('#themeAudio');if(!audio)return;cancelAudioFade();audio.volume=clamp(safe(e.target.value)/100,0,1);if(audio.volume>0&&audio.muted)audio.muted=false;saveAudioPrefs({volume:audio.volume,muted:audio.muted});syncSoundPlayerUi()}
+  function syncSoundPlayerUi(){
+    const audio=$('#themeAudio'),cfg=themeAudioConfig();if($('#soundPlayerName'))$('#soundPlayerName').textContent=cfg.name||'Trilha do tema';if($('#soundWelcomeTrackName'))$('#soundWelcomeTrackName').textContent=cfg.name||'Trilha do tema';
+    const playing=!!audio&&!!audio.src&&!audio.paused;state.audio.playing=playing;if($('#soundToggleBtn')){$('#soundToggleBtn').textContent=playing?'❚❚':'▶';$('#soundToggleBtn').setAttribute('aria-label',playing?'Pausar trilha':'Reproduzir trilha')}
+    if($('#soundMuteBtn')){$('#soundMuteBtn').textContent=audio?.muted?'🔇':'🔊';$('#soundMuteBtn').setAttribute('aria-label',audio?.muted?'Ativar som':'Silenciar trilha')}
+    if($('#soundPlayerStatus'))$('#soundPlayerStatus').textContent=playing?(audio?.muted?'Reproduzindo • silenciado':'Reproduzindo em ambiente'):state.audio.pendingResume?'Clique no painel para iniciar':'Trilha pausada';
+  }
+  function handleSoundtrackFile(e){
+    if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;
+    const ok=/^audio\/(mpeg|mp3|ogg|wav|x-wav|mp4|m4a|aac)$/i.test(f.type||'')||/\.(mp3|ogg|wav|m4a|aac)$/i.test(f.name||'');if(!ok){toast('Use MP3, OGG, WAV, M4A ou AAC.');e.target.value='';return}
+    if(f.size>3*1024*1024){toast('Use uma trilha de até 3 MB para manter o tema leve.');e.target.value='';return}
+    const reader=new FileReader();reader.onload=()=>{state.theme.soundtrack=reader.result;state.theme.soundtrackName=(f.name||DEFAULT_SOUNDTRACK_NAME).replace(/\.[^.]+$/,'');state.theme.soundtrackVolume=state.theme.soundtrackVolume??.18;state.theme.preset='custom';saveTheme();applySoundtrack(state.theme,{preservePlayback:false});if($('#soundtrackNameInput'))$('#soundtrackNameInput').value=state.theme.soundtrackName;toast('Trilha do tema atualizada.')};reader.readAsDataURL(f);e.target.value='';
+  }
+  async function previewThemeSoundtrack(){
+    const cfg=themeAudioConfig();if(!cfg.src){toast('Nenhuma trilha configurada neste tema.');return}
+    const audio=$('#themeAudio');if(!audio)return;
+    if(state.audio.previewing){cancelAudioFade();audio.pause();const before=state.audio.previewBefore||{};audio.volume=before.volume??preferredAudioVolume();audio.muted=!!before.muted;try{audio.currentTime=before.currentTime??0}catch(e){}state.audio.previewing=false;state.audio.previewBefore=null;if($('#previewSoundtrackBtn'))$('#previewSoundtrackBtn').textContent='▶ Ouvir trilha';if(before.wasPlaying)await playThemeAudio(true);else syncSoundPlayerUi();return}
+    state.audio.previewBefore={volume:audio.volume,muted:audio.muted,wasPlaying:!audio.paused,currentTime:safe(audio.currentTime)};state.audio.previewing=true;cancelAudioFade();audio.pause();try{audio.currentTime=0}catch(e){}audio.volume=0;audio.muted=false;try{await audio.play();fadeAudioTo(cfg.volume,1500);if($('#previewSoundtrackBtn'))$('#previewSoundtrackBtn').textContent='❚❚ Pausar prévia';syncSoundPlayerUi()}catch(e){state.audio.previewing=false;state.audio.previewBefore=null;audio.volume=preferredAudioVolume();toast('Clique novamente para permitir a reprodução do áudio.')}
+  }
+  function resetSoundtrack(){if(!isAdmin())return;state.theme.soundtrack=DEFAULT_SOUNDTRACK;state.theme.soundtrackName=DEFAULT_SOUNDTRACK_NAME;state.theme.soundtrackVolume=.18;state.theme.preset='custom';saveTheme();applyTheme(state.theme);toast('Trilha original restaurada.')}
+  function removeSoundtrack(){if(!isAdmin())return;state.theme.soundtrack=null;state.theme.soundtrackName='';state.theme.preset='custom';saveTheme();applyTheme(state.theme);toast('Trilha removida deste tema.')}
+
+  function normalizeThemePayload(theme){const t=clone(theme||DEFAULT_THEME);if(t.preset==='vermithor'||(!t.preset&&(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor'))){if(!t.name||t.name==='Vermithor')t.name='Casa do Dragão';if(!t.campaignTitle||t.campaignTitle==='Dragão Vermithor')t.campaignTitle='Casa do Dragão';if(!t.campaignTagline||t.campaignTagline==='Transforme números em conquista.')t.campaignTagline='Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.';}if(!t.favicon)t.favicon=DEFAULT_FAVICON;if(!Object.prototype.hasOwnProperty.call(t,'soundtrack'))t.soundtrack=DEFAULT_SOUNDTRACK;if(!t.soundtrackName&&t.soundtrack)t.soundtrackName=DEFAULT_SOUNDTRACK_NAME;if(t.soundtrackVolume==null)t.soundtrackVolume=.18;return t}
+  function applyPreset(name){if(!isAdmin())return;const presets={vermithor:clone(DEFAULT_THEME),soften:{name:'Soften',campaignTitle:'Soften Performance',campaignTagline:'Tecnologia que impulsiona resultados.',preset:'soften',accent:'#20b7f5',secondary:'#176bd3',bg:'#06111f',bg2:'#0a2035',panel:'rgba(8,24,40,.9)',text:'#f3f8fc',background:null,favicon:DEFAULT_FAVICON,soundtrack:DEFAULT_SOUNDTRACK,soundtrackName:DEFAULT_SOUNDTRACK_NAME,soundtrackVolume:.18,opacity:.18},neon:{name:'Neon',campaignTitle:'Squad Neon',campaignTagline:'Acelere. Evolua. Conquiste.',preset:'neon',accent:'#c05cff',secondary:'#21dbc9',bg:'#090514',bg2:'#151029',panel:'rgba(23,15,42,.9)',text:'#faf5ff',background:null,favicon:DEFAULT_FAVICON,soundtrack:DEFAULT_SOUNDTRACK,soundtrackName:DEFAULT_SOUNDTRACK_NAME,soundtrackVolume:.18,opacity:.18},clean:{name:'Claro',campaignTitle:'Performance',campaignTagline:'Clareza para acompanhar cada resultado.',preset:'clean',accent:'#3157d5',secondary:'#6a7be8',bg:'#e9eef5',bg2:'#f7f9fc',panel:'rgba(255,255,255,.91)',text:'#172033',background:null,favicon:DEFAULT_FAVICON,soundtrack:DEFAULT_SOUNDTRACK,soundtrackName:DEFAULT_SOUNDTRACK_NAME,soundtrackVolume:.18,opacity:.06}};state.theme=presets[name]||presets.vermithor;saveTheme();applyTheme(state.theme);toast(`Tema ${state.theme.name} aplicado.`)}
+  function applyTheme(t){t=normalizeThemePayload(t||DEFAULT_THEME);const r=document.documentElement.style;if(t.accent)r.setProperty('--accent',t.accent);if(t.secondary)r.setProperty('--accent2',t.secondary);if(t.bg)r.setProperty('--bg',t.bg);if(t.bg2)r.setProperty('--bg2',t.bg2);if(t.panel)r.setProperty('--panel',t.panel);if(t.text)r.setProperty('--text',t.text);if(t.opacity!=null)r.setProperty('--hero-opacity',t.opacity);const safeBg=sanitizeThemeBackground(t.background),bg=safeBg?`url("${safeBg}")`:t.preset==='vermithor'?"url('assets/vermithor.png')":'none';r.setProperty('--hero-img',bg);if($('#accentColor'))$('#accentColor').value=t.accent||'#f0a33a';if($('#secondaryColor'))$('#secondaryColor').value=t.secondary||'#ef5a29';const fallbackTitle=t.preset==='vermithor'?'Casa do Dragão':(t.name||`Squad ${state.squadCode}`),fallbackTagline=t.preset==='vermithor'?'Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.':'Acompanhe, evolua e conquiste.';if($('#campaignNameInput'))$('#campaignNameInput').value=t.campaignTitle||fallbackTitle;if($('#campaignTaglineInput'))$('#campaignTaglineInput').value=t.campaignTagline||fallbackTagline;applyFavicon(t.favicon);if($('#soundtrackNameInput'))$('#soundtrackNameInput').value=t.soundtrackName||'';if($('#soundtrackDefaultVolume'))$('#soundtrackDefaultVolume').value=Math.round(clamp(Number(t.soundtrackVolume??.18),0,1)*100);if($('#soundtrackDefaultVolumeLabel'))$('#soundtrackDefaultVolumeLabel').textContent=`${Math.round(clamp(Number(t.soundtrackVolume??.18),0,1)*100)}%`;applySoundtrack(t);updateThemeName()}
   function updateThemeName(){if($('#themeName'))$('#themeName').textContent=state.theme?.name||state.theme?.campaignTitle||'Personalizado'}
   function handleBackground(e){if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Use uma imagem de até 5 MB.');return}const reader=new FileReader();reader.onload=()=>{state.theme.background=reader.result;state.theme.name=$('#campaignNameInput').value||'Personalizado';state.theme.campaignTitle=$('#campaignNameInput').value||state.theme.campaignTitle||`Squad ${state.squadCode}`;state.theme.campaignTagline=$('#campaignTaglineInput').value||state.theme.campaignTagline||'';state.theme.preset='custom';saveTheme();applyTheme(state.theme);toast('Fundo atualizado.')};reader.readAsDataURL(f)}
   function sanitizeThemeBackground(v){if(!v)return null;const s=String(v).trim();return/^(data:image\/(png|jpeg|jpg|webp|gif);base64,|https?:\/\/|assets\/)/i.test(s)?s:null}
@@ -1486,10 +1569,10 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     const reader=new FileReader();reader.onload=()=>{state.theme.favicon=reader.result;state.theme.preset='custom';saveTheme();applyFavicon(state.theme.favicon);toast('Favicon do tema atualizado.')};reader.readAsDataURL(f);
   }
   function resetFavicon(){if(!isAdmin())return;state.theme.favicon=DEFAULT_FAVICON;state.theme.preset='custom';if($('#faviconFile'))$('#faviconFile').value='';saveTheme();applyFavicon(DEFAULT_FAVICON);toast('Favicon padrão do dragão restaurado.')}
-  function themePayload(){return{schema:'squad-theme-v1',name:state.theme.name||'Personalizado',campaignTitle:state.theme.campaignTitle||state.theme.name||`Squad ${state.squadCode}`,campaignTagline:state.theme.campaignTagline||'',accent:state.theme.accent||'#f0a33a',secondary:state.theme.secondary||'#ef5a29',bg:state.theme.bg||'#080b12',bg2:state.theme.bg2||'#10141e',panel:state.theme.panel||'rgba(17,22,31,.88)',text:state.theme.text||'#f5f6f8',background:state.theme.background||null,favicon:state.theme.favicon||DEFAULT_FAVICON,opacity:state.theme.opacity??.28}}
+  function themePayload(){return{schema:'squad-theme-v1',name:state.theme.name||'Personalizado',campaignTitle:state.theme.campaignTitle||state.theme.name||`Squad ${state.squadCode}`,campaignTagline:state.theme.campaignTagline||'',accent:state.theme.accent||'#f0a33a',secondary:state.theme.secondary||'#ef5a29',bg:state.theme.bg||'#080b12',bg2:state.theme.bg2||'#10141e',panel:state.theme.panel||'rgba(17,22,31,.88)',text:state.theme.text||'#f5f6f8',background:state.theme.background||null,favicon:state.theme.favicon||DEFAULT_FAVICON,soundtrack:Object.prototype.hasOwnProperty.call(state.theme,'soundtrack')?state.theme.soundtrack:DEFAULT_SOUNDTRACK,soundtrackName:state.theme.soundtrackName||'',soundtrackVolume:clamp(Number(state.theme.soundtrackVolume??.18),0,1),opacity:state.theme.opacity??.28}}
   function downloadJson(obj,name){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
   function exportTheme(){if(!isAdmin()||!requireSpecificSquad())return;downloadJson(themePayload(),`tema-squad-${state.squadCode.toLowerCase()}.json`);toast('Tema exportado em JSON.')}
-  async function handleThemeJson(e){if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;try{const raw=JSON.parse(await f.text());if(raw.schema!=='squad-theme-v1')throw new Error('Arquivo de tema incompatível.');const theme={...raw,preset:'custom'};delete theme.schema;delete theme._instrucoes;if(theme.background&&!sanitizeThemeBackground(theme.background))throw new Error('Fundo inválido.');if(theme.favicon&&!sanitizeThemeBackground(theme.favicon))throw new Error('Favicon inválido.');state.theme=theme;saveTheme();applyTheme(state.theme);toast('Tema importado e aplicado.')}catch(err){toast(err.message||'Não foi possível importar o tema.')}finally{e.target.value=''}}
+  async function handleThemeJson(e){if(!isAdmin())return;const f=e.target.files?.[0];if(!f)return;try{const raw=JSON.parse(await f.text());if(raw.schema!=='squad-theme-v1')throw new Error('Arquivo de tema incompatível.');const theme={...raw,preset:'custom'};delete theme.schema;delete theme._instrucoes;if(theme.background&&!sanitizeThemeBackground(theme.background))throw new Error('Fundo inválido.');if(theme.favicon&&!sanitizeThemeBackground(theme.favicon))throw new Error('Favicon inválido.');if(theme.soundtrack&&!sanitizeThemeAudio(theme.soundtrack))throw new Error('Trilha sonora inválida.');state.theme=theme;saveTheme();applyTheme(state.theme);toast('Tema importado e aplicado.')}catch(err){toast(err.message||'Não foi possível importar o tema.')}finally{e.target.value=''}}
 
   /* ===== Supabase: login + dados multi-squad ===== */
   async function initSupabase(){

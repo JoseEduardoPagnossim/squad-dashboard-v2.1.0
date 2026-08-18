@@ -11,6 +11,9 @@
   "text": "#f5f6f8",
   "background": null,
   "opacity": 0.28,
-  "_instrucoes": "O campo favicon aceita assets/..., URL http(s) ou data:image PNG/JPEG/WEBP/GIF. No painel, o upload de favicon é limitado a 750 KB.",
-  "favicon": "assets/favicon-dragon.png"
+  "_instrucoes": "Favicon: assets/..., URL http(s) ou data:image. Trilha: assets/..., URL http(s) ou data:audio MP3/OGG/WAV/M4A/AAC; o painel limita upload de áudio a 3 MB. Use áudio original, licenciado ou royalty-free.",
+  "favicon": "assets/favicon-dragon.png",
+  "soundtrack": "assets/casa-do-dragao-ambient.mp3",
+  "soundtrackName": "Fogo & Conquista",
+  "soundtrackVolume": 0.18
 }
