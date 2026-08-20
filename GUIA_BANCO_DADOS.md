@@ -263,3 +263,10 @@ A interface permite alterar nome, vínculo do técnico no CSV, status e, para Ad
 ### Exclusão
 
 Ao excluir um usuário, o acesso no Supabase Auth é removido. O perfil é removido pela FK `profiles.user_id -> auth.users(id) on delete cascade`. Em `technician_monthly`, o campo `user_id` usa `on delete set null`, portanto o histórico mensal permanece salvo.
+
+
+## V2.18.0 — Financeiro
+
+Execute `MIGRACAO_V2.18.0.sql` antes de publicar a V2.18.0. A migração cria `technician_finance_monthly`, `super_admin_commissions` e adiciona `finance_settings` / `finance_month_data` em `squad_months`. O financeiro individual tem RLS próprio para não expor valores de outros técnicos ao usuário técnico.
+
+O fechamento mensal passa a congelar também as regras e a composição financeira no `closed_snapshot`. Meses antigos fechados antes da V2.18.0 permanecem com o snapshot anterior; para recalculá-los com a regra nova, reabra, configure o financeiro, confira e feche novamente.
