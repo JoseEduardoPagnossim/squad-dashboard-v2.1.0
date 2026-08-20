@@ -1,50 +1,51 @@
-# Soften Performance Hub V2.4.0 — Guia de implantação e operação
+# Soften Performance Hub V2.19.0 — Banco, segurança e operação
 
-## 1. Atualização de uma base V2.3.0 existente
+## 1. Arquitetura
 
-Você não precisa recriar o projeto Supabase nem cadastrar os usuários novamente.
+O projeto usa Supabase Postgres + Authentication + RLS. Os principais blocos são:
 
-Execute no **SQL Editor**:
+- `organizations`: organização;
+- `squads`: Squads A, B, D e E;
+- `profiles`: perfil atual do usuário;
+- `profile_squad_history`: vigência histórica do usuário em cada Squad;
+- `squad_months`: competência do Squad, metas, regras, fechamento e snapshots;
+- `technician_monthly`: desempenho mensal;
+- `daily_metrics`: histórico diário;
+- `technician_finance_monthly`: campos financeiros manuais e cálculo persistido;
+- `super_admin_commissions`: comissão mensal manual do Admin Geral;
+- `squad_themes`: tema/ambientação.
 
-```text
-MIGRACAO_V2.4.0.sql
-```
-
-Depois atualize os arquivos do site e mantenha seu `config.js` atual.
-
-## 2. Instalação nova
-
-Em um projeto Supabase novo:
-
-1. execute `supabase_schema.sql`;
-2. crie o primeiro Admin geral em **Authentication > Users**;
-3. execute `bootstrap_primeiro_admin.sql` com o UUID desse usuário;
-4. publique a Edge Function `create-user`;
-5. configure `config.js`;
-6. configure a URL do GitHub Pages em **Authentication > URL Configuration**.
-
-## 3. Usuários e Squads
-
-Squads atuais:
+## 2. Perfis
 
 ```text
-A
-B
-D
-E
+super_admin  → todos os Squads, indicadores, movimentações e gestão geral
+squad_admin  → administração do próprio Squad
+technician   → próprio desempenho e visões consolidadas autorizadas
 ```
 
-Perfis:
+O `profiles.squad_id` representa o vínculo **atual**. A partir da V2.19, o passado é preservado em `profile_squad_history`.
 
-- `super_admin`: pode ver e administrar todos os Squads;
-- `squad_admin`: administra somente o próprio Squad;
-- `technician`: visualiza o próprio desempenho e o contexto autorizado do Squad.
+## 3. Histórico de movimentação
 
-Para técnico, o campo **Nome do técnico no CSV** precisa corresponder ao valor da coluna `Tecnico` do arquivo importado.
+`profile_squad_history` possui:
 
-## 4. CSV operacional
+```text
+organization_id
+user_id
+squad_id
+technician_name
+valid_from_year / valid_from_month
+valid_to_year / valid_to_month
+created_by / created_at / note
+```
 
-Colunas esperadas:
+Uma linha sem `valid_to_*` é o vínculo aberto atual. A Edge Function `manage-user` fecha o vínculo anterior e abre o novo quando o Admin Geral move o técnico.
+
+Reimportações históricas consultam esse histórico antes do `profiles.squad_id`, evitando deslocar meses antigos para o Squad atual.
+
+## 4. Importação operacional
+
+CSV esperado:
 
 ```text
 time
@@ -58,215 +59,152 @@ Nota 2
 Nota 1
 ```
 
-O Admin geral pode importar um único arquivo contendo A, B, D e E. O sistema separa os registros pelo `grupoAtendimento`.
+A reimportação é substitutiva, não incremental. O sistema reconstrói os números operacionais da competência com o estado mais recente do CSV e preserva parâmetros manuais.
 
-## 5. Como a reimportação funciona
+A chave de nome normaliza Unicode, espaços invisíveis, espaços duplicados e acentos para vínculo.
 
-A importação é de **estado atualizado**, não incremental.
+## 5. Gamificação
 
-Se Agosto já possui 93 atendimentos e o CSV do dia seguinte informa 105, Agosto passa a ter 105.
+Status individual usa as médias atuais do Squad para:
 
-O sistema não soma 93 + 105.
-
-Ao reimportar o mesmo Squad/mês:
-
-- atendimentos e notas são substituídos pelo consolidado mais recente;
-- histórico diário é reconstruído;
-- metas individuais são mantidas;
-- descontos e bônus são mantidos;
-- parâmetros manuais de pontuação são mantidos;
-- metas gerais do Squad são mantidas.
-
-## 6. Pontuação automática
-
-Fórmula:
+- atendimentos;
+- total de avaliações;
+- nota média;
+- % avaliado = total de avaliações / atendimentos.
 
 ```text
-Pontos = Atendimentos × Média da avaliação
-       + ±20 por atendimento
-       + ±30 por total de avaliações
-       + ±40 por média da avaliação
-       + ±35 por percentual avaliado
+2+ critérios => ACIMA
+0/1          => ABAIXO
+sem produção => sem status
 ```
 
-As quatro referências usam a média do Squad quando o campo administrativo correspondente está vazio.
+A pontuação e o ranking são independentes da bonificação financeira.
 
-O sistema também calcula automaticamente:
+## 6. Financeiro
 
-- metas batidas;
-- status;
-- ranking mensal;
-- pontuação acumulada.
+### Tabelas
 
-## 7. Metas individuais por mês
-
-As metas são armazenadas no registro mensal de cada técnico.
-
-Exemplo:
+`squad_months` armazena:
 
 ```text
-Rodolfo - Julho  : meta atend. 210 / meta notas 5 70
-Rodolfo - Agosto : meta atend. 185 / meta notas 5 63
-Rodolfo - Setembro: meta atend. 200 / meta notas 5 68
+finance_settings
+finance_month_data
+finance_model                  -- squad | individual
+finance_compare                -- exibir comparação
+finance_comparison_snapshot    -- resumo dos dois cenários
 ```
 
-Alterar Setembro não altera Julho ou Agosto.
-
-### Copiar metas do mês anterior
-
-Em **Administração > Metas e bonificações do mês**, use:
-
-**Copiar metas do mês anterior**
-
-O sistema copia, por técnico correspondente:
-
-- meta de atendimentos;
-- meta de notas 5.
-
-Desconto e bônus não são copiados automaticamente.
-
-As metas gerais do Squad também não são copiadas, pois a meta de atendimento pode variar conforme os dias úteis do novo mês.
-
-## 8. Fechamento mensal
-
-Durante o mês, mantenha o registro **ABERTO**.
-
-No encerramento:
-
-1. confira a última importação;
-2. confira metas individuais;
-3. confira parâmetros de pontuação;
-4. confira bônus e descontos;
-5. em **Administração > Meses importados**, clique em **Fechar mês**.
-
-Ao fechar, o sistema grava um snapshot contendo:
-
-- referências efetivamente utilizadas na pontuação;
-- pontuação de cada técnico;
-- metas batidas;
-- status;
-- ranking;
-- resultado da equipe;
-- data/hora do fechamento.
-
-O mês passa a ser exibido como **FECHADO**.
-
-## 9. O que fica bloqueado em um mês fechado
-
-Enquanto fechado, o painel impede:
-
-- reimportar aquele mesmo Squad/mês;
-- alterar metas individuais;
-- alterar bônus ou descontos;
-- alterar parâmetros da fórmula;
-- alterar metas gerais do Squad;
-- excluir o mês.
-
-O tema do Squad continua sendo uma configuração geral e pode ser alterado independentemente do fechamento mensal.
-
-## 10. Reabrir um mês
-
-Se houver necessidade de corrigir um histórico:
-
-1. abra **Administração > Meses importados**;
-2. clique em **Reabrir**;
-3. faça a correção/importação;
-4. confira os cálculos;
-5. clique novamente em **Fechar mês**.
-
-Ao reabrir, o snapshot anterior é removido e o mês volta a calcular normalmente com seus parâmetros originais. Um novo snapshot é criado no próximo fechamento.
-
-## 11. Pontuação acumulada
-
-O acumulado considera:
-
-- meses fechados;
-- mais o mês aberto mais recente.
-
-Isso mantém o histórico oficial e inclui o desempenho corrente.
-
-## 12. Excluir importação incorreta
-
-Somente meses abertos podem ser excluídos.
-
-Se o mês estiver fechado, primeiro use **Reabrir**.
-
-A exclusão remove os dados e configurações daquele Squad/mês, portanto deve ser usada apenas para importações realmente incorretas.
-
-## 13. Metas do Squad
-
-Em **Administração > Metas do mês selecionado**:
-
-- Meta de atendimentos do Squad;
-- Meta de % de avaliação.
-
-A meta de atendimento pode ser calculada por:
+`technician_finance_monthly` armazena:
 
 ```text
-dias úteis × 10 atendimentos × quantidade de técnicos
+manual_bonus
+sales_commission
+vacation
+calculated
 ```
 
-## 14. Tema
+`calculated` contém os componentes auditáveis e, na V2.19, os dois modelos por técnico.
 
-O tema é definido por administradores e pode ser diferente em cada Squad.
+### Modelo Base do Squad
 
-É possível:
+```text
+group_avg_per_day = total_att / dias_uteis / tecnicos_com_producao
+group_notes5_pct  = total_notes5 / total_att
+```
 
-- escolher preset;
-- alterar cores;
-- trocar fundo;
-- alterar campanha;
-- importar/exportar tema JSON.
+As duas métricas procuram suas faixas, somam as comissões e recebem o multiplicador de cancelamento. Essa base é compartilhada pelos técnicos com produção.
 
-## 15. Rotina recomendada
+### Modelo Individual
 
-### Diariamente
+Cada técnico usa `att / dias_uteis` e `notes5 / att` para encontrar suas próprias faixas.
 
-1. gerar o CSV atualizado;
-2. importar o mês corrente;
-3. conferir vínculos ignorados;
-4. conferir dashboard e ranking.
+### Ajustes comuns
 
-### No início de um novo mês
+Depois da base:
 
-1. importar o novo período;
-2. copiar metas do mês anterior, se aplicável;
-3. revisar metas individuais;
-4. revisar metas gerais do Squad;
-5. manter o mês aberto.
+```text
++ bônus manual
++ prêmio maior atendimento
++ prêmio maior Notas 5
++ comissão de vendas
+- desconto ABAIXO
++ redistribuição entre ACIMA do mesmo Squad
+```
 
-### No fechamento
+Férias aplica 50% sobre o total final. Admin Geral possui comissão manual separada.
 
-1. fazer a última importação;
-2. revisar parâmetros, metas, bônus e desconto;
-3. fechar o mês;
-4. consultar o histórico normalmente nos meses seguintes.
+## 7. Fechamento
 
-## 16. Segurança
+O snapshot V3 do mês congela:
 
-- `service_role` permanece somente no servidor/Edge Function;
-- o navegador usa apenas a chave pública do projeto;
-- RLS limita os dados pelo perfil e Squad;
-- criação de usuários ocorre pela Edge Function;
-- controles administrativos são ocultos para técnicos;
-- o fechamento mensal adiciona uma proteção operacional para evitar alterações acidentais no histórico.
+- referências e resultado da gamificação;
+- modelo financeiro oficial;
+- opção de comparação;
+- regras financeiras;
+- dados de cancelamento;
+- resumo dos dois modelos;
+- composição completa dos dois modelos por técnico.
 
+Meses fechados ficam bloqueados para reimportação/alterações até serem reabertos.
 
-## Gestão de usuários V2.6
+## 8. RLS e Edge Functions
 
-Além da função `create-user`, publique também a Edge Function `manage-user`. Ela realiza edição e exclusão usando `service_role` apenas no servidor.
+### Dados financeiros
 
-### Edição
+O técnico pode ler apenas o próprio financeiro. Admin do Squad pode administrar o próprio Squad. Admin Geral possui escopo geral autorizado.
 
-A interface permite alterar nome, vínculo do técnico no CSV, status e, para Admin geral, perfil/Squad. E-mail e senha não são alterados.
+### `profile_squad_history`
 
-### Exclusão
+Usuários autenticados podem ler conforme escopo. INSERT/UPDATE/DELETE são revogados do papel `authenticated`; alterações são feitas pela Edge Function com `service_role`.
 
-Ao excluir um usuário, o acesso no Supabase Auth é removido. O perfil é removido pela FK `profiles.user_id -> auth.users(id) on delete cascade`. Em `technician_monthly`, o campo `user_id` usa `on delete set null`, portanto o histórico mensal permanece salvo.
+### `create-user`
 
+Usa `service_role` no servidor para:
 
-## V2.18.0 — Financeiro
+- criar o Auth user;
+- criar `profiles`;
+- criar histórico inicial de Squad;
+- vincular linhas mensais pelo nome normalizado;
+- fazer rollback do Auth se o perfil falhar.
 
-Execute `MIGRACAO_V2.18.0.sql` antes de publicar a V2.18.0. A migração cria `technician_finance_monthly`, `super_admin_commissions` e adiciona `finance_settings` / `finance_month_data` em `squad_months`. O financeiro individual tem RLS próprio para não expor valores de outros técnicos ao usuário técnico.
+### `manage-user`
 
-O fechamento mensal passa a congelar também as regras e a composição financeira no `closed_snapshot`. Meses antigos fechados antes da V2.18.0 permanecem com o snapshot anterior; para recalculá-los com a regra nova, reabra, configure o financeiro, confira e feche novamente.
+Usa `service_role` para:
+
+- editar perfil;
+- registrar movimentação;
+- inativar/reativar e bloquear/liberar Auth;
+- excluir quando permitido.
+
+Nunca exponha a `SUPABASE_SERVICE_ROLE_KEY` no frontend ou no GitHub.
+
+## 9. Atualização V2.18.1 → V2.19.0
+
+Execute nesta ordem:
+
+1. `MIGRACAO_V2.19.0.sql`;
+2. deploy da `manage-user` V2.19;
+3. deploy da `create-user` V2.19;
+4. frontend V2.19;
+5. logout/login e hard refresh.
+
+Não recrie banco nem rode `supabase_schema.sql` sobre uma produção já existente. O schema completo é para instalação nova.
+
+## 10. Instalação nova
+
+1. execute `supabase_schema.sql`;
+2. crie o primeiro Admin Geral no Authentication;
+3. execute `bootstrap_primeiro_admin.sql` com o UUID;
+4. publique `create-user` e `manage-user`;
+5. configure `config.js` com URL e anon/publishable key;
+6. configure as URLs de autenticação do domínio publicado.
+
+## 11. Backup e auditoria
+
+Para competências oficiais, recomenda-se:
+
+- gerar Excel/PDF antes do fechamento;
+- manter o mês fechado depois da conferência;
+- reabrir somente para correção controlada;
+- usar Inativar, não Excluir, para pessoas que deixam a operação;
+- informar competência ao movimentar técnicos entre Squads.
