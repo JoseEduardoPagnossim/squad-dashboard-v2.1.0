@@ -1194,11 +1194,58 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     if(allDemoUsers().some(u=>String(u.email).toLowerCase()===p.email))throw new Error('Já existe um usuário com este e-mail.');
     const list=loadDemoCreatedUsers();list.push({email:p.email,password:p.password,fullName:p.fullName,role:p.role,squadCode:p.squadCode,techName:p.techName,active:true,userId:`demo-${Date.now()}`});saveDemoCreatedUsers(list);
   }
+  async function edgeFunctionErrorMessage(error){
+    let message=String(error?.message||'').trim();
+    const response=error?.context;
+    try{
+      if(response&&typeof response.clone==='function'){
+        const copy=response.clone();
+        const contentType=String(copy.headers?.get?.('content-type')||'').toLowerCase();
+        if(contentType.includes('application/json')){
+          const payload=await copy.json();
+          message=String(payload?.error||payload?.message||message).trim();
+        }else{
+          const text=String(await copy.text()).trim();
+          if(text)message=text;
+        }
+      }
+    }catch(parseError){console.warn('Não foi possível ler o detalhe da Edge Function.',parseError)}
+    const err=new Error(message||'Falha ao executar a função do servidor.');
+    err.httpStatus=response?.status||null;
+    return err;
+  }
   async function createSupabaseUser(p){
     const body={full_name:p.fullName,email:p.email,password:p.password,role:p.role,squad_code:p.squadCode,technician_name:p.techName};
-    const {data,error}=await state.supabase.functions.invoke('create-user',{body});if(error)throw error;if(data?.error)throw new Error(data.error);return data;
+    // Renova a sessão imediatamente antes da ação administrativa. Isso evita que um token
+    // antigo/expirado seja enviado para a Edge Function após muitas horas com o painel aberto.
+    let session=null;
+    try{
+      const refreshed=await state.supabase.auth.refreshSession();
+      if(!refreshed.error)session=refreshed.data?.session||null;
+    }catch(refreshError){console.warn('Refresh de sessão não concluído antes de criar usuário.',refreshError)}
+    if(!session){
+      const current=await state.supabase.auth.getSession();
+      if(current.error)throw current.error;
+      session=current.data?.session||null;
+    }
+    if(!session?.access_token)throw new Error('Sua sessão administrativa expirou. Entre novamente no sistema e tente criar o usuário.');
+    const {data,error}=await state.supabase.functions.invoke('create-user',{body,headers:{Authorization:`Bearer ${session.access_token}`}});
+    if(error)throw await edgeFunctionErrorMessage(error);
+    if(data?.error)throw new Error(data.error);
+    return data;
   }
-  function humanCreateUserError(err){const m=String(err?.message||err||'');if(/already|registered|duplicate|unique/i.test(m))return'Já existe um usuário com este e-mail.';if(/function|failed to fetch|non-2xx/i.test(m))return'Falha ao criar no servidor. Confira se a Edge Function create-user foi publicada.';return m||'Não foi possível criar o usuário.'}
+  function humanCreateUserError(err){
+    const m=String(err?.message||err||'').trim();
+    if(/already|registered|duplicate|unique|já existe/i.test(m))return'Já existe um usuário com este e-mail. Se ele não aparece na tela, confira Authentication > Users no Supabase.';
+    if(/sess[aã]o|jwt|token|unauthorized/i.test(m))return'Sua sessão administrativa expirou ou não foi aceita pelo servidor. Saia, entre novamente e tente de novo.';
+    if(/perfil administrador não encontrado/i.test(m))return'Seu login existe, mas o perfil administrativo não foi localizado no banco. Confira a tabela profiles para o seu usuário.';
+    if(/sem permissão/i.test(m))return'Seu perfil atual não tem permissão para criar esse tipo de usuário.';
+    if(/squad inválido|fora da organização/i.test(m))return'O Squad selecionado não foi localizado para esta organização.';
+    if(/configuração do servidor incompleta|service.role|service_role/i.test(m))return'A Edge Function create-user está sem a configuração de servidor necessária. Republique a função no projeto correto do Supabase.';
+    if(/function not found|404|failed to fetch/i.test(m))return'A Edge Function create-user não foi encontrada. Republique a função create-user no Supabase.';
+    if(/non-2xx|edge function/i.test(m))return`A Edge Function create-user respondeu com erro${err?.httpStatus?` HTTP ${err.httpStatus}`:''}. Abra Supabase > Edge Functions > create-user > Logs para ver o motivo.`;
+    return m||'Não foi possível criar o usuário.';
+  }
 
   function renderAdmin(){
     if(!isAdmin())return;
@@ -1423,7 +1470,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   async function saveFinanceConfiguration(){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m||m.isClosed)return toast('Reabra o mês antes de alterar a bonificação.');
-    try{m.financeSettings=collectFinanceSettingsFromUi(m);m.financeMonthData={customersStart:Math.max(0,safe($('#financeCustomersStart').value)),canceledCount:Math.max(0,safe($('#financeCanceledCount').value))};recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistFinanceMonth(m);render();toast('Regras financeiras salvas e bonificação recalculada.')}catch(err){console.error(err);toast('Não foi possível salvar. Confira se a migração V2.18.0 foi executada.')}
+    try{m.financeSettings=collectFinanceSettingsFromUi(m);m.financeMonthData={customersStart:Math.max(0,safe($('#financeCustomersStart').value)),canceledCount:Math.max(0,safe($('#financeCanceledCount').value))};recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistFinanceMonth(m);render();toast('Regras financeiras salvas e bonificação recalculada.')}catch(err){console.error(err);toast('Não foi possível salvar. Confira se a migração V2.18.1 foi executada.')}
   }
   async function saveFinanceTechnicians(){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m||m.isClosed)return toast('Reabra o mês antes de alterar os valores financeiros.');
@@ -1451,7 +1498,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   function demoAdminCommissionKey(){return'squadDashboardSuperAdminCommissionsV218'}
   async function saveSuperAdminCommission(){
-    if(!isSuperAdmin())return;const m=currentMonth();if(!m)return toast('Selecione um Squad e um mês para definir a competência.');const amount=Math.max(0,safe($('#superAdminCommissionInput').value)),notes=$('#superAdminCommissionNotes').value.trim();try{if(state.supabase){const payload={organization_id:state.user.organizationId,user_id:state.user.userId,year:m.year,month:m.month,amount,notes,updated_by:state.user.userId,updated_at:new Date().toISOString()};const {data,error}=await state.supabase.from('super_admin_commissions').upsert(payload,{onConflict:'organization_id,user_id,year,month'}).select('id').single();if(error)throw error;const old=(state.superAdminCommissions||[]).filter(c=>!(c.user_id===state.user.userId&&safe(c.year)===m.year&&safe(c.month)===m.month));state.superAdminCommissions=[...old,{...payload,id:data.id,name:state.user.fullName}];}else{const list=JSON.parse(localStorage.getItem(demoAdminCommissionKey())||'[]').filter(c=>!(c.user_id===state.user.email&&safe(c.year)===m.year&&safe(c.month)===m.month));list.push({user_id:state.user.email,year:m.year,month:m.month,amount,notes,name:state.user.fullName});localStorage.setItem(demoAdminCommissionKey(),JSON.stringify(list));state.superAdminCommissions=list;}renderSuperAdminCommission(m);toast('Comissão do Admin Geral salva.')}catch(err){console.error(err);toast('Não foi possível salvar. Execute a migração V2.18.0.')}
+    if(!isSuperAdmin())return;const m=currentMonth();if(!m)return toast('Selecione um Squad e um mês para definir a competência.');const amount=Math.max(0,safe($('#superAdminCommissionInput').value)),notes=$('#superAdminCommissionNotes').value.trim();try{if(state.supabase){const payload={organization_id:state.user.organizationId,user_id:state.user.userId,year:m.year,month:m.month,amount,notes,updated_by:state.user.userId,updated_at:new Date().toISOString()};const {data,error}=await state.supabase.from('super_admin_commissions').upsert(payload,{onConflict:'organization_id,user_id,year,month'}).select('id').single();if(error)throw error;const old=(state.superAdminCommissions||[]).filter(c=>!(c.user_id===state.user.userId&&safe(c.year)===m.year&&safe(c.month)===m.month));state.superAdminCommissions=[...old,{...payload,id:data.id,name:state.user.fullName}];}else{const list=JSON.parse(localStorage.getItem(demoAdminCommissionKey())||'[]').filter(c=>!(c.user_id===state.user.email&&safe(c.year)===m.year&&safe(c.month)===m.month));list.push({user_id:state.user.email,year:m.year,month:m.month,amount,notes,name:state.user.fullName});localStorage.setItem(demoAdminCommissionKey(),JSON.stringify(list));state.superAdminCommissions=list;}renderSuperAdminCommission(m);toast('Comissão do Admin Geral salva.')}catch(err){console.error(err);toast('Não foi possível salvar. Execute a migração V2.18.1.')}
   }
 
   function formatDateTime(v){if(!v)return'';try{return new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}catch(e){return String(v)}}
@@ -1476,7 +1523,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       m.isClosed=true;m.closedAt=now;m.closedBy=state.user?.userId||state.user?.email||null;saveDemoSquads();
       if(state.supabase&&m.dbId){await persistFinanceMonth(m);const {error}=await state.supabase.from('squad_months').update({is_closed:true,closed_at:now,closed_by:state.user.userId,closed_snapshot:m.closedSnapshot,team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error;await persistCalculatedScores(m)}
       refreshSelectors();render();toast(`${m.monthName} ${m.year} fechado e congelado com sucesso.`);
-    }catch(err){console.error(err);toast('Não foi possível fechar o mês. Confira se as migrações V2.4.0 e V2.18.0 foram executadas.')}
+    }catch(err){console.error(err);toast('Não foi possível fechar o mês. Confira se as migrações V2.4.0 e V2.18.1 foram executadas.')}
   }
   async function reopenMonth(id){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m||!m.isClosed)return;
@@ -1732,7 +1779,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
         const {data:comms,error:ce}=await state.supabase.from('super_admin_commissions').select('id,user_id,year,month,amount,notes').order('year',{ascending:false}).order('month',{ascending:false});if(ce)throw ce;
         const {data:admins}=await state.supabase.from('profiles').select('user_id,full_name,email').eq('role','super_admin');const names=new Map((admins||[]).map(a=>[a.user_id,a.full_name||a.email||'Admin geral']));
         state.superAdminCommissions=(comms||[]).map(c=>({...c,name:names.get(c.user_id)||'Admin geral',amount:safe(c.amount)}));
-      }catch(err){console.warn('Comissões de Admin Geral indisponíveis. Execute a migração V2.18.0.',err);}
+      }catch(err){console.warn('Comissões de Admin Geral indisponíveis. Execute a migração V2.18.1.',err);}
     }
     try{
       const {data:overview,error:overviewError}=await state.supabase.rpc('get_org_squad_monthly_overview');

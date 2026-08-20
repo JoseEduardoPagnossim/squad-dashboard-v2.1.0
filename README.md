@@ -1,8 +1,8 @@
-# Soften Performance Hub V2.18.0
+# Soften Performance Hub V2.18.1
 
 Painel multi-Squad para acompanhamento diário/mensal, gamificação, indicadores executivos e fechamento financeiro dos técnicos da Soften Sistemas.
 
-## Novidades da V2.18.0
+## Novidades da V2.18.1
 
 - **Bonificação financeira separada da gamificação**. Pontos/ranking não são usados como valor financeiro.
 - Status do técnico corrigido para reproduzir a planilha: 4 critérios comparados sempre com as **médias atuais do Squad**; 2+ = ACIMA; 0/1 = ABAIXO; sem atendimento = sem status.
@@ -32,7 +32,7 @@ Painel multi-Squad para acompanhamento diário/mensal, gamificação, indicadore
 ## Atualização de uma instalação V2.17.1
 
 1. Faça backup do `config.js` atualmente publicado.
-2. No Supabase, abra **SQL Editor** e execute `MIGRACAO_V2.18.0.sql` uma única vez.
+2. No Supabase, abra **SQL Editor** e execute `MIGRACAO_V2.18.1.sql` uma única vez.
 3. Substitua no GitHub os arquivos do pacote `squad-dashboard-v2.18.0-atualizacao-github.zip`.
 4. **Não substitua o seu `config.js` configurado**. O ZIP de atualização não contém esse arquivo.
 5. Aguarde o GitHub Pages publicar e faça `Ctrl + F5`.
@@ -51,3 +51,7 @@ Os dados financeiros individuais ficam na tabela `technician_finance_monthly`, c
 ## Observação sobre importação diária
 
 Reimportar o CSV do mesmo mês **substitui os números operacionais**, não soma com a importação anterior. Metas e valores manuais financeiros já preenchidos são preservados.
+
+
+## Correção V2.18.1
+A criação de usuários agora renova a sessão antes da Edge Function e exibe o erro real retornado pelo servidor. Republique `create-user` usando `supabase/functions/create-user/index.ts`. Não há migração SQL adicional.
