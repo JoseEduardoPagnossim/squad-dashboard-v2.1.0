@@ -1,4 +1,13 @@
-# Soften Performance Hub V2.20.0
+# Soften Performance Hub V2.20.1
+
+
+## Ajustes da V2.20.1
+
+- Tela **Meu desempenho** reorganizada para eliminar o grande espaço vazio abaixo do histórico diário.
+- **Histórico do mês** não usa mais rolagem vertical interna no desktop; a página passa a controlar a rolagem naturalmente.
+- Os rankings **Ranking atual** e **Ranking por valor recebido** ficam lado a lado abaixo do histórico no desktop e empilham em telas menores.
+- Ao navegar entre telas, a página volta automaticamente ao topo.
+- Nenhuma alteração de banco, SQL ou Edge Function é necessária em relação à V2.20.0.
 
 Painel multi-Squad da Soften Sistemas para acompanhamento diário e mensal, gamificação, indicadores, gestão de usuários e fechamento financeiro auditável.
 

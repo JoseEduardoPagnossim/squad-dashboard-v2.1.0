@@ -314,6 +314,17 @@
   }
   function requireSpecificSquad(){if(state.squadCode==='all'){toast('Selecione um Squad específico primeiro.');return false}return true}
 
+  function resetViewScroll(){
+    const goTop=()=>{
+      try{window.scrollTo({top:0,left:0,behavior:'auto'});}catch(e){window.scrollTo(0,0);}
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      const main=$('.main');if(main&&main.scrollTop)main.scrollTop=0;
+    };
+    goTop();
+    requestAnimationFrame(goTop);
+  }
+
   function showView(name,adminSection=null){
     if((name==='admin'||name==='users')&&!isAdmin())return;
     if(name==='indicators'&&!isSuperAdmin())return;
@@ -329,6 +340,7 @@
     $('.month-control').classList.toggle('hidden',name==='users'||name==='profile'||name==='help'||name==='indicators');
     $('.sidebar').classList.remove('open');
     render();
+    resetViewScroll();
   }
 
   function refreshSelectors(){
