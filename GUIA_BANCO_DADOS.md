@@ -1,4 +1,4 @@
-# Soften Performance Hub V2.19.0 — Banco, segurança e operação
+# Soften Performance Hub V2.20.0 — Banco, segurança e operação
 
 ## 1. Arquitetura
 
@@ -208,3 +208,17 @@ Para competências oficiais, recomenda-se:
 - reabrir somente para correção controlada;
 - usar Inativar, não Excluir, para pessoas que deixam a operação;
 - informar competência ao movimentar técnicos entre Squads.
+
+
+## 10. Atualização V2.20.0
+
+Execute `MIGRACAO_V2.20.0.sql` após a V2.19.0.
+
+Novas colunas em `squad_months`:
+
+- `finance_technician_compare`: controla se o técnico pode ver a simulação de transição.
+- `finance_individual_cap`: teto global do modelo Individual; padrão R$ 7.000,00.
+
+A função `get_my_squad_finance_ranking(year, month)` é `SECURITY DEFINER` e entrega a técnicos/Admin de Squad somente nome e valor financeiro oficial dos técnicos do próprio Squad. Ela não amplia a política de leitura de `technician_finance_monthly`, portanto os componentes financeiros privados continuam protegidos.
+
+O frontend V2.20.0 também persiste `technician_finance_monthly.calculated` a cada reimportação CSV, mantendo a classificação financeira consistente depois das atualizações diárias.

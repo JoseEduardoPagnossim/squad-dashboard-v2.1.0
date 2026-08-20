@@ -1,215 +1,126 @@
-# Soften Performance Hub V2.19.0
+# Soften Performance Hub V2.20.0
 
 Painel multi-Squad da Soften Sistemas para acompanhamento diário e mensal, gamificação, indicadores, gestão de usuários e fechamento financeiro auditável.
 
 Squads atuais: **A, B, D e E**.
 
-## Destaques da V2.19.0
+## Destaques da V2.20.0
 
-- **Dois modelos financeiros no mesmo mês**: `Base do Squad` e `Individual`.
-- O Admin escolhe qual modelo é o **oficial** e pode manter a **comparação** ligada sem afetar o valor oficial.
-- Fechamento financeiro por técnico reformulado em cards responsivos, sem tabela horizontal.
-- Relatórios Excel/PDF mostram os dois cenários, diferença e valor oficial.
-- Movimentação de técnico entre Squads pela interface com **competência de vigência** e preservação do passado.
-- **Inativar/Reativar** bloqueia/libera o login sem apagar históricos.
-- Criação de usuário identifica perfil já existente antes de tentar duplicar e faz rollback se a criação do perfil falhar.
-- Sidebar reorganizada em grupos: **Desempenho**, **Gestão** e **Conta**.
-- “Como usar” refeito para refletir todo o fluxo atual.
+- Dois modelos financeiros continuam coexistindo: **Base do Squad** e **Individual**.
+- O Admin define o **modelo oficial** da competência.
+- Existe uma nova opção independente: **Mostrar comparação ao técnico no Meu desempenho**. Ela serve para períodos de transição; desligada, o técnico vê apenas o modelo oficial.
+- A comparação liberada ao técnico mostra somente os dois valores do próprio usuário. Parâmetros internos do teto não são exibidos.
+- O modelo **Individual** possui piso de **R$ 0,00 por técnico**: um cálculo negativo é zerado.
+- O modelo **Individual** possui teto mensal da soma paga a todos os técnicos do Squad, com padrão de **R$ 7.000,00**.
+- Se o Individual ultrapassar o teto, o sistema reduz proporcionalmente os valores individuais e fecha a soma em no máximo o teto configurado. Essa auditoria é exclusiva dos gestores.
+- A redistribuição continua sendo feita **somente entre técnicos ACIMA** do mesmo Squad.
+- Técnicos passam a ver um **ranking por valor oficial recebido** com todos os técnicos do próprio grupo.
+- **Indicadores** passa a ter ranking financeiro pelo valor oficial acumulado no período selecionado.
+- O bloco de **contas de demonstração foi removido da tela de login**.
+- A importação CSV agora também atualiza no banco os cálculos financeiros já recalculados, evitando ranking financeiro desatualizado após reimportações diárias.
 
-## Navegação
+## Financeiro: regras principais
 
-### Desempenho
-- **Meu desempenho**: painel individual, status auditável, histórico e financeiro do próprio técnico.
-- **Visão do Squad**: ranking, histórico por técnico, comparativos consolidados dos Squads, volume diário do setor e gráfico de todos os técnicos.
-- **Indicadores**: análise executiva exclusiva do Admin Geral.
+### Base do Squad
 
-### Gestão
-- **Operação**: CSV, metas, referências, fechamento/reabertura e histórico de meses.
-- **Bonificação**: modelo financeiro, comparação, regras, cancelamento, valores manuais, férias, relatórios e comissão do Admin Geral.
-- **Usuários**: criar, editar, movimentar, inativar/reativar e excluir.
-- **Aparência**: tema, fundo, favicon e trilha sonora.
+A comissão-base usa a média de atendimentos/técnico/dia do Squad e o percentual de Notas 5 do grupo. Depois entram bônus, prêmios, comissão de vendas, desconto, redistribuição e férias.
 
-### Conta
-- **Meu perfil**: dados da conta e troca de senha com validação da senha atual.
-- **Como usar**: guia completo e matriz de permissões.
+### Individual
 
-## Importação CSV
+Cada técnico usa sua própria média de atendimentos/dia e seu próprio `% Notas 5 = Notas 5 / atendimentos`.
 
-Colunas esperadas:
+A ordem do modelo Individual é:
 
 ```text
-time
-Tecnico
-grupoAtendimento
-Quantidade
-Nota 5
-Nota 4
-Nota 3
-Nota 2
-Nota 1
+faixas individuais
+→ multiplicador de cancelamento
+→ bônus / prêmios / vendas
+→ desconto
+→ redistribuição somente para ACIMA
+→ piso mínimo de R$ 0,00
+→ férias (50%, quando marcado)
+→ teto global do Squad
 ```
 
-O vínculo de técnico normaliza espaços, caracteres invisíveis e acentuação.
+### Teto do Individual
 
-A reimportação é de **estado atualizado**: importar novamente o mesmo Squad/mês substitui os dados operacionais anteriores; **não soma**. Metas, parâmetros e valores financeiros manuais já cadastrados são preservados.
-
-## Gamificação
-
-A gamificação permanece separada do financeiro.
-
-O status individual compara quatro indicadores com as **médias atuais do próprio Squad**:
-
-1. atendimentos;
-2. total de avaliações;
-3. nota média;
-4. percentual avaliado (`total de avaliações / atendimentos`).
-
-Regra:
-
-```text
-2, 3 ou 4 critérios atingidos => ACIMA
-0 ou 1 critério atingido      => ABAIXO
-sem atendimento               => sem status
-```
-
-A pontuação mantém a fórmula de atendimentos × nota média com bônus/penalidades pelos quatro critérios. O status da equipe replica a regra da planilha: fica ACIMA quando pelo menos 50% dos técnicos válidos possuem pontuação acima da média do grupo.
-
-## Financeiro: dois modelos
-
-### 1. Base do Squad
-
-Modelo compartilhado para reproduzir a política atual.
-
-```text
-Média atend./técnico/dia do Squad =
-  atendimentos totais do Squad
-  / dias úteis considerados
-  / técnicos ativos com produção
-
-% Notas 5 do Squad =
-  total de Notas 5 do Squad
-  / total de atendimentos do Squad
-```
-
-As duas métricas encontram suas faixas de comissão; o subtotal recebe o multiplicador de cancelamento. Essa base é compartilhada pelos técnicos com produção. Depois entram os ajustes individuais.
-
-### 2. Individual
-
-Modelo meritocrático. Cada técnico utiliza:
-
-```text
-Média atend./dia individual = atendimentos do técnico / dias úteis considerados
-% Notas 5 individual = Notas 5 do técnico / atendimentos do técnico
-```
-
-As faixas são encontradas individualmente e recebem o mesmo multiplicador de cancelamento da competência do Squad.
-
-### Componentes comuns aos dois modelos
-
-Após a base do modelo escolhido, o sistema aplica:
-
-```text
-+ bônus manual
-+ prêmio de maior atendimento
-+ prêmio de maior quantidade de Notas 5
-+ comissão de vendas
-- desconto para status ABAIXO
-+ redistribuição do total descontado entre os ACIMA do mesmo Squad
-```
-
-Em empate nos prêmios, o valor é dividido igualmente.
-
-Se o técnico estiver marcado como **Férias**, somente ao final:
-
-```text
-valor calculado × 50% = valor final
-```
-
-Sem atendimentos e sem avaliações no mês, a bonificação é zero.
-
-## Comparação financeira
-
-Em **Gestão → Bonificação**:
-
-- escolha `Base do Squad` ou `Individual` como **modelo oficial**;
-- ative/desative **Exibir comparação entre os dois modelos**;
-- confira a folha total dos dois cenários e o impacto financeiro;
-- compare cada técnico individualmente.
-
-O checkbox de comparação é apenas analítico. O valor exibido como **oficial** e congelado no fechamento é sempre o modelo selecionado.
-
-## Comissão do Admin Geral
-
-A comissão mensal do Admin Geral é informada manualmente como valor total, por competência, e não participa das regras financeiras dos Squads.
-
-## Relatórios
-
-Em **Gestão → Bonificação** existem:
-
-- **Relatório Excel**: técnicos, ambos os modelos, diferença, modelo oficial, valor oficial, ajustes e aba de resumo; inclui Admin Geral quando houver comissão cadastrada.
-- **Relatório PDF**: conferência compacta com os dois modelos e o valor oficial.
-
-As bibliotecas de exportação são carregadas sob demanda pela internet.
-
-## Movimentação de técnicos entre Squads
-
-Admin Geral pode editar o usuário e trocar o Squad informando a competência de início.
+O teto é sobre a **soma total efetivamente paga a todos os técnicos do Squad** no cenário Individual.
 
 Exemplo:
 
 ```text
-Squad D até 07/2026
-Squad A a partir de 08/2026
+Individual antes do teto: R$ 8.000,00
+Teto:                      R$ 7.000,00
+Fator proporcional:        87,5%
+Folha Individual final:    R$ 7.000,00
 ```
 
-O sistema registra a vigência em `profile_squad_history`, mantém meses anteriores no Squad antigo e passa a usar o novo vínculo na competência escolhida. Reimportações históricas consultam esse histórico antes do perfil atual.
+O gestor vê valor antes do teto, fator, ajuste e valores por técnico. O técnico vê somente o valor oficial e, quando a transição estiver liberada, a simulação do outro modelo — sem exposição do teto.
 
-Movimentações futuras não são agendadas automaticamente; use o mês atual ou uma competência anterior.
+## Comparação para técnicos
 
-## Inativar, reativar e excluir
+Em **Gestão → Bonificação** existem duas opções diferentes:
 
-- **Inativar**: define o perfil como inativo e bloqueia o login no Supabase Auth; históricos permanecem.
-- **Reativar**: libera novamente o login.
-- **Excluir**: ação excepcional para cadastro incorreto; remove o acesso, mas os registros mensais já existentes não são apagados pelo fluxo normal de históricos.
+- **Exibir comparação administrativa**: controla o comparador da tela de gestão.
+- **Mostrar comparação ao técnico no Meu desempenho**: libera temporariamente uma simulação para os técnicos.
 
-Admin de Squad gerencia somente técnicos do próprio Squad. Movimentações entre Squads são exclusivas do Admin Geral.
+A simulação nunca altera o modelo oficial nem o valor oficial da competência.
 
-## Fechamento mensal
+## Ranking financeiro
 
-Antes de fechar:
+### Meu desempenho
 
-1. importe o CSV final da competência;
-2. confira metas e gamificação;
-3. escolha o modelo financeiro oficial;
-4. confira cancelamento, bônus manual, vendas e férias;
-5. gere Excel/PDF;
-6. feche o mês.
+Todo técnico pode ver a classificação de bonificação do próprio Squad, com:
 
-O snapshot V3 congela gamificação, modelo financeiro oficial, opção de comparação, regras, métricas da Base do Squad e os dois cenários por técnico.
+```text
+posição
+nome do técnico
+valor oficial da competência
+```
 
-Para corrigir, reabra o mês, faça o ajuste e feche novamente.
+Somente o valor final é compartilhado. Componentes como bônus manual, vendas, teto, desconto e redistribuição continuam protegidos.
 
-## Atualização da V2.18.1 para V2.19.0
+### Indicadores
 
-**Ordem obrigatória:** banco → Edge Functions → frontend.
+O Admin Geral vê um ranking financeiro no período selecionado. Se o filtro tiver vários meses, o ranking soma os valores oficiais de cada competência. Em `Todos os Squads`, identifica também o Squad de cada técnico.
+
+## Gamificação
+
+Continua totalmente separada do financeiro. O status individual usa quatro referências do próprio Squad: atendimentos, total de avaliações, nota média e `% avaliado`. Dois ou mais critérios = **ACIMA**; zero ou um = **ABAIXO**.
+
+## Movimentação e usuários
+
+- Admin Geral pode mover técnico entre Squads pela interface, informando a competência de vigência.
+- O histórico em `profile_squad_history` preserva meses antigos.
+- Inativar bloqueia login sem apagar histórico; reativar libera novamente.
+- Excluir fica reservado para cadastros incorretos.
+
+## Importação CSV
+
+A reimportação do mesmo Squad/mês **substitui** os dados operacionais; não soma. Metas, parâmetros e valores financeiros manuais são preservados. Nomes são normalizados antes do vínculo.
+
+## Fechamento
+
+No fechamento, o snapshot V4 congela:
+
+- gamificação;
+- modelo financeiro oficial;
+- comparação administrativa;
+- liberação ou não da comparação ao técnico;
+- teto Individual;
+- total Individual antes/depois do teto e fator aplicado;
+- dois cenários por técnico;
+- regras, ajustes e valor oficial.
+
+## Atualização V2.19.1 → V2.20.0
 
 1. Faça backup do repositório e do `config.js` publicado.
-2. No Supabase SQL Editor, execute **`MIGRACAO_V2.19.0.sql`** uma única vez.
-3. Republique a Edge Function **`manage-user`** com `supabase/functions/manage-user/index.ts`.
-4. Republique a Edge Function **`create-user`** com `supabase/functions/create-user/index.ts`.
-5. Mantenha a verificação JWT habilitada nas funções.
-6. Atualize o GitHub com `squad-dashboard-v2.19.0-atualizacao-github.zip`.
-7. **Não substitua seu `config.js` atual**. O ZIP de atualização não inclui esse arquivo.
-8. Aguarde o GitHub Pages e faça logout/login + `Ctrl + F5`.
-9. Execute os testes de produção descritos em `ATUALIZACAO_V2.19.0.md`.
+2. No Supabase SQL Editor, execute **`MIGRACAO_V2.20.0.sql`** uma única vez.
+3. **Não é necessário republicar Edge Functions** nesta versão.
+4. Atualize o GitHub com `squad-dashboard-v2.20.0-atualizacao-github.zip`.
+5. O ZIP de atualização não contém `config.js`; preserve seu arquivo atual.
+6. Aguarde o GitHub Pages e faça logout/login + `Ctrl + F5`.
+7. Em Gestão → Bonificação, confirme o teto de R$ 7.000,00 e deixe a comparação do técnico desligada até desejar iniciar a transição.
+8. Teste o ranking financeiro em uma conta de técnico.
 
-## Instalação nova
-
-1. Execute `supabase_schema.sql`.
-2. Crie o primeiro Admin Geral no Supabase Authentication.
-3. Execute `bootstrap_primeiro_admin.sql` com o UUID do primeiro Admin.
-4. Publique `create-user` e `manage-user`.
-5. Configure `config.js` com URL e chave pública do Supabase.
-6. Configure a URL do GitHub Pages em Authentication → URL Configuration.
-
-Consulte também `GUIA_BANCO_DADOS.md`.
+Para instalação nova, execute `supabase_schema.sql`, publique as Edge Functions existentes e configure `config.js`.
