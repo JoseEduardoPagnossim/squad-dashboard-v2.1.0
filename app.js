@@ -10,6 +10,7 @@
   const clamp = (n,a,b) => Math.min(b,Math.max(a,n));
   const HISTORY_COLORS = ['#f0a33a','#36c98f','#ff4ddb','#e6edf7','#9ea4ad','#2f78ff','#ff3b30','#9b6cff','#22c7d6','#f2c14e','#63d471','#ef7f4d'];
   const safe = n => Number.isFinite(Number(n)) ? Number(n) : 0;
+  const roundTo = (n,decimals=0) => {const f=10**decimals;return Math.round((safe(n)+Number.EPSILON)*f)/f};
   const clone = obj => JSON.parse(JSON.stringify(obj));
   const firstRelation = v => Array.isArray(v)?(v[0]||{}):(v||{});
   const DEFAULT_FINANCE_SETTINGS = {
@@ -173,6 +174,9 @@
     $('#copyPreviousGoalsBtn').addEventListener('click',copyGoalsFromPreviousMonth);
     $('#saveScoreSettingsBtn').addEventListener('click',saveScoreSettings);
     $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
+    if($('#confirmDialogConfirm'))$('#confirmDialogConfirm').addEventListener('click',()=>settleConfirmDialog(true));
+    if($('#confirmDialogCancel'))$('#confirmDialogCancel').addEventListener('click',()=>settleConfirmDialog(false));
+    if($('#confirmDialogClose'))$('#confirmDialogClose').addEventListener('click',()=>settleConfirmDialog(false));
     $$('.modal').forEach(m=>{
       let backdropDown=false;
       m.addEventListener('pointerdown',e=>{backdropDown=e.target===m;});
@@ -376,8 +380,8 @@
     $('#kpiAtt').textContent=fmtInt(t.att);$('#kpiAttGoal').textContent=`/ ${fmtInt(t.goalAtt)}`;$('#attBar').style.width=clamp(attPct*100,0,100)+'%';$('#attProgress').textContent=fmtPct(attPct);$('#attRemaining').textContent=t.att>=t.goalAtt?`+${fmtInt(t.att-t.goalAtt)} acima`:`Faltam ${fmtInt(t.goalAtt-t.att)}`;
     $('#kpiNotes').textContent=fmtInt(t.notes5);$('#kpiNotesGoal').textContent=`/ ${fmtInt(t.goalEval)}`;$('#noteBar').style.width=clamp(notePct*100,0,100)+'%';$('#noteProgress').textContent=fmtPct(notePct);$('#noteRemaining').textContent=t.notes5>=t.goalEval?`+${fmtInt(t.notes5-t.goalEval)} acima`:`Faltam ${fmtInt(t.goalEval-t.notes5)}`;
     $('#kpiEvalPct').textContent=fmtPct(t.evalPct);$('#evalCount').textContent=`${fmtInt(t.totalEval)} avaliações`;$('#avgRating').textContent=`Média ${safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;const evalTarget=teamSettings(m).teamGoalEvalPct;$('#evalQuality').textContent=t.evalPct>=evalTarget?'Meta de avaliação atingida':t.avg>=4.9?'Qualidade excelente':'Acompanhar qualidade';
-    $('#kpiAvgRating').textContent=safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});$('#avgRatingBar').style.width=clamp((safe(t.avg)/5)*100,0,100)+'%';$('#avgRatingStatus').textContent=safe(t.avg)>=rules.refAvg?'Acima da referência':'Abaixo da referência';$('#avgRatingReference').textContent=`Ref. ${safe(rules.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-    $('#kpiPoints').textContent=fmtNum(t.points);$('#goalsHit').textContent=`${fmtInt(t.goalsHit)}/4 critérios • acumulado ${fmtNum(cumulativePointsForTech(t))} pts`;if($('#pointsStatusFoot'))$('#pointsStatusFoot').textContent=`Status ${t.status||'—'}`;if($('#pointsRankFoot'))$('#pointsRankFoot').textContent=t.rank?`Ranking #${t.rank}`:'Ranking —';
+    const avgAbove=safe(t.avg)>=rules.refAvg;$('#kpiAvgRating').textContent=safe(t.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});$('#avgRatingBar').style.width=clamp((safe(t.avg)/5)*100,0,100)+'%';$('#avgRatingStatus').textContent=avgAbove?'Acima da referência':'Abaixo da referência';$('#avgRatingStatus').style.color=avgAbove?'var(--success)':'var(--danger)';$('#avgRatingReference').textContent=`Ref. ${safe(rules.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    $('#kpiPoints').textContent=fmtNum(t.points);$('#goalsHit').textContent=`${fmtInt(t.goalsHit)}/4 critérios • acumulado ${fmtNum(cumulativePointsForTech(t))} pts`;if($('#pointsStatusFoot')){$('#pointsStatusFoot').textContent=`Status ${t.status||'—'}`;$('#pointsStatusFoot').style.color=String(t.status).toUpperCase()==='ACIMA'?'var(--success)':String(t.status).toUpperCase()==='ABAIXO'?'var(--danger)':'var(--muted)'}if($('#pointsRankFoot'))$('#pointsRankFoot').textContent=t.rank?`Ranking #${t.rank}`:'Ranking —';
     $('#attGoalPct').textContent=fmtPct(attPct);$('#noteGoalPct').textContent=fmtPct(notePct);$('#attGoalText').textContent=goalLine('atendimentos',t.att,t.goalAtt);$('#noteGoalText').textContent=goalLine('notas',t.notes5,t.goalEval);
     $('#goalOrb').style.background=overallColor(attPct,notePct);$('#goalOrb').style.boxShadow=`0 0 18px ${overallColor(attPct,notePct)}`;const coach=coachText(t,m,attPct,notePct);$('#coachTitle').textContent=coach.title;$('#coachText').textContent=coach.text;
     renderStatusAudit(t,m,audit);renderFinanceSummary(t,m);renderGamification(t,m,attPct,notePct);renderChart(t,m);renderDaily(t,m);renderMiniRanking(m,t.name);renderFinanceRanking(m,t.name);
@@ -443,7 +447,7 @@
   function renderTeam(){
     const all=state.squadCode==='all';$('#allSquadsPanel').classList.toggle('hidden',!all);$('#singleSquadPanel').classList.toggle('hidden',all);if(all){renderPortfolio();return}
     const m=currentMonth();if(!m)return;const totals=m.teamTotals||deriveTotals(m.technicians),cfg=teamSettings(m),attProgress=cfg.teamGoalAtt?totals.att/cfg.teamGoalAtt:0,evalProgress=cfg.teamGoalEvalPct?totals.evalPct/cfg.teamGoalEvalPct:0,statusInfo=teamStatusFromPoints(m);
-    $('#teamResult').textContent=m.teamResult||'—';$('#teamAtt').textContent=fmtInt(totals.att);$('#teamAttGoal').textContent=fmtInt(cfg.teamGoalAtt);$('#teamEval').textContent=fmtInt(totals.eval);$('#teamPct').textContent=fmtPct(totals.evalPct);$('#teamPctGoal').textContent=fmtPct(cfg.teamGoalEvalPct);$('#teamAttBar').style.width=clamp(attProgress*100,0,100)+'%';$('#teamPctBar').style.width=clamp(evalProgress*100,0,100)+'%';$('#teamAttNote').textContent=totals.att>=cfg.teamGoalAtt?`${fmtInt(totals.att-cfg.teamGoalAtt)} acima da meta`:`${fmtPct(attProgress)} da meta • faltam ${fmtInt(cfg.teamGoalAtt-totals.att)}`;$('#teamPctNote').textContent=totals.evalPct>=cfg.teamGoalEvalPct?`${((totals.evalPct-cfg.teamGoalEvalPct)*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} p.p. acima da meta`:`Faltam ${((cfg.teamGoalEvalPct-totals.evalPct)*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} p.p. para a meta`;$('#teamHeroTitle').textContent=`Squad ${state.squadCode} em ${m.monthName}`;
+    const teamResultValue=String(m.teamResult||'—').toUpperCase(),teamResultBox=$('#teamResult')?.closest('.team-result');$('#teamResult').textContent=m.teamResult||'—';if(teamResultBox){teamResultBox.classList.toggle('above',teamResultValue==='ACIMA');teamResultBox.classList.toggle('below',teamResultValue==='ABAIXO');teamResultBox.classList.toggle('neutral',teamResultValue!=='ACIMA'&&teamResultValue!=='ABAIXO')}$('#teamAtt').textContent=fmtInt(totals.att);$('#teamAttGoal').textContent=fmtInt(cfg.teamGoalAtt);$('#teamEval').textContent=fmtInt(totals.eval);$('#teamPct').textContent=fmtPct(totals.evalPct);$('#teamPctGoal').textContent=fmtPct(cfg.teamGoalEvalPct);$('#teamAttBar').style.width=clamp(attProgress*100,0,100)+'%';$('#teamPctBar').style.width=clamp(evalProgress*100,0,100)+'%';$('#teamAttNote').textContent=totals.att>=cfg.teamGoalAtt?`${fmtInt(totals.att-cfg.teamGoalAtt)} acima da meta`:`${fmtPct(attProgress)} da meta • faltam ${fmtInt(cfg.teamGoalAtt-totals.att)}`;$('#teamPctNote').textContent=totals.evalPct>=cfg.teamGoalEvalPct?`${((totals.evalPct-cfg.teamGoalEvalPct)*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} p.p. acima da meta`:`Faltam ${((cfg.teamGoalEvalPct-totals.evalPct)*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} p.p. para a meta`;$('#teamHeroTitle').textContent=`Squad ${state.squadCode} em ${m.monthName}`;
     $('#teamAvgPoints').textContent=fmtNum(statusInfo.avgPoints);$('#teamAvgPointsNote').textContent=`${statusInfo.aboveCount} de ${statusInfo.count} acima da média`;
     $('#teamStatusAudit').textContent=statusInfo.count?`${statusInfo.aboveCount} de ${statusInfo.count} técnicos acima de ${fmtNum(statusInfo.avgPoints)} pts • ${fmtPct(statusInfo.ratio)} • mínimo 50%`:'Sem técnicos com pontuação para calcular o status';
     const list=[...m.technicians].sort((a,b)=>(a.rank||99)-(b.rank||99));$('#teamLeaderboard').innerHTML=list.map(t=>`<div class="leader-item ${t.rank===1?'top1':''}"><div class="place">#${t.rank||'—'}</div><div class="name">${escapeHtml(t.name)}</div><div class="metric"><span>Atend.</span><strong>${fmtInt(t.att)}</strong></div><div class="metric"><span>Notas 5</span><strong>${fmtInt(t.notes5)}</strong></div><div class="metric hide-md"><span>% Aval.</span><strong>${fmtPct(t.evalPct)}</strong></div><div class="metric points"><span>Pontos</span><strong>${fmtNum(t.points)}</strong></div><div><span class="status ${String(t.status).toUpperCase()==='ACIMA'?'above':'below'}">${escapeHtml(t.status||'—')}</span></div></div>`).join('');
@@ -1197,12 +1201,12 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   async function toggleUserActive(userId){
     const u=directoryUserById(userId);if(!canManageDirectoryUser(u)||u.role==='super_admin')return;const next=!u.active;
-    if(!window.confirm(`${next?'Reativar':'Inativar'} o acesso de ${u.fullName}? ${next?'O login será liberado novamente.':'O login será bloqueado, mas todo o histórico será preservado.'}`))return;
+    if(!await confirmDialog(`${next?'Reativar':'Inativar'} o acesso de ${u.fullName}? ${next?'O login será liberado novamente.':'O login será bloqueado, mas todo o histórico será preservado.'}`,{title:next?'Reativar usuário':'Inativar usuário',confirmText:next?'Reativar':'Inativar',tone:next?'success':'warning'}))return;
     try{if(state.supabase)await manageSupabaseUser('set_active',{userId:u.userId,active:next});else updateDemoUser({...u,userId:u.userId,active:next});state.userDirectoryLoaded=false;await loadUserDirectory();renderUserRows();toast(`${u.fullName} ${next?'reativado':'inativado'} com sucesso.`)}catch(err){console.error(err);toast(humanManageUserError(err))}
   }
   async function deleteUser(userId){
     const u=directoryUserById(userId);if(!canDeleteDirectoryUser(u))return;
-    if(!window.confirm(`Excluir o acesso de ${u.fullName}? O login será removido. O histórico mensal já importado continuará preservado, porém sem vínculo com este usuário.`))return;
+    if(!await confirmDialog(`Excluir o acesso de ${u.fullName}? O login será removido. O histórico mensal já importado continuará preservado, porém sem vínculo com este usuário.`,{title:'Excluir usuário',confirmText:'Excluir',tone:'danger'}))return;
     try{if(state.supabase)await manageSupabaseUser('delete',{userId:u.userId});else deleteDemoUser(u);state.userDirectoryLoaded=false;await loadUserDirectory();renderUserRows();toast(`Usuário ${u.fullName} excluído.`)}catch(err){console.error(err);toast(humanManageUserError(err))}
   }
   async function manageSupabaseUser(action,payload){
@@ -1344,7 +1348,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
 
   function renderScoreSettings(m){
     const rules=displayScoreRules(m);
-    $('#scoreRefAtt').value=safe(rules.refAtt).toFixed(2);$('#scoreRefEval').value=safe(rules.refTotalEval).toFixed(2);$('#scoreRefAvg').value=safe(rules.refAvg).toFixed(2);$('#scoreRefPct').value=(safe(rules.refEvalPct)*100).toFixed(2);
+    $('#scoreRefAtt').value=safe(rules.refAtt).toFixed(0);$('#scoreRefEval').value=safe(rules.refTotalEval).toFixed(0);$('#scoreRefAvg').value=safe(rules.refAvg).toFixed(2);$('#scoreRefPct').value=(safe(rules.refEvalPct)*100).toFixed(2);
     ['scoreRefAtt','scoreRefEval','scoreRefAvg','scoreRefPct'].forEach(id=>$('#'+id).disabled=true);
     $('#scoreAutoHint').innerHTML=m?.isClosed?`🔒 <strong>Médias congeladas no fechamento:</strong> ${fmtNum(rules.refAtt)} atend. • ${fmtNum(rules.refTotalEval)} avaliações • nota ${safe(rules.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} • ${fmtPct(rules.refEvalPct)}.`:`<strong>Médias atuais do Squad:</strong> ${fmtNum(rules.refAtt)} atend. • ${fmtNum(rules.refTotalEval)} avaliações • nota ${safe(rules.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} • ${fmtPct(rules.refEvalPct)}. Estas referências são recalculadas a cada importação.`;
   }
@@ -1393,12 +1397,20 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   function truncate2(n){return Math.trunc((safe(n)+Number.EPSILON)*100)/100}
   function automaticScoreRefs(m){
     const list=(m?.technicians||[]).filter(t=>safe(t.att)>0);
-    return{refAtt:meanOf(list,t=>t.att),refTotalEval:meanOf(list,t=>t.totalEval),refAvg:meanOf(list,t=>t.avg),refEvalPct:meanOf(list,t=>t.evalPct)};
+    // Replica as referencias da planilha STATUS DO SQUAD:
+    // B11 = ROUND(AVERAGE(...),0), I11 = ROUND(AVERAGE(...),0),
+    // J11 = ROUNDDOWN(AVERAGE(...),2), K11 = ROUND(AVERAGE(...),4).
+    return{
+      refAtt:roundTo(meanOf(list,t=>t.att),0),
+      refTotalEval:roundTo(meanOf(list,t=>t.totalEval),0),
+      refAvg:truncate2(meanOf(list,t=>t.avg)),
+      refEvalPct:roundTo(meanOf(list,t=>t.evalPct),4)
+    };
   }
   function businessDaysElapsed(y,m,latest){let c=0,limit=Math.min(Math.max(0,safe(latest)),new Date(y,m,0).getDate());for(let d=1;d<=limit;d++){const dow=new Date(y,m-1,d).getDay();if(dow>=1&&dow<=5)c++}return c}
   function scoreRules(m,options={}){
     const auto=automaticScoreRefs(m),saved=m?.scoreSettings||{},totalDays=Math.max(1,businessDaysMonFri(m.year,m.month)),elapsedDays=Math.min(totalDays,businessDaysElapsed(m.year,m.month,m.latestDay));
-    return{refAtt:auto.refAtt,refTotalEval:auto.refTotalEval,refAvg:auto.refAvg,refEvalPct:auto.refEvalPct,baseRefAtt:auto.refAtt,baseRefTotalEval:auto.refTotalEval,bonusAtt:safe(saved.bonusAtt)||20,bonusTotalEval:safe(saved.bonusTotalEval)||30,bonusAvg:safe(saved.bonusAvg)||40,bonusEvalPct:safe(saved.bonusEvalPct)||35,manualCount:0,progress:1,elapsedDays,totalDays,attSource:'Média atual do Squad',evalSource:'Média atual do Squad',avgSource:'Média atual do Squad',pctSource:'Média atual do Squad'};
+    return{refAtt:auto.refAtt,refTotalEval:auto.refTotalEval,refAvg:auto.refAvg,refEvalPct:auto.refEvalPct,baseRefAtt:auto.refAtt,baseRefTotalEval:auto.refTotalEval,bonusAtt:safe(saved.bonusAtt)||20,bonusTotalEval:safe(saved.bonusTotalEval)||30,bonusAvg:safe(saved.bonusAvg)||40,bonusEvalPct:safe(saved.bonusEvalPct)||35,manualCount:0,progress:1,elapsedDays,totalDays,attSource:'Média do Squad arredondada (0 casas)',evalSource:'Média do Squad arredondada (0 casas)',avgSource:'Média do Squad truncada (2 casas)',pctSource:'Média do Squad arredondada (4 casas)'};
   }
   function displayScoreRules(m){
     if(m?.isClosed&&m.closedSnapshot?.scoreRules){const r=m.closedSnapshot.scoreRules;return{...r,progress:1,elapsedDays:businessDaysMonFri(m.year,m.month),totalDays:businessDaysMonFri(m.year,m.month),attSource:'Referência congelada no fechamento',evalSource:'Referência congelada no fechamento',avgSource:'Referência congelada no fechamento',pctSource:'Referência congelada no fechamento'}}
@@ -1434,7 +1446,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       t.totalEval=safe(t.notes5)+safe(t.notes4)+safe(t.notes3)+safe(t.notes2)+safe(t.notes1);
       const rawAvg=t.totalEval?((safe(t.notes5)*5+safe(t.notes4)*4+safe(t.notes3)*3+safe(t.notes2)*2+safe(t.notes1))/t.totalEval):0;
       t.avg=truncate2(rawAvg);
-      t.evalPct=safe(t.att)?t.totalEval/safe(t.att):0;
+      t.evalPct=safe(t.att)?roundTo(t.totalEval/safe(t.att),4):0;
     }
     if(m.isClosed&&Array.isArray(m.closedSnapshot?.technicians)){
       const snap=new Map(m.closedSnapshot.technicians.map(x=>[nameLinkKey(x.name),x]));
@@ -1466,7 +1478,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   function financeModelLabel(model){return model==='individual'?'Individual meritocrático':'Base do Squad'}
   function financeFloorTier(value,tiers){const sorted=[...(tiers||[])].sort((a,b)=>safe(b.min)-safe(a.min));return sorted.find(t=>safe(value)>=safe(t.min))||sorted[sorted.length-1]||{min:0,amount:0}}
   function financeCancelTier(rate,tiers){const sorted=[...(tiers||[])].sort((a,b)=>safe(a.max)-safe(b.max));return sorted.find(t=>safe(rate)<=safe(t.max))||sorted[sorted.length-1]||{max:0,mult:0}}
-  function financialStatusRefs(m){const list=(m?.technicians||[]).filter(t=>safe(t.att)>0);return{refAtt:meanOf(list,t=>t.att),refTotalEval:meanOf(list,t=>t.totalEval),refAvg:meanOf(list,t=>t.avg),refEvalPct:meanOf(list,t=>t.evalPct)}}
+  function financialStatusRefs(m){return automaticScoreRefs(m)}
   function financePerformanceStatus(t,m){if(safe(t.att)<=0)return'';const r=financialStatusRefs(m),hits=[safe(t.att)>=r.refAtt,safe(t.totalEval)>=r.refTotalEval,safe(t.avg)>=r.refAvg,safe(t.evalPct)>=r.refEvalPct].filter(Boolean).length;return hits>=2?'ACIMA':'ABAIXO'}
   function buildFinanceModelData({mode,hasProduction,days,avgPerDay,notes5Pct,commissionAtt,commissionNotes5,cancelRate,cancelTier,rawMult,effectiveMult,financeStatus,topAttBonus,topNotes5Bonus,manualBonus,sales,discount,redistributed,vacation,pool}){
     const base=hasProduction?safe(commissionAtt)+safe(commissionNotes5):0,afterCancel=hasProduction?base*effectiveMult:0;
@@ -1550,7 +1562,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     if(!state.supabase||!m?.dbId)return;const payload={finance_settings:financeSettingsForMonth(m),finance_month_data:m.financeMonthData||{},finance_model:financeModelForMonth(m),finance_compare:m.financeCompare!==false,finance_technician_compare:m.financeTechCompare===true,finance_individual_cap:Number.isFinite(Number(m.financeIndividualCap))?safe(m.financeIndividualCap):7000,finance_comparison_snapshot:m.financeComparison||{}};const {error:me}=await state.supabase.from('squad_months').update(payload).eq('id',m.dbId);if(me)throw me;
     for(const t of m.technicians||[]){if(!t.dbId)continue;const row={technician_month_id:t.dbId,manual_bonus:safe(t.financeManualBonus),sales_commission:safe(t.salesCommission),vacation:!!t.vacation,calculated:t.financeData||{},updated_by:state.user.userId,updated_at:new Date().toISOString()};const {data,error}=await state.supabase.from('technician_finance_monthly').upsert(row,{onConflict:'technician_month_id'}).select('id').single();if(error)throw error;t.financeDbId=data.id}
   }
-  async function copyFinanceRulesFromPreviousMonth(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m||m.isClosed)return;const prev=previousMonthForCurrent(m);if(!prev)return toast('Não existe mês anterior neste Squad.');if(!window.confirm(`Copiar as faixas e parâmetros financeiros de ${prev.monthName} ${prev.year}? O modelo oficial, cancelamento e valores individuais não serão copiados.`))return;m.financeSettings=clone(financeSettingsForMonth(prev));m.financeIndividualCap=Number.isFinite(Number(prev.financeIndividualCap))?safe(prev.financeIndividualCap):7000;recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistFinanceMonth(m);render();toast('Regras financeiras copiadas do mês anterior.')}
+  async function copyFinanceRulesFromPreviousMonth(){if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m||m.isClosed)return;const prev=previousMonthForCurrent(m);if(!prev)return toast('Não existe mês anterior neste Squad.');if(!await confirmDialog(`Copiar as faixas e parâmetros financeiros de ${prev.monthName} ${prev.year}? O modelo oficial, cancelamento e valores individuais não serão copiados.`,{title:'Copiar regras financeiras',confirmText:'Copiar',tone:'warning'}))return;m.financeSettings=clone(financeSettingsForMonth(prev));m.financeIndividualCap=Number.isFinite(Number(prev.financeIndividualCap))?safe(prev.financeIndividualCap):7000;recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistFinanceMonth(m);render();toast('Regras financeiras copiadas do mês anterior.')}
   function financeReportRows(m){return (m?.technicians||[]).map(t=>{const d=t.financeData||{},sq=d.models?.squad||d,ind=d.models?.individual||d,official=financeModelForMonth(m);return{'Técnico':titleWords(t.name),'Status financeiro':d.financeStatus||'','Atendimentos':safe(t.att),'Atend./dia individual':safe(ind.avgPerDay),'Notas 5':safe(t.notes5),'% Notas 5 individual':safe(ind.notes5Pct),'Base Squad - comissão atend.':safe(sq.commissionAtt),'Base Squad - comissão N5':safe(sq.commissionNotes5),'Base Squad - final':safe(sq.final),'Individual - comissão atend.':safe(ind.commissionAtt),'Individual - comissão N5':safe(ind.commissionNotes5),'Individual - antes do teto':safe(ind.preCapFinal),'Individual - ajuste teto':safe(ind.capAdjustment),'Individual - final':safe(ind.final),'Diferença Individual x Squad':safe(ind.final)-safe(sq.final),'Modelo oficial':financeModelLabel(official),'Valor oficial':safe(d.final),'Multiplicador cancelamento':safe(d.cancelMultiplier||1),'Bônus manual':safe(d.manualBonus),'Prêmio atendimento':safe(d.topAttBonus),'Prêmio Notas 5':safe(d.topNotes5Bonus),'Comissão vendas':safe(d.salesCommission),'Desconto':safe(d.discount),'Redistribuição':safe(d.redistribution),'Férias':t.vacation?'SIM':'NÃO'}})}
   function reportAdminRows(m){if(!m)return[];return (state.superAdminCommissions||[]).filter(c=>safe(c.year)===safe(m.year)&&safe(c.month)===safe(m.month)).map(c=>({'Admin Geral':c.name||'Admin geral','Comissão final':safe(c.amount),'Observação':c.notes||''}))}
   function loadExternalScriptOnce(src,test){return new Promise((resolve,reject)=>{if(test?.())return resolve();const existing=[...document.scripts].find(x=>x.src===src);if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}const sc=document.createElement('script');sc.src=src;sc.onload=resolve;sc.onerror=()=>reject(new Error('Não foi possível carregar a biblioteca de exportação.'));document.head.appendChild(sc)})}
@@ -1576,7 +1588,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   async function copyGoalsFromPreviousMonth(){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth();if(!m)return;if(m.isClosed){toast('Este mês está fechado. Reabra-o antes de copiar metas.');return}
     const prev=previousMonthForCurrent(m);if(!prev){toast('Não existe um mês anterior importado neste Squad.');return}
-    if(!window.confirm(`Copiar somente as metas individuais de ${prev.monthName} ${prev.year} para ${m.monthName} ${m.year}? Metas de atendimentos e notas 5 já preenchidas no mês atual serão substituídas.`))return;
+    if(!await confirmDialog(`Copiar somente as metas individuais de ${prev.monthName} ${prev.year} para ${m.monthName} ${m.year}? Metas de atendimentos e notas 5 já preenchidas no mês atual serão substituídas.`,{title:'Copiar metas do mês anterior',confirmText:'Copiar metas',tone:'warning'}))return;
     try{
       let copied=0;for(const t of m.technicians||[]){const old=(prev.technicians||[]).find(x=>(t.userId&&x.userId&&t.userId===x.userId)||samePersonName(x.name,t.name));if(!old)continue;t.goalAtt=safe(old.goalAtt);t.goalEval=safe(old.goalEval);copied++;}
       recalculateMonth(m);saveDemoSquads();if(state.supabase)await persistManualMetrics(m);render();toast(`${copied} técnico(s) tiveram as metas individuais copiadas de ${prev.monthName}.`);
@@ -1584,7 +1596,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   async function closeMonth(id){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m||m.isClosed)return;
-    if(!window.confirm(`Fechar ${m.monthName} ${m.year}? Dados, metas, pontuação e bonificação financeira ficarão congelados até que o mês seja reaberto.`))return;
+    if(!await confirmDialog(`Fechar ${m.monthName} ${m.year}? Dados, metas, pontuação e bonificação financeira ficarão congelados até que o mês seja reaberto.`,{title:'Fechar competência',confirmText:'Fechar mês',tone:'warning'}))return;
     try{
       recalculateMonth(m,{final:true});const rules=scoreRules(m,{final:true}),now=new Date().toISOString();
       m.closedSnapshot={version:4,closedAt:now,scoreRules:{refAtt:rules.refAtt,refTotalEval:rules.refTotalEval,refAvg:rules.refAvg,refEvalPct:rules.refEvalPct,bonusAtt:rules.bonusAtt,bonusTotalEval:rules.bonusTotalEval,bonusAvg:rules.bonusAvg,bonusEvalPct:rules.bonusEvalPct},teamResult:m.teamResult,teamGoals:teamSettings(m),financeModel:financeModelForMonth(m),financeCompare:m.financeCompare!==false,financeTechCompare:m.financeTechCompare===true,financeIndividualCap:Number.isFinite(Number(m.financeIndividualCap))?safe(m.financeIndividualCap):7000,financeComparison:clone(m.financeComparison||{}),financeSettings:clone(financeSettingsForMonth(m)),financeMonthData:clone(m.financeMonthData||{}),technicians:(m.technicians||[]).map(t=>({name:t.name,att:safe(t.att),notes5:safe(t.notes5),notes4:safe(t.notes4),notes3:safe(t.notes3),notes2:safe(t.notes2),notes1:safe(t.notes1),totalEval:safe(t.totalEval),avg:safe(t.avg),evalPct:safe(t.evalPct),goalAtt:safe(t.goalAtt),goalEval:safe(t.goalEval),points:safe(t.points),goalsHit:safe(t.goalsHit),status:t.status,rank:t.rank,financeManualBonus:safe(t.financeManualBonus),salesCommission:safe(t.salesCommission),vacation:!!t.vacation,financeData:clone(t.financeData||{})}))};
@@ -1595,7 +1607,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   async function reopenMonth(id){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m||!m.isClosed)return;
-    if(!window.confirm(`Reabrir ${m.monthName} ${m.year}? O mês voltará a aceitar importações e alterações. Ao concluir a correção, feche-o novamente.`))return;
+    if(!await confirmDialog(`Reabrir ${m.monthName} ${m.year}? O mês voltará a aceitar importações e alterações. Ao concluir a correção, feche-o novamente.`,{title:'Reabrir competência',confirmText:'Reabrir mês',tone:'warning'}))return;
     try{
       m.isClosed=false;m.closedAt=null;m.closedBy=null;m.closedSnapshot={};recalculateMonth(m);saveDemoSquads();
       if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').update({is_closed:false,closed_at:null,closed_by:null,closed_snapshot:{},team_result:m.teamResult}).eq('id',m.dbId);if(error)throw error;await persistCalculatedScores(m);await persistFinanceMonth(m)}
@@ -1617,7 +1629,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
 
   async function deleteImportedMonth(id){
     if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonths()[id];if(!m)return;if(m.isClosed){toast('Mês fechado não pode ser excluído. Reabra-o primeiro.');return}
-    if(!window.confirm(`Excluir ${m.monthName} ${m.year} do Squad ${state.squadCode}? Isso remove os dados importados e as métricas manuais deste mês.`))return;
+    if(!await confirmDialog(`Excluir ${m.monthName} ${m.year} do Squad ${state.squadCode}? Isso remove os dados importados e as métricas manuais deste mês.`,{title:'Excluir competência',confirmText:'Excluir mês',tone:'danger'}))return;
     try{if(state.supabase&&m.dbId){const {error}=await state.supabase.from('squad_months').delete().eq('id',m.dbId);if(error)throw error;}delete currentSquad().months[id];const ids=Object.keys(currentMonths()).sort().reverse();state.currentId=ids[0]||null;chooseDefaultTech();saveDemoSquads();refreshSelectors();render();toast('Mês importado excluído.')}catch(err){console.error(err);toast('Não foi possível excluir este mês.')}
   }
 
@@ -1645,6 +1657,18 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     $('#importDetails').innerHTML='Colunas esperadas: <b>time</b>, <b>Tecnico</b>, <b>grupoAtendimento</b>, <b>Quantidade</b>, <b>Nota 5</b>, <b>Nota 4</b>, <b>Nota 3</b>, <b>Nota 2</b> e <b>Nota 1</b>.';
     $('#importProgress').style.width='0%';$('#chooseFileBtn').disabled=false;$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden');openModal('importModal');
   }
+  let confirmDialogResolver=null;
+  function confirmDialog(message,options={}){
+    const modal=$('#confirmDialog');if(!modal)return Promise.resolve(false);
+    const title=options.title||'Confirmar ação',confirmText=options.confirmText||'Confirmar',cancelText=options.cancelText||'Cancelar',tone=options.tone||'warning';
+    $('#confirmDialogTitle').textContent=title;$('#confirmDialogMessage').textContent=message;$('#confirmDialogConfirm').textContent=confirmText;$('#confirmDialogCancel').textContent=cancelText;
+    modal.dataset.tone=tone;const icon=$('#confirmDialogIcon');if(icon)icon.textContent=tone==='danger'?'!':tone==='success'?'✓':'?';
+    if(confirmDialogResolver){confirmDialogResolver(false);confirmDialogResolver=null}
+    openModal('confirmDialog');
+    setTimeout(()=>$('#confirmDialogConfirm')?.focus(),0);
+    return new Promise(resolve=>{confirmDialogResolver=resolve});
+  }
+  function settleConfirmDialog(value){const resolve=confirmDialogResolver;confirmDialogResolver=null;closeModal('confirmDialog');if(resolve)resolve(!!value)}
   function openModal(id){$('#'+id).classList.add('open');$('#'+id).setAttribute('aria-hidden','false')}
   function closeModal(id){$('#'+id).classList.remove('open');$('#'+id).setAttribute('aria-hidden','true')}
   function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2800)}

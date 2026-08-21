@@ -222,3 +222,8 @@ Novas colunas em `squad_months`:
 A função `get_my_squad_finance_ranking(year, month)` é `SECURITY DEFINER` e entrega a técnicos/Admin de Squad somente nome e valor financeiro oficial dos técnicos do próprio Squad. Ela não amplia a política de leitura de `technician_finance_monthly`, portanto os componentes financeiros privados continuam protegidos.
 
 O frontend V2.20.0 também persiste `technician_finance_monthly.calculated` a cada reimportação CSV, mantendo a classificação financeira consistente depois das atualizações diárias.
+
+
+## V2.20.2 — equivalência da pontuação e dialogs
+
+A pontuação automática usa as mesmas referências da planilha oficial: `ROUND(AVERAGE(atendimentos),0)`, `ROUND(AVERAGE(total avaliações),0)`, `ROUNDDOWN(AVERAGE(nota média),2)` e `ROUND(AVERAGE(% avaliado),4)`. O percentual individual também é arredondado em quatro casas antes da comparação. As confirmações de ações críticas são dialogs internos do sistema; não há `window.confirm` no frontend. Esta versão não exige migração de banco.

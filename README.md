@@ -1,4 +1,14 @@
-# Soften Performance Hub V2.20.1
+# Soften Performance Hub V2.20.2
+
+
+## Ajustes da V2.20.2
+
+- Pontuação alinhada aos arredondamentos da planilha oficial: atendimentos e total de avaliações arredondados para 0 casas, média de avaliação truncada para 2 casas e percentual avaliado arredondado para 4 casas.
+- O percentual individual também é arredondado para 4 casas antes da comparação, como a coluna K da planilha.
+- Confirmações de inativar/excluir usuário, copiar regras/metas e fechar/reabrir/excluir mês agora usam dialogs internos do Performance Hub, sem `window.confirm` do navegador.
+- Resultado `ABAIXO` da equipe agora recebe tratamento visual vermelho; `ACIMA` permanece verde. A mesma coerência foi reforçada nos status individuais exibidos nos cards.
+- Nenhuma alteração de banco ou Edge Function é necessária.
+
 
 
 ## Ajustes da V2.20.1
