@@ -85,6 +85,8 @@
     superAdminCommissions:[],
     financeRankingCache:{},
     financeRankingLoading:{},
+    gameRankingCache:{},
+    gameRankingLoading:{},
     audio:{source:null,playing:false,pendingResume:false,previewing:false,previewBefore:null,fadeTimer:null}
   };
 
@@ -298,7 +300,7 @@
 
   async function enterApp(user){
     state.user=user;
-    state.userDirectoryLoaded=false;state.userDirectory=[];
+    state.userDirectoryLoaded=false;state.userDirectory=[];state.gameRankingCache={};state.gameRankingLoading={};
     state.squadCode=user.role==='super_admin'?'D':(user.squadCode||'D');
     chooseLatestMonth(); chooseDefaultTech();
     state.theme=state.squads[state.squadCode]?.theme||loadThemeForSquad(state.squadCode); applyTheme(state.theme);
@@ -403,7 +405,18 @@
     const rows=[...names.values()].map(name=>{const daily=dailyRowsForTechnician(squad,name,start,end),agg=aggregateDailyRows(daily);return{name,...agg,daily};}).filter(t=>safe(t.att)>0||safe(t.totalEval)>0);
     if(!rows.length)return[];const refs={refAtt:roundTo(meanOf(rows,t=>t.att),0),refTotalEval:roundTo(meanOf(rows,t=>t.totalEval),0),refAvg:truncate2(meanOf(rows,t=>t.avg)),refEvalPct:roundTo(meanOf(rows,t=>t.evalPct),4),bonusAtt:20,bonusTotalEval:30,bonusAvg:40,bonusEvalPct:35};for(const t of rows){const scored=calculateScore(t,refs);t.periodPoints=scored.points;t.periodStatus=scored.status;t.periodGoalsHit=scored.goalsHit;t.points=scored.points;t.status=scored.status;}rows.sort((a,b)=>safe(b.periodPoints)-safe(a.periodPoints)||safe(b.att)-safe(a.att)||String(a.name).localeCompare(String(b.name),'pt-BR'));rows.forEach((t,i)=>t.periodRank=i+1);return rows;
   }
+  function gameRankingCacheKey(squadCode=state.squadCode,start=state.analysisStartDate,end=state.analysisEndDate){return `${squadCode}|${start||''}|${end||''}`;}
+  async function loadGameRankingForTechnician(squadCode=state.squadCode,start=state.analysisStartDate,end=state.analysisEndDate){
+    if(!state.supabase||!isTechnician()||!squadCode||!start||!end)return;
+    const key=gameRankingCacheKey(squadCode,start,end);if(state.gameRankingCache[key]||state.gameRankingLoading[key])return;state.gameRankingLoading[key]=true;
+    try{
+      const {data,error}=await state.supabase.rpc('get_my_squad_game_ranking',{p_start_date:start,p_end_date:end});if(error)throw error;
+      state.gameRankingCache[key]=(data||[]).map(r=>({name:r.technician_name||'',att:safe(r.att),notes5:safe(r.notes5),notes4:safe(r.notes4),notes3:safe(r.notes3),notes2:safe(r.notes2),notes1:safe(r.notes1),totalEval:safe(r.total_eval),avg:safe(r.avg_rating),evalPct:safe(r.eval_pct),periodPoints:safe(r.points),periodStatus:String(r.status||''),periodGoalsHit:safe(r.goals_hit),periodRank:safe(r.ranking)||null,points:safe(r.points),status:String(r.status||'')}));
+    }catch(err){console.warn('Ranking do game do Squad indisponível. Confira a migração V2.24.2.',err);state.gameRankingCache[key]=[];}
+    finally{delete state.gameRankingLoading[key];if(state.currentView==='individual'&&state.squadCode===squadCode&&state.analysisStartDate===start&&state.analysisEndDate===end)renderIndividual();}
+  }
   function gameRankingRowsForCurrentPeriod(squadCode=state.squadCode,start=state.analysisStartDate,end=state.analysisEndDate){
+    if(isTechnician()&&state.supabase){const key=gameRankingCacheKey(squadCode,start,end),cached=state.gameRankingCache[key];if(cached)return cached;loadGameRankingForTechnician(squadCode,start,end);return[];}
     const source=(orgTechnicianDailyRows?.()||[]).filter(r=>String(r.squadCode)===String(squadCode)&&dateBetween(r.date||isoDateParts(r.year,r.month,r.day),start,end));
     if(!source.length)return periodTechniciansForSquad(state.squads?.[squadCode],start,end);
     const map=new Map();
@@ -567,7 +580,7 @@
     ]});
   }
   function renderDaily(t,m,periodMode=false){const rows=(periodMode?(t.daily||[]):(t.daily||[]).filter(d=>d.day<=m.latestDay)).filter(d=>!d.off&&(d.att||d.notes5||d.notes4||d.notes3||d.notes2||d.notes1)).sort((a,b)=>periodMode?String(b.date).localeCompare(String(a.date)):b.day-a.day);const avgAtt=rows.length?rows.reduce((sum,d)=>sum+safe(d.att),0)/rows.length:0;$('#dailySummary').textContent=`${analysisRangeLabel()} • média ${avgAtt.toLocaleString('pt-BR',{maximumFractionDigits:1})} atend./dia`;$('#dailyRows').innerHTML=rows.map(d=>{const totalEval=safe(d.notes5)+safe(d.notes4)+safe(d.notes3)+safe(d.notes2)+safe(d.notes1),pct=d.att?totalEval/safe(d.att):0,goal=periodMode&&m?((currentTech()?.goalAtt||0)/Math.max(1,businessDaysMonFri(m.year,m.month))):avgAtt,pace=safe(d.att)>=goal?'good':safe(d.att)>=goal*.72?'mid':'low',label=pace==='good'?'FORTE':pace==='mid'?'OK':'ATENÇÃO',labelDate=periodMode?parseIsoAnalysisDate(d.date)?.toLocaleDateString('pt-BR'):`${String(d.day).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`;return `<tr><td><strong>${labelDate}</strong></td><td>${fmtInt(d.att)}</td><td>${fmtInt(d.notes5)}</td><td>${fmtPct(pct)}</td><td><span class="pace ${pace}">${label}</span></td></tr>`}).join('')||'<tr><td colspan="5" class="muted">Nenhum lançamento diário encontrado no período.</td></tr>'}
-  function renderMiniRankingPeriod(list,selected){$('#miniRanking').innerHTML=(list||[]).slice(0,8).map(t=>`<div class="rank-row ${samePersonName(t.name,selected)?'selected':''}"><span class="rank-pos">${t.periodRank||'—'}</span><div><strong>${escapeHtml(shortName(t.name))}</strong><small>${fmtInt(t.att)} atend. • ${fmtInt(t.notes5)} notas 5</small></div><span class="rank-score">${fmtNum(t.periodPoints)} pts*</span></div>`).join('')||'<div class="muted">Sem dados no período.</div>';}
+  function renderMiniRankingPeriod(list,selected){const el=$('#miniRanking');if(!el)return;if(isTechnician()&&state.supabase&&state.gameRankingLoading[gameRankingCacheKey()]){el.innerHTML='<div class="muted finance-ranking-loading">Carregando ranking do Squad...</div>';return}el.innerHTML=(list||[]).slice(0,8).map(t=>`<div class="rank-row ${samePersonName(t.name,selected)?'selected':''}"><span class="rank-pos">${t.periodRank||'—'}</span><div><strong>${escapeHtml(shortName(t.name))}</strong><small>${fmtInt(t.att)} atend. • ${fmtInt(t.notes5)} notas 5</small></div><span class="rank-score">${fmtNum(t.periodPoints)} pts*</span></div>`).join('')||'<div class="muted">Sem dados do ranking no período.</div>';}
 
   function localFinanceRankingRows(m){
     return (m?.technicians||[]).map(t=>({technicianName:t.name,amount:safe(t.financeData?.final),model:financeModelForMonth(m)})).sort((a,b)=>safe(b.amount)-safe(a.amount)||String(a.technicianName).localeCompare(String(b.technicianName),'pt-BR')).map((r,i)=>({...r,rank:i+1}));

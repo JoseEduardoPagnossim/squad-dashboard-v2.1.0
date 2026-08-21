@@ -1,6 +1,6 @@
-# Soften Performance Hub V2.24.1
+# Soften Performance Hub V2.24.2
 
-## V2.24.1 — ajustes em Meu desempenho
+## V2.24.2 — ajustes em Meu desempenho
 
 - cartão de usuário duplicado removido da sidebar;
 - ranking de gamificação do Squad restaurado para login de Técnico;
@@ -8,7 +8,7 @@
 - sem nova migração SQL; utiliza os RPCs operacionais já existentes desde V2.21.0.
 
 
-## Novidades da V2.24.0 — Light & Dark Mode Premium
+## Novidades da V2.24.2 — Light & Dark Mode Premium
 
 - alternância instantânea por botão Sol/Lua no cabeçalho e na tela de login;
 - preferência Light/Dark persistida no navegador, com detecção automática de `prefers-color-scheme` no primeiro acesso;
@@ -241,3 +241,7 @@ Para instalação nova, execute `supabase_schema.sql`, publique as Edge Function
 - Restaura `buildStatusMatrix()`, removida acidentalmente durante a refatoração premium dos gráficos.
 - Evita que uma falha isolada em um gráfico interrompa a renderização dos demais cards da tela Indicadores.
 - Mantém as correções de altura e os consolidados mensais da V2.23.1.
+
+## V2.24.2 — ranking do game para Técnicos
+
+Para que o login de Técnico visualize o ranking completo do próprio Squad respeitando o calendário diário, execute `MIGRACAO_V2.24.2.sql`. A função `get_my_squad_game_ranking` é `SECURITY DEFINER` e limita a consulta ao Squad do usuário autenticado.
