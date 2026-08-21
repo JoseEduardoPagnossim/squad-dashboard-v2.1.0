@@ -232,3 +232,8 @@ A pontuação automática usa as mesmas referências da planilha oficial: `ROUND
 
 A partir da V2.20.3, o status `active=false` controla o **acesso** do usuário, não a existência dos dados operacionais. Se um técnico inativado possui registros no CSV de uma competência, ele continua sendo reconhecido na reimportação daquele mês e participa normalmente das médias, status e pontuação.
 
+
+
+## V2.20.4 — composição da média da competência
+
+Ao reimportar uma competência aberta, o sistema atualiza os técnicos presentes no CSV e preserva o último consolidado dos técnicos que já possuíam produção naquele mesmo mês, mas deixaram de aparecer na extração posterior por inativação ou movimentação. Esses técnicos continuam compondo as referências de pontuação do mês. Linhas-resumo não são preservadas. A mudança é apenas de frontend/importação e não exige SQL ou Edge Function.

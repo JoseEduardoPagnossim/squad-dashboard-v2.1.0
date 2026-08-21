@@ -1,4 +1,13 @@
-# Soften Performance Hub V2.20.3
+# Soften Performance Hub V2.20.4
+
+
+## Correções da V2.20.4
+
+- A média usada na pontuação passa a preservar todos os técnicos que **já tiveram produção na competência**, mesmo que uma extração posterior do CSV deixe de trazer o nome por inativação ou migração.
+- Um técnico ausente no CSV novo mantém o último consolidado já gravado daquele mês; isso evita reduzir artificialmente a quantidade de técnicos e alterar B11, I11, J11 e K11.
+- Linhas-resumo antigas como **Média Grupo**, **Total Grupo** e **Resultado Equipe** não são preservadas como técnicos.
+- Técnicos que continuam no CSV são atualizados normalmente; a importação continua substitutiva para eles.
+- Não há alteração de SQL ou Edge Function.
 
 ## Correções da V2.20.3
 

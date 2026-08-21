@@ -1737,12 +1737,30 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     if(!rows.length)throw new Error('Nenhuma linha válida foi encontrada para os Squads A, B, D ou E.');return{rows,ignored,total:lines.length-1};
   }
 
+  function isOperationalTechnicianRow(t){
+    if(!t?.name)return false;
+    const key=normalizeName(t.name);
+    if(/^(MEDIA|MÉDIA) GRUPO$|^TOTAL GRUPO$|^RESULTADO EQUIPE$|^TOTAL$|^MEDIA$|^MÉDIA$/.test(key))return false;
+    return safe(t.att)>0||safe(t.totalEval)>0||safe(t.notes5)+safe(t.notes4)+safe(t.notes3)+safe(t.notes2)+safe(t.notes1)>0;
+  }
+
   function buildMonthFromCsv(rows,id,fileName,previous,squadCode=state.squadCode){
     const selected=rows.filter(r=>r.id===id&&r.group===squadCode);if(!selected.length)throw new Error('Nenhum registro encontrado para o mês selecionado.');
     const [year,month]=id.split('-').map(Number),byTech=new Map();let latest=1;
     for(const r of selected){latest=Math.max(latest,r.day);let t=byTech.get(r.name);if(!t){t={name:r.name,att:0,notes5:0,notes4:0,notes3:0,notes2:0,notes1:0,dailyMap:new Map()};byTech.set(r.name,t)}t.att+=r.att;t.notes5+=r.notes5;t.notes4+=r.notes4;t.notes3+=r.notes3;t.notes2+=r.notes2;t.notes1+=r.notes1;let d=t.dailyMap.get(r.day)||{day:r.day,att:0,notes5:0,off:false};d.att+=r.att;d.notes5+=r.notes5;t.dailyMap.set(r.day,d)}
-    const prevBy=new Map((previous?.technicians||[]).map(t=>[nameLinkKey(t.name),t]));const daysInMonth=new Date(year,month,0).getDate();
-    const technicians=[...byTech.values()].map(raw=>{const prev=prevBy.get(nameLinkKey(raw.name))||{};const daily=[];for(let d=1;d<=daysInMonth;d++)daily.push(raw.dailyMap.get(d)||{day:d,att:0,notes5:0,off:new Date(year,month-1,d).getDay()===0});return{name:raw.name,att:raw.att,notes5:raw.notes5,notes4:raw.notes4,notes3:raw.notes3,notes2:raw.notes2,notes1:raw.notes1,totalEval:0,avg:0,evalPct:0,status:prev.status||'',goalsHit:safe(prev.goalsHit),points:safe(prev.points),rank:prev.rank||null,discount:safe(prev.discount),pointBonus:safe(prev.pointBonus),goalAtt:safe(prev.goalAtt),goalEval:safe(prev.goalEval),financeManualBonus:safe(prev.financeManualBonus),salesCommission:safe(prev.salesCommission),vacation:!!prev.vacation,financeData:prev.financeData?clone(prev.financeData):{},daily}}).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    const previousTechs=previous?.technicians||[],prevBy=new Map(previousTechs.map(t=>[nameLinkKey(t.name),t])),daysInMonth=new Date(year,month,0).getDate(),presentKeys=new Set([...byTech.keys()].map(nameLinkKey));
+    const technicians=[...byTech.values()].map(raw=>{const prev=prevBy.get(nameLinkKey(raw.name))||{};const daily=[];for(let d=1;d<=daysInMonth;d++)daily.push(raw.dailyMap.get(d)||{day:d,att:0,notes5:0,off:new Date(year,month-1,d).getDay()===0});return{dbId:prev.dbId||null,userId:prev.userId||null,name:raw.name,att:raw.att,notes5:raw.notes5,notes4:raw.notes4,notes3:raw.notes3,notes2:raw.notes2,notes1:raw.notes1,totalEval:0,avg:0,evalPct:0,status:prev.status||'',goalsHit:safe(prev.goalsHit),points:safe(prev.points),rank:prev.rank||null,discount:safe(prev.discount),pointBonus:safe(prev.pointBonus),goalAtt:safe(prev.goalAtt),goalEval:safe(prev.goalEval),financeManualBonus:safe(prev.financeManualBonus),salesCommission:safe(prev.salesCommission),vacation:!!prev.vacation,financeData:prev.financeData?clone(prev.financeData):{},daily}});
+
+    // V2.20.4: a média da competência deve representar todos os técnicos que efetivamente
+    // tiveram produção naquele mês. Se um técnico já estava gravado na competência e deixa
+    // de aparecer em uma extração posterior (ex.: inativação/migração), preservamos o último
+    // consolidado daquele mês em vez de removê-lo. Assim B11/I11/J11/K11 não mudam artificialmente.
+    for(const prev of previousTechs){
+      const key=nameLinkKey(prev.name);if(presentKeys.has(key)||!isOperationalTechnicianRow(prev))continue;
+      const preserved=clone(prev);preserved.daily=(prev.daily||[]).map(d=>({...d}));technicians.push(preserved);
+      latest=Math.max(latest,...(preserved.daily||[]).filter(d=>safe(d.att)>0||safe(d.notes5)>0).map(d=>safe(d.day)),1);
+    }
+    technicians.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     const data={id,month,monthName:MONTHS_PT[month-1],year,sourceFile:fileName,latestDay:latest,importedAt:new Date().toISOString(),teamResult:previous?.teamResult||'',redistributed:safe(previous?.redistributed),settings:previous?.settings?{...previous.settings}:undefined,scoreSettings:previous?.scoreSettings?{...previous.scoreSettings}:{},financeSettings:previous?.financeSettings?clone(previous.financeSettings):clone(DEFAULT_FINANCE_SETTINGS),financeMonthData:previous?.financeMonthData?clone(previous.financeMonthData):{},financeModel:previous?.financeModel||'squad',financeCompare:previous?.financeCompare!==false,financeTechCompare:previous?.financeTechCompare===true,financeIndividualCap:Number.isFinite(Number(previous?.financeIndividualCap))?safe(previous.financeIndividualCap):7000,financeComparison:previous?.financeComparison?clone(previous.financeComparison):{},isClosed:!!previous?.isClosed,closedAt:previous?.closedAt||null,closedBy:previous?.closedBy||null,closedSnapshot:previous?.closedSnapshot?clone(previous.closedSnapshot):{},technicians};recalculateMonth(data);return data;
   }
 
