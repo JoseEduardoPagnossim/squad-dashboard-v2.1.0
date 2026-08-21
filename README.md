@@ -1,4 +1,10 @@
-# Soften Performance Hub V2.20.2
+# Soften Performance Hub V2.20.3
+
+## Correções da V2.20.3
+
+- Reimportar um mês não remove mais técnicos apenas porque o acesso foi **inativado** depois. A inativação bloqueia login, mas preserva o técnico nos dados históricos, nas médias, no status e na pontuação.
+- A pontuação continua usando as referências equivalentes à planilha: atendimento e total de avaliações arredondados para 0 casas, nota média truncada para 2 casas e percentual avaliado arredondado para 4 casas.
+- O botão **Sair** passou para o grupo **Conta** na navegação lateral e permanece acessível em telas com pouco espaço/zoom elevado.
 
 
 ## Ajustes da V2.20.2

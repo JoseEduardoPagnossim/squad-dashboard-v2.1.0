@@ -336,3 +336,21 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 
 /* V2.20.2 - dialogs internos, cores de status e equivalencia de pontuacao */
 .confirm-dialog-card{width:min(470px,100%);padding:28px 30px}.confirm-dialog-card .eyebrow{display:block;margin-top:14px}.confirm-dialog-card p{margin:8px 0 0;font-size:12px}.confirm-dialog-icon{margin-bottom:2px}.modal[data-tone="danger"] .confirm-dialog-icon{background:rgba(242,99,99,.12);color:var(--danger)}.modal[data-tone="danger"] #confirmDialogConfirm{background:var(--danger);border-color:var(--danger);color:#fff}.modal[data-tone="warning"] .confirm-dialog-icon{background:rgba(242,193,78,.12);color:var(--warn)}.modal[data-tone="success"] .confirm-dialog-icon{background:rgba(54,201,143,.12);color:var(--success)}.modal[data-tone="success"] #confirmDialogConfirm{background:var(--success);border-color:var(--success);color:#07130e}
+
+
+/* V2.20.3 - preservação histórica e saída sempre acessível */
+.logout-nav{margin-top:2px!important;color:#f0b45a!important;border:1px solid rgba(242,165,45,.18)!important;background:rgba(242,165,45,.035)!important;font-weight:850}
+.logout-nav:hover{color:#fff!important;background:rgba(242,165,45,.12)!important;border-color:rgba(242,165,45,.34)!important}
+.sidebar{overflow-x:hidden}
+@media(max-height:820px){
+  .sidebar{overflow-y:auto}
+  .campaign-visual{display:none!important}
+  .sound-player{margin-top:auto}
+}
+@media(max-height:680px){
+  .sidebar{gap:10px;padding-top:14px;padding-bottom:12px}
+  .user-mini{margin-bottom:5px}
+  .sidebar-nav{gap:8px!important}
+  .nav-group .nav-btn{padding:8px 11px}
+  .sidebar-footer{display:none}
+}

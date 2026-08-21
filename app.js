@@ -1679,7 +1679,21 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       const text=await file.text(),parsed=parseServiceCsv(text);$('#importProgress').style.width='55%';
       if(!state.userDirectoryLoaded)await loadUserDirectory();
       const scopeAll=isSuperAdmin()&&state.squadCode==='all',codes=scopeAll?Object.keys(state.squads):[state.squadCode],allowedBy={};
-      for(const code of codes)allowedBy[code]=new Set((state.userDirectory||[]).filter(u=>u.role==='technician'&&u.active&&u.squadCode===code&&u.techName).map(u=>nameLinkKey(u.techName)));
+      // V2.20.3: a situação de login (ativo/inativo) não pode apagar desempenho histórico.
+      // Técnicos inativados continuam elegíveis para a importação operacional do CSV.
+      // Assim, ao reimportar um mês em que o técnico trabalhou, ele permanece no mês,
+      // nas médias do Squad, no status e na pontuação. A inativação bloqueia apenas o acesso.
+      for(const code of codes){
+        allowedBy[code]=new Set((state.userDirectory||[])
+          .filter(u=>u.role==='technician'&&u.squadCode===code&&u.techName)
+          .map(u=>nameLinkKey(u.techName)));
+        // Também preserva nomes já existentes em competências históricas do Squad,
+        // cobrindo movimentações/inativações realizadas depois da importação original.
+        const squad=state.squads?.[code];
+        for(const monthData of Object.values(squad?.months||{})){
+          for(const tech of monthData?.technicians||[])if(tech?.name)allowedBy[code].add(nameLinkKey(tech.name));
+        }
+      }
       if(!codes.some(code=>allowedBy[code].size))throw new Error(scopeAll?'Cadastre técnicos nos Squads antes de importar o CSV.':`Cadastre os técnicos do Squad ${state.squadCode} em Usuários antes de importar o CSV.`);
       const scopeRows=parsed.rows.filter(r=>codes.includes(r.group)),unmatched=[...new Set(scopeRows.filter(r=>!allowedBy[r.group]?.has(nameLinkKey(r.name))).map(r=>`${r.group}: ${r.name}`))].sort(),rows=scopeRows.filter(r=>allowedBy[r.group]?.has(nameLinkKey(r.name)));
       const months=[...new Set(rows.map(r=>r.id))].sort().reverse();if(!months.length)throw new Error(scopeAll?'O CSV não possui registros que correspondam aos técnicos cadastrados. Confira os vínculos em Usuários.':`O CSV não possui registros que correspondam aos técnicos cadastrados do Squad ${state.squadCode}. Confira o campo Nome do técnico no CSV.`);
@@ -1687,7 +1701,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       $('#csvMonthSelect').innerHTML=months.map(id=>{const [y,m]=id.split('-').map(Number);return `<option value="${id}">${MONTHS_PT[m-1]} ${y}</option>`}).join('');
       $('#csvPeriodBlock').classList.remove('hidden');$('#confirmCsvImportBtn').classList.remove('hidden');$('#importMessage').textContent=scopeAll?'CSV reconhecido para importação geral.':`CSV reconhecido para o Squad ${state.squadCode}.`;
       const unmatchedText=unmatched.length?` • <strong>${unmatched.length} vínculo(s) não encontrado(s) ignorado(s)</strong>: ${escapeHtml(unmatched.slice(0,5).join(', '))}${unmatched.length>5?'…':''}`:'';
-      $('#importDetails').innerHTML=`<strong>${fmtInt(rows.length)} linhas vinculadas</strong> aos técnicos cadastrados • <strong>${months.length} meses disponíveis</strong>${unmatchedText} • ${fmtInt(parsed.ignored)} linhas inválidas/fora dos Squads A, B, D e E.`;$('#importProgress').style.width='100%';
+      $('#importDetails').innerHTML=`<strong>${fmtInt(rows.length)} linhas vinculadas</strong> aos técnicos cadastrados • <strong>${months.length} meses disponíveis</strong>${unmatchedText} • ${fmtInt(parsed.ignored)} linhas inválidas/fora dos Squads A, B, D e E. <span class="muted">Técnicos inativados continuam sendo reconhecidos no histórico quando possuem dados no CSV.</span>`;$('#importProgress').style.width='100%';
     }catch(err){console.error(err);state.pendingCsv=null;$('#importMessage').textContent='Não foi possível ler este CSV.';$('#importDetails').textContent=err.message||String(err);$('#importProgress').style.width='100%';$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden')}
     finally{$('#chooseFileBtn').disabled=false;e.target.value=''}
   }

@@ -227,3 +227,8 @@ O frontend V2.20.0 também persiste `technician_finance_monthly.calculated` a ca
 ## V2.20.2 — equivalência da pontuação e dialogs
 
 A pontuação automática usa as mesmas referências da planilha oficial: `ROUND(AVERAGE(atendimentos),0)`, `ROUND(AVERAGE(total avaliações),0)`, `ROUNDDOWN(AVERAGE(nota média),2)` e `ROUND(AVERAGE(% avaliado),4)`. O percentual individual também é arredondado em quatro casas antes da comparação. As confirmações de ações críticas são dialogs internos do sistema; não há `window.confirm` no frontend. Esta versão não exige migração de banco.
+
+### Inativação e reimportação histórica
+
+A partir da V2.20.3, o status `active=false` controla o **acesso** do usuário, não a existência dos dados operacionais. Se um técnico inativado possui registros no CSV de uma competência, ele continua sendo reconhecido na reimportação daquele mês e participa normalmente das médias, status e pontuação.
+
