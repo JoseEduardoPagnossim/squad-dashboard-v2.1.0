@@ -1,5 +1,17 @@
-# Soften Performance Hub V2.20.4
+# Soften Performance Hub V2.20.5
 
+
+
+## Novidades da V2.20.5
+
+- Novo checkbox financeiro **Desconsiderar na quantidade de técnicos do grupo**, disponível por técnico e por competência.
+- Ao marcar, o técnico continua com seus atendimentos e notas somados nos totais, mas deixa de compor apenas o denominador de técnicos usado na **média de atendimentos/técnico/dia da Base do Squad**.
+- O `% de Notas 5` do grupo continua considerando todas as Notas 5 e todos os atendimentos, inclusive do técnico desconsiderado.
+- O modelo **Individual** não é alterado.
+- A **gamificação/pontuação/status** também não é alterada: a regra é exclusivamente financeira, mantendo os dois motores separados.
+- O painel de auditoria financeira informa quantos técnicos possuem produção e quantos estão efetivamente sendo considerados no denominador.
+- A escolha é preservada em reimportações, gravada por competência, congelada no fechamento e incluída no Excel.
+- Esta versão exige executar `MIGRACAO_V2.20.5.sql` antes de publicar o novo frontend.
 
 ## Correções da V2.20.4
 

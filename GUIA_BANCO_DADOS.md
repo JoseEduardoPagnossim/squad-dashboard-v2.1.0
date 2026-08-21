@@ -1,3 +1,18 @@
+
+## V2.20.5 — Técnico fora do denominador financeiro
+
+Execute `MIGRACAO_V2.20.5.sql` antes de publicar o frontend desta versão. A migração adiciona `exclude_from_group_count` em `technician_finance_monthly`.
+
+O campo é por técnico e competência. Quando marcado em **Gestão → Bonificação**:
+
+- atendimentos e avaliações permanecem no mês e nos totais do Squad;
+- Notas 5 continuam compondo o `% Notas 5` do grupo;
+- o técnico não incrementa a quantidade usada no denominador de `média de atendimentos/técnico/dia` da **Base do Squad**;
+- Individual, gamificação, pontuação, status e ranking não são alterados pela marcação;
+- o valor é preservado na reimportação e no snapshot de fechamento.
+
+A migração é idempotente (`ADD COLUMN IF NOT EXISTS`).
+
 # Soften Performance Hub V2.20.0 — Banco, segurança e operação
 
 ## 1. Arquitetura
