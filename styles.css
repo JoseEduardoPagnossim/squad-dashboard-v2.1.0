@@ -831,3 +831,33 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),textarea{
   .chart-series-area,.chart-series-line,.chart-point,.premium-bar,.hero-rank::before{animation:none!important}
   .progress i,.team-progress i,.level-progress i,.import-progress i{transition:none!important}
 }
+
+
+/* V2.23.1 — correção de altura dos gráficos e visão mensal executiva */
+.chart-modern .chart-plot-scroll svg,
+.history-chart.interactive-chart .chart-plot-scroll svg,
+.fullscreen-chart-canvas .chart-plot-scroll svg{
+  height:var(--chart-height,340px)!important;
+  min-height:var(--chart-height,340px)!important;
+}
+
+/* Os dois cards executivos por Squad trabalham com competências mensais e não precisam
+   ocupar a mesma altura dos gráficos diários/históricos. */
+.sector-chart-grid .history-chart.interactive-chart{
+  min-height:330px!important;
+}
+.sector-chart-grid .chart-plot-scroll{
+  min-height:280px;
+}
+.sector-chart-grid .chart-legend-visible{
+  margin-top:10px;
+}
+
+/* Evita que um SVG muito largo seja achatado pela razão do viewBox. */
+.chart-modern .chart-plot-scroll{
+  min-height:var(--chart-height,340px);
+}
+
+@media(max-width:900px){
+  .sector-chart-grid .history-chart.interactive-chart{min-height:320px!important}
+}

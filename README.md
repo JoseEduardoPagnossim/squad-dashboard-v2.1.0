@@ -1,6 +1,6 @@
-# Soften Performance Hub V2.23.0
+# Soften Performance Hub V2.23.1
 
-## Novidades da V2.23.0 — gráficos e métricas premium
+## Novidades da V2.23.1 — gráficos e métricas premium
 
 - linhas dos gráficos agora usam curvas suaves Bezier/Catmull-Rom;
 - preenchimento em área com gradiente derivado da cor de cada série;
@@ -209,3 +209,9 @@ No fechamento, o snapshot V4 congela:
 8. Teste o ranking financeiro em uma conta de técnico.
 
 Para instalação nova, execute `supabase_schema.sql`, publique as Edge Functions existentes e configure `config.js`.
+
+
+## V2.23.1 — correção de gráficos
+- Corrige gráficos SVG que podiam ficar achatados/invisíveis em intervalos longos.
+- Os gráficos executivos de volume e taxa de avaliação por Squad passam a agrupar por competência mensal.
+- O gráfico de ritmo diário continua diário.

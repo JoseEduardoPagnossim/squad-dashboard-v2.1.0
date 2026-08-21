@@ -695,9 +695,29 @@ function filteredOrgDailyRows(){return orgDailyRows().filter(r=>dateBetween(r.da
 function buildOrgDailyComparison(){const rows=filteredOrgDailyRows(),map=new Map();rows.forEach(r=>{const date=r.date||isoDateParts(r.year,r.month,r.day);map.set(date,(map.get(date)||0)+safe(r.totalAtt));});const days=[...map.entries()].map(([date,value])=>({date,value})).sort((a,b)=>a.date.localeCompare(b.date)),values=days.map(x=>x.value),average=values.length?values.reduce((a,b)=>a+b,0)/values.length:0;return{labels:days.map(x=>{const d=parseIsoAnalysisDate(x.date);return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`}),series:[{name:'Atendimentos diários do setor',color:'var(--accent)',values},{name:'Média diária do período',color:'var(--accent2)',dashed:true,values:days.map(()=>average)}],average,days:days.length};}
 function renderTeamOrgDailyComparison(){const el=$('#teamOrgDailyChart');if(!el)return;const data=buildOrgDailyComparison();if($('#teamOrgDailyNote'))$('#teamOrgDailyNote').textContent=`${analysisRangeLabel()} • média ${fmtNum(data.average)} atend./dia • A+B+D+E`;renderIndicatorLineChart(el,data.labels,data.series,{maxValue:null,percent:false,decimals:0,height:390});}
 function renderIndicatorOrgDailyComparison(){const el=$('#indicatorOrgDailyChart');if(!el)return;const data=buildOrgDailyComparison();if($('#indicatorOrgDailyNote'))$('#indicatorOrgDailyNote').textContent=`${analysisRangeLabel()} • média ${fmtNum(data.average)} atend./dia`;renderIndicatorLineChart(el,data.labels,data.series,{maxValue:null,percent:false,decimals:0,height:390});}
-function buildOrgSquadDailySeries(){const rows=filteredOrgDailyRows(),dates=[...new Set(rows.map(r=>r.date||isoDateParts(r.year,r.month,r.day)))].sort(),codes=[...new Set(rows.map(r=>r.squadCode))].sort(),palette=['#f0a33a','#36c98f','#46a4ff','#d879ff','#ef5a29','#46d7d0','#f2c14e','#ff6d92'],labels=dates.map(x=>{const d=parseIsoAnalysisDate(x);return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`}),attendance=codes.map((code,i)=>({name:`Squad ${code}`,color:palette[i%palette.length],values:dates.map(date=>{const rs=rows.filter(r=>r.squadCode===code&&(r.date||isoDateParts(r.year,r.month,r.day))===date);return rs.length?rs.reduce((sum,r)=>sum+safe(r.totalAtt),0):null;})})),evaluation=codes.map((code,i)=>({name:`Squad ${code}`,color:palette[i%palette.length],values:dates.map(date=>{const rs=rows.filter(r=>r.squadCode===code&&(r.date||isoDateParts(r.year,r.month,r.day))===date);if(!rs.length)return null;const att=rs.reduce((sum,r)=>sum+safe(r.totalAtt),0),ev=rs.reduce((sum,r)=>sum+safe(r.totalEval),0);return att?(ev/att)*100:null;})}));return{dates,labels,attendance,evaluation};}
-function renderTeamSquadOverview(){if(!$('#teamSquadAttendanceChart'))return;const data=buildOrgSquadDailySeries();$('#teamSectorPeriod').textContent=analysisRangeLabel();renderIndicatorLineChart($('#teamSquadAttendanceChart'),data.labels,data.attendance,{maxValue:null,percent:false,decimals:0,height:390});renderIndicatorLineChart($('#teamSquadEvaluationChart'),data.labels,data.evaluation,{maxValue:null,percent:true,decimals:1,height:390});}
-function renderIndicatorSquadOverview(){if(!$('#indicatorSquadAttendanceChart'))return;const data=buildOrgSquadDailySeries();$('#indicatorSectorPeriod').textContent=analysisRangeLabel();renderIndicatorLineChart($('#indicatorSquadAttendanceChart'),data.labels,data.attendance,{maxValue:null,percent:false,decimals:0,height:390});renderIndicatorLineChart($('#indicatorSquadEvaluationChart'),data.labels,data.evaluation,{maxValue:null,percent:true,decimals:1,height:390});}
+function buildOrgSquadMonthlySeries(){
+  // Os dois gráficos executivos do setor são mensais por definição.
+  // O calendário continua definindo quais competências entram no recorte, mas cada ponto
+  // representa a competência consolidada (e não cada dia), evitando dezenas de pontos
+  // comprimidos quando o usuário seleciona vários meses.
+  const allRows=orgOverviewRows(),available=orgOverviewMonthIds(allRows,0),ids=analysisMonthIds().filter(id=>available.includes(id));
+  const data=buildOrgSquadSeries(ids,allRows);
+  return{ids,labels:ids.map(shortHistoryMonth),attendance:data.attendance,evaluation:data.evaluation};
+}
+function renderTeamSquadOverview(){
+  if(!$('#teamSquadAttendanceChart'))return;
+  const data=buildOrgSquadMonthlySeries();
+  $('#teamSectorPeriod').textContent=analysisRangeLabel();
+  renderIndicatorLineChart($('#teamSquadAttendanceChart'),data.labels,data.attendance,{maxValue:null,percent:false,decimals:0,height:280,fitWidth:true});
+  renderIndicatorLineChart($('#teamSquadEvaluationChart'),data.labels,data.evaluation,{maxValue:null,percent:true,decimals:1,height:280,fitWidth:true});
+}
+function renderIndicatorSquadOverview(){
+  if(!$('#indicatorSquadAttendanceChart'))return;
+  const data=buildOrgSquadMonthlySeries();
+  $('#indicatorSectorPeriod').textContent=analysisRangeLabel();
+  renderIndicatorLineChart($('#indicatorSquadAttendanceChart'),data.labels,data.attendance,{maxValue:null,percent:false,decimals:0,height:280,fitWidth:true});
+  renderIndicatorLineChart($('#indicatorSquadEvaluationChart'),data.labels,data.evaluation,{maxValue:null,percent:true,decimals:1,height:280,fitWidth:true});
+}
 
 function allTechnicianMetricConfig(metric=state.allTechniciansMetric){
   const configs={
@@ -923,7 +943,7 @@ function renderHistoryAttendanceChart(el,labels,totals,series){
   const zones=labels.map((_,i)=>`<rect x="${p.l+slot*i}" y="${p.t}" width="${slot}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`).join('');
   const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(label)}</text>`).join('');
   const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive"><span class="chart-legend-total"><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;--chart-height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
   bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[{name:'Total geral',value:totals?.[i],text:fmtInt(totals?.[i]),color:'var(--accent)'},...validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:fmtInt(s.values[i]),color:s.color})]});
 }
 
@@ -973,7 +993,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   const zones=(labels||[]).map((_,i)=>{const zx=labels.length<=1?p.l:Math.max(p.l,x(i)-zoneWidth/2),zw=labels.length<=1?plotWidth:(i===0||i===labels.length-1?zoneWidth/2:zoneWidth);return `<rect x="${zx}" y="${p.t}" width="${zw}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`}).join('');
   const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive">${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
   el.classList.toggle('chart-emphasis',!!emphasis);
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${grid}${paths}${rulers}${zones}${xLabels}</svg></div>${legend}`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;--chart-height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${grid}${paths}${rulers}${zones}${xLabels}</svg></div>${legend}`;
   bindSharedChartTooltip(el,{labels,entriesForIndex:i=>validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:chartValueText(s.values[i],{percent,decimals}),color:s.color||'var(--accent)'})});
 }
 
