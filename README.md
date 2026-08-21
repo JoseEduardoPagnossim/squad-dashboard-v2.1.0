@@ -1,4 +1,12 @@
-# Soften Performance Hub V2.24.0
+# Soften Performance Hub V2.24.1
+
+## V2.24.1 — ajustes em Meu desempenho
+
+- cartão de usuário duplicado removido da sidebar;
+- ranking de gamificação do Squad restaurado para login de Técnico;
+- cards de Atendimentos, Notas 5 e % Avaliado exibem também a meta mensal completa, além da meta proporcional do calendário.
+- sem nova migração SQL; utiliza os RPCs operacionais já existentes desde V2.21.0.
+
 
 ## Novidades da V2.24.0 — Light & Dark Mode Premium
 

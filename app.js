@@ -152,7 +152,7 @@
     $('#recoveryForm').addEventListener('submit',handleRecoveryPassword);
     $('#logoutBtn').addEventListener('click',logout);
     $$('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view,btn.dataset.adminSection||null)));
-    ['#sideUserProfileBtn','#topUserProfileBtn'].forEach(sel=>{const el=$(sel);if(!el)return;el.addEventListener('click',()=>showView('profile'));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showView('profile')}})});
+    ['#topUserProfileBtn'].forEach(sel=>{const el=$(sel);if(!el)return;el.addEventListener('click',()=>showView('profile'));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showView('profile')}})});
     $('#profilePasswordForm').addEventListener('submit',handleProfilePasswordChange);
     $('#mobileMenu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
     $('#squadSelect').addEventListener('change',async e=>{await selectSquad(e.target.value);});
@@ -316,9 +316,9 @@
     $$('.super-help').forEach(el=>el.classList.toggle('hidden',!superAdmin));
     $('.technician-control').classList.toggle('hidden',isTechnician()||state.currentView!=='individual'||state.squadCode==='all');
     const analyticalView=['individual','team','indicators'].includes(state.currentView);if($('.month-control'))$('.month-control').classList.toggle('hidden',analyticalView||['users','profile','help'].includes(state.currentView));if($('#analysisDateControl'))$('#analysisDateControl').classList.toggle('hidden',!['individual','team'].includes(state.currentView));syncAnalysisDateControls();
-    $('#sideUserName').textContent=state.user.fullName;$('#topUserName').textContent=state.user.fullName;
-    $('#sideUserRole').textContent=roleLabel(state.user.role);$('#topUserScope').textContent=state.user.role==='super_admin'?'Acesso geral':`Squad ${state.user.squadCode}`;
-    const initial=(state.user.fullName||'U').charAt(0).toUpperCase();$('#sideAvatar').textContent=initial;$('#topAvatar').textContent=initial;
+    if($('#topUserName'))$('#topUserName').textContent=state.user.fullName;
+    if($('#topUserScope'))$('#topUserScope').textContent=state.user.role==='super_admin'?'Acesso geral':`Squad ${state.user.squadCode}`;
+    const initial=(state.user.fullName||'U').charAt(0).toUpperCase();if($('#topAvatar'))$('#topAvatar').textContent=initial;
   }
   function isTechnician(){return state.user?.role==='technician'}
   function isAdmin(){return ['squad_admin','super_admin'].includes(state.user?.role)}
@@ -403,6 +403,20 @@
     const rows=[...names.values()].map(name=>{const daily=dailyRowsForTechnician(squad,name,start,end),agg=aggregateDailyRows(daily);return{name,...agg,daily};}).filter(t=>safe(t.att)>0||safe(t.totalEval)>0);
     if(!rows.length)return[];const refs={refAtt:roundTo(meanOf(rows,t=>t.att),0),refTotalEval:roundTo(meanOf(rows,t=>t.totalEval),0),refAvg:truncate2(meanOf(rows,t=>t.avg)),refEvalPct:roundTo(meanOf(rows,t=>t.evalPct),4),bonusAtt:20,bonusTotalEval:30,bonusAvg:40,bonusEvalPct:35};for(const t of rows){const scored=calculateScore(t,refs);t.periodPoints=scored.points;t.periodStatus=scored.status;t.periodGoalsHit=scored.goalsHit;t.points=scored.points;t.status=scored.status;}rows.sort((a,b)=>safe(b.periodPoints)-safe(a.periodPoints)||safe(b.att)-safe(a.att)||String(a.name).localeCompare(String(b.name),'pt-BR'));rows.forEach((t,i)=>t.periodRank=i+1);return rows;
   }
+  function gameRankingRowsForCurrentPeriod(squadCode=state.squadCode,start=state.analysisStartDate,end=state.analysisEndDate){
+    const source=(orgTechnicianDailyRows?.()||[]).filter(r=>String(r.squadCode)===String(squadCode)&&dateBetween(r.date||isoDateParts(r.year,r.month,r.day),start,end));
+    if(!source.length)return periodTechniciansForSquad(state.squads?.[squadCode],start,end);
+    const map=new Map();
+    source.forEach(r=>{
+      const name=r.technicianName||r.name||'';if(!name)return;const key=nameLinkKey(name),v=map.get(key)||{name,att:0,notes5:0,notes4:0,notes3:0,notes2:0,notes1:0};
+      v.att+=safe(r.att);v.notes5+=safe(r.notes5);v.notes4+=safe(r.notes4);v.notes3+=safe(r.notes3);v.notes2+=safe(r.notes2);v.notes1+=safe(r.notes1);map.set(key,v);
+    });
+    const rows=[...map.values()].map(v=>{v.totalEval=v.notes5+v.notes4+v.notes3+v.notes2+v.notes1;v.avg=v.totalEval?truncate2((v.notes5*5+v.notes4*4+v.notes3*3+v.notes2*2+v.notes1)/v.totalEval):0;v.evalPct=v.att?roundTo(v.totalEval/v.att,4):0;return v;}).filter(t=>safe(t.att)>0||safe(t.totalEval)>0);
+    if(!rows.length)return periodTechniciansForSquad(state.squads?.[squadCode],start,end);
+    const refs={refAtt:roundTo(meanOf(rows,t=>t.att),0),refTotalEval:roundTo(meanOf(rows,t=>t.totalEval),0),refAvg:truncate2(meanOf(rows,t=>t.avg)),refEvalPct:roundTo(meanOf(rows,t=>t.evalPct),4),bonusAtt:20,bonusTotalEval:30,bonusAvg:40,bonusEvalPct:35};
+    rows.forEach(t=>{const scored=calculateScore(t,refs);t.periodPoints=scored.points;t.periodStatus=scored.status;t.periodGoalsHit=scored.goalsHit;t.points=scored.points;t.status=scored.status;});
+    rows.sort((x,y)=>safe(y.periodPoints)-safe(x.periodPoints)||safe(y.att)-safe(x.att)||String(x.name).localeCompare(String(y.name),'pt-BR'));rows.forEach((t,i)=>t.periodRank=i+1);return rows;
+  }
   function periodTechnicianForCurrent(){const squad=currentSquad(),name=state.techName||currentTech()?.name;return periodTechniciansForSquad(squad).find(t=>samePersonName(t.name,name))||null}
   function selectedBusinessDays(){let c=0;if(!state.analysisStartDate||!state.analysisEndDate)return 0;for(let d=state.analysisStartDate;d<=state.analysisEndDate;d=addCalendarDays(d,1))if(isBusinessDateIso(d))c++;return c}
   function periodGoalForTechnician(t,squad=currentSquad()){
@@ -474,15 +488,15 @@
   }
 
   function renderIndividual(){
-    const m=currentMonth(),t=currentTech();if(!m||!t)return;const period=periodTechnicianForCurrent()||{name:t.name,att:0,notes5:0,totalEval:0,avg:0,evalPct:0,daily:[]},periodRows=periodTechniciansForSquad(currentSquad()),periodGoal=periodGoalForTechnician(t);
+    const m=currentMonth(),t=currentTech();if(!m||!t)return;const periodRows=gameRankingRowsForCurrentPeriod(),periodFromRanking=periodRows.find(r=>samePersonName(r.name,t.name)),localPeriod=periodTechnicianForCurrent(),period={...(periodFromRanking||localPeriod||{name:t.name,att:0,notes5:0,totalEval:0,avg:0,evalPct:0}),daily:localPeriod?.daily||[]},periodGoal=periodGoalForTechnician(t);
     const attPct=t.goalAtt?safe(t.att)/t.goalAtt:0,notePct=t.goalEval?safe(t.notes5)/t.goalEval:0,hasGoals=safe(t.goalAtt)>0&&safe(t.goalEval)>0;
     const audit=technicianStatusAudit(t,m),rules=audit.rules;
     $('#heroName').textContent=firstName(t.name);$('#heroStatus').textContent=t.status?`STATUS ${t.status}`:(hasGoals?overallLabel(attPct,notePct):'METAS PENDENTES');$('#heroStatus').style.color=String(t.status).toUpperCase()==='ACIMA'?'var(--success)':String(t.status).toUpperCase()==='ABAIXO'?'var(--danger)':(hasGoals?overallColor(attPct,notePct):'var(--warn)');$('#heroMessage').textContent=`Período analisado: ${analysisRangeLabel()}. A pontuação, status, metas e bonificação continuam oficiais por competência mensal.`;
     $('#lastUpdate').textContent=`Filtro diário • ${analysisRangeLabel()}`;$('#sourceFile').textContent=`Competência oficial: ${m.monthName} ${m.year}`;
     $('#rankNumber').textContent=period.periodRank?`#${period.periodRank}`:'—';$('#rankContext').textContent=`de ${periodRows.length} no período • Squad ${state.squadCode}`;
-    $('#kpiAtt').textContent=fmtInt(period.att);$('#kpiAttGoal').textContent=periodGoal.att?`/ ${fmtInt(periodGoal.att)}`:'';$('#attBar').style.width=clamp((periodGoal.att?period.att/periodGoal.att:0)*100,0,100)+'%';$('#attProgress').textContent=periodGoal.att?fmtPct(period.att/periodGoal.att):'—';$('#attRemaining').textContent=periodGoal.att?(period.att>=periodGoal.att?`+${fmtInt(period.att-periodGoal.att)} acima no período`:`Faltam ${fmtInt(periodGoal.att-period.att)} no período`):'Meta mensal preservada';
-    $('#kpiNotes').textContent=fmtInt(period.notes5);$('#kpiNotesGoal').textContent=periodGoal.notes5?`/ ${fmtInt(periodGoal.notes5)}`:'';$('#noteBar').style.width=clamp((periodGoal.notes5?period.notes5/periodGoal.notes5:0)*100,0,100)+'%';$('#noteProgress').textContent=periodGoal.notes5?fmtPct(period.notes5/periodGoal.notes5):'—';$('#noteRemaining').textContent=periodGoal.notes5?(period.notes5>=periodGoal.notes5?`+${fmtInt(period.notes5-periodGoal.notes5)} acima no período`:`Faltam ${fmtInt(periodGoal.notes5-period.notes5)} no período`):'Meta mensal preservada';
-    $('#kpiEvalPct').textContent=fmtPct(period.evalPct);$('#evalCount').textContent=`${fmtInt(period.totalEval)} avaliações no período`;$('#avgRating').textContent=`Média ${safe(period.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;const evalTarget=teamSettings(m).teamGoalEvalPct;$('#evalQuality').textContent=period.evalPct>=evalTarget?'Meta de avaliação atingida no período':period.avg>=4.9?'Qualidade excelente no período':'Acompanhar qualidade no período';
+    $('#kpiAtt').textContent=fmtInt(period.att);$('#kpiAttGoal').textContent=periodGoal.att?`/ ${fmtInt(periodGoal.att)}`:'';$('#attBar').style.width=clamp((periodGoal.att?period.att/periodGoal.att:0)*100,0,100)+'%';$('#attProgress').textContent=periodGoal.att?fmtPct(period.att/periodGoal.att):'—';$('#attRemaining').textContent=periodGoal.att?(period.att>=periodGoal.att?`+${fmtInt(period.att-periodGoal.att)} acima no período`:`Faltam ${fmtInt(periodGoal.att-period.att)} no período`):'Meta mensal preservada';if($('#kpiAttMonthlyGoal'))$('#kpiAttMonthlyGoal').textContent=safe(t.goalAtt)>0?fmtInt(t.goalAtt):'—';
+    $('#kpiNotes').textContent=fmtInt(period.notes5);$('#kpiNotesGoal').textContent=periodGoal.notes5?`/ ${fmtInt(periodGoal.notes5)}`:'';$('#noteBar').style.width=clamp((periodGoal.notes5?period.notes5/periodGoal.notes5:0)*100,0,100)+'%';$('#noteProgress').textContent=periodGoal.notes5?fmtPct(period.notes5/periodGoal.notes5):'—';$('#noteRemaining').textContent=periodGoal.notes5?(period.notes5>=periodGoal.notes5?`+${fmtInt(period.notes5-periodGoal.notes5)} acima no período`:`Faltam ${fmtInt(periodGoal.notes5-period.notes5)} no período`):'Meta mensal preservada';if($('#kpiNotesMonthlyGoal'))$('#kpiNotesMonthlyGoal').textContent=safe(t.goalEval)>0?fmtInt(t.goalEval):'—';
+    $('#kpiEvalPct').textContent=fmtPct(period.evalPct);$('#evalCount').textContent=`${fmtInt(period.totalEval)} avaliações no período`;$('#avgRating').textContent=`Média ${safe(period.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;const evalTarget=teamSettings(m).teamGoalEvalPct;if($('#kpiEvalMonthlyGoal'))$('#kpiEvalMonthlyGoal').textContent=evalTarget>0?fmtPct(evalTarget):'—';$('#evalQuality').textContent=period.evalPct>=evalTarget?'Meta de avaliação atingida no período':period.avg>=4.9?'Qualidade excelente no período':'Acompanhar qualidade no período';
     const avgAbove=safe(period.avg)>=rules.refAvg;$('#kpiAvgRating').textContent=safe(period.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});$('#avgRatingBar').style.width=clamp((safe(period.avg)/5)*100,0,100)+'%';$('#avgRatingStatus').textContent=avgAbove?'Acima da referência mensal':'Abaixo da referência mensal';$('#avgRatingStatus').style.color=avgAbove?'var(--success)':'var(--danger)';$('#avgRatingReference').textContent=`Ref. mensal ${safe(rules.refAvg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
     $('#kpiPoints').textContent=fmtNum(t.points);$('#goalsHit').textContent=`${fmtInt(t.goalsHit)}/4 critérios • acumulado ${fmtNum(cumulativePointsForTech(t))} pts`;if($('#pointsStatusFoot')){$('#pointsStatusFoot').textContent=`Status oficial ${t.status||'—'}`;$('#pointsStatusFoot').style.color=String(t.status).toUpperCase()==='ACIMA'?'var(--success)':String(t.status).toUpperCase()==='ABAIXO'?'var(--danger)':'var(--muted)'}if($('#pointsRankFoot'))$('#pointsRankFoot').textContent=t.rank?`Ranking mensal #${t.rank}`:'Ranking mensal —';
     $('#attGoalPct').textContent=fmtPct(attPct);$('#noteGoalPct').textContent=fmtPct(notePct);$('#attGoalText').textContent=goalLine('atendimentos',t.att,t.goalAtt);$('#noteGoalText').textContent=goalLine('notas',t.notes5,t.goalEval);

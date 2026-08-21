@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.24.0 • Light & Dark Mode premium</small>
+      <small class="login-version">V2.24.1 • Ajustes Meu Desempenho</small>
     </div>
   </section>
 
@@ -67,10 +67,6 @@
       <div class="brand">
         <div class="brand-mark">S</div>
         <div><strong>SOFTEN</strong><span>Performance Hub</span></div>
-      </div>
-      <div class="user-mini profile-shortcut" id="sideUserProfileBtn" role="button" tabindex="0" title="Abrir meu perfil">
-        <span class="user-avatar" id="sideAvatar">A</span>
-        <div><strong id="sideUserName">Usuário</strong><small id="sideUserRole">Perfil</small></div>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-group"><span class="nav-group-label">DESEMPENHO</span>
@@ -105,7 +101,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.24.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.24.1 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -178,9 +174,9 @@
           </div>
 
           <div class="kpi-grid">
-            <article class="kpi card"><div class="kpi-head"><span>Atendimentos</span><span class="icon-chip">☎</span></div><div class="kpi-value"><strong id="kpiAtt">0</strong><span id="kpiAttGoal">/ 0</span></div><div class="progress"><i id="attBar"></i></div><div class="kpi-foot"><span id="attProgress">0%</span><small id="attRemaining">Faltam 0</small></div></article>
-            <article class="kpi card"><div class="kpi-head"><span>Notas 5</span><span class="icon-chip">★</span></div><div class="kpi-value"><strong id="kpiNotes">0</strong><span id="kpiNotesGoal">/ 0</span></div><div class="progress"><i id="noteBar"></i></div><div class="kpi-foot"><span id="noteProgress">0%</span><small id="noteRemaining">Faltam 0</small></div></article>
-            <article class="kpi card"><div class="kpi-head"><span>% Avaliado</span><span class="icon-chip">%</span></div><div class="kpi-value"><strong id="kpiEvalPct">0%</strong></div><div class="mini-line"><span id="evalQuality">Meta de qualidade</span></div><div class="kpi-foot"><span id="evalCount">0 avaliações</span><small id="avgRating">Média 0,00</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>Atendimentos</span><span class="icon-chip">☎</span></div><div class="kpi-value"><strong id="kpiAtt">0</strong><span id="kpiAttGoal">/ 0</span></div><div class="progress"><i id="attBar"></i></div><div class="kpi-monthly-target"><span>Meta mensal completa</span><strong id="kpiAttMonthlyGoal">0</strong></div><div class="kpi-foot"><span id="attProgress">0%</span><small id="attRemaining">Faltam 0</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>Notas 5</span><span class="icon-chip">★</span></div><div class="kpi-value"><strong id="kpiNotes">0</strong><span id="kpiNotesGoal">/ 0</span></div><div class="progress"><i id="noteBar"></i></div><div class="kpi-monthly-target"><span>Meta mensal completa</span><strong id="kpiNotesMonthlyGoal">0</strong></div><div class="kpi-foot"><span id="noteProgress">0%</span><small id="noteRemaining">Faltam 0</small></div></article>
+            <article class="kpi card"><div class="kpi-head"><span>% Avaliado</span><span class="icon-chip">%</span></div><div class="kpi-value"><strong id="kpiEvalPct">0%</strong></div><div class="mini-line"><span id="evalQuality">Meta de qualidade</span></div><div class="kpi-monthly-target"><span>Meta mensal completa</span><strong id="kpiEvalMonthlyGoal">0%</strong></div><div class="kpi-foot"><span id="evalCount">0 avaliações</span><small id="avgRating">Média 0,00</small></div></article>
             <article class="kpi card quality-kpi"><div class="kpi-head"><span>Nota média</span><span class="icon-chip">★</span></div><div class="kpi-value"><strong id="kpiAvgRating">0,00</strong><span>/ 5,00</span></div><div class="progress quality-progress"><i id="avgRatingBar"></i></div><div class="kpi-foot"><span id="avgRatingStatus">Comparativo</span><small id="avgRatingReference">Ref. —</small></div></article>
             <article class="kpi card"><div class="kpi-head"><span>Pontuação</span><span class="icon-chip">◆</span></div><div class="kpi-value"><strong id="kpiPoints">0</strong></div><div class="mini-line"><span id="goalsHit">0 critérios atendidos</span></div><div class="kpi-foot"><span id="pointsStatusFoot">Status —</span><small id="pointsRankFoot">Ranking —</small></div></article>
           </div>
