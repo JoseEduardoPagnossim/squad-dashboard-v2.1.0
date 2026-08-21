@@ -1,4 +1,15 @@
-# Soften Performance Hub V2.20.5
+# Soften Performance Hub V2.21.0
+
+## Novidades da V2.21.0 — calendário diário
+
+- **Meu desempenho**, **Visão do Squad** e **Indicadores** agora usam intervalo diário com calendário.
+- O padrão é **primeiro dia do mês atual → última data importada**. Se não houver dados no mês atual, o sistema usa o mês mais recente disponível.
+- Atalhos: **Hoje**, **7 dias**, **15 dias**, **Este mês** e **Mês anterior**.
+- Atendimentos, notas, avaliações, nota média, gráficos diários, comparativos dos Squads e produtividade por hora/minuto respondem ao intervalo.
+- A pontuação, status oficial, metas, fechamento e bonificação continuam por **competência mensal**. Rankings analíticos do período são simulações e não alteram os pontos gravados.
+- O histórico diário passa a armazenar também **Nota 4, Nota 3, Nota 2 e Nota 1**, permitindo calcular corretamente total de avaliações e nota média em qualquer recorte diário.
+- Execute `MIGRACAO_V2.21.0.sql` antes de publicar o frontend. Depois, reimporte os meses que deseja analisar por dia para preencher a composição histórica completa das avaliações.
+
 
 
 

@@ -1,19 +1,16 @@
+# Soften Performance Hub V2.21.0 — Banco, segurança e operação
+
+## Atualização V2.21.0 — filtros diários
+
+Antes de publicar o frontend, execute `MIGRACAO_V2.21.0.sql`. A migração adiciona as notas 4, 3, 2 e 1 em `daily_metrics` e recria os RPCs agregados diários usados nas análises.
+
+Após a migração, reimporte os meses que deseja consultar por intervalos parciais. Os dados mensais antigos continuam válidos, mas a composição diária de notas 4 a 1 só passa a existir após uma nova importação do CSV.
+
+Pontuação, status oficial, bonificação e fechamento permanecem mensais; o calendário diário é uma camada analítica.
 
 ## V2.20.5 — Técnico fora do denominador financeiro
 
-Execute `MIGRACAO_V2.20.5.sql` antes de publicar o frontend desta versão. A migração adiciona `exclude_from_group_count` em `technician_finance_monthly`.
-
-O campo é por técnico e competência. Quando marcado em **Gestão → Bonificação**:
-
-- atendimentos e avaliações permanecem no mês e nos totais do Squad;
-- Notas 5 continuam compondo o `% Notas 5` do grupo;
-- o técnico não incrementa a quantidade usada no denominador de `média de atendimentos/técnico/dia` da **Base do Squad**;
-- Individual, gamificação, pontuação, status e ranking não são alterados pela marcação;
-- o valor é preservado na reimportação e no snapshot de fechamento.
-
-A migração é idempotente (`ADD COLUMN IF NOT EXISTS`).
-
-# Soften Performance Hub V2.20.0 — Banco, segurança e operação
+A configuração `exclude_from_group_count` continua válida e independente do calendário diário. Ela afeta somente o denominador financeiro da Base do Squad.
 
 ## 1. Arquitetura
 

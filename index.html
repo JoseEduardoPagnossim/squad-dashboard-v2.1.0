@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b1020" />
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2.21.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -98,7 +98,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.20.5 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.21.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -117,6 +117,18 @@
             <span>Mês</span>
             <select id="monthSelect"></select>
           </label>
+          <div class="analysis-date-control hidden" id="analysisDateControl">
+            <label class="control date-control"><span>De</span><input id="analysisStartDate" type="date" aria-label="Data inicial"></label>
+            <span class="date-range-arrow">→</span>
+            <label class="control date-control"><span>Até</span><input id="analysisEndDate" type="date" aria-label="Data final"></label>
+            <div class="date-quick compact" aria-label="Atalhos de período">
+              <button type="button" data-analysis-preset="today">Hoje</button>
+              <button type="button" data-analysis-preset="7d">7 dias</button>
+              <button type="button" data-analysis-preset="15d">15 dias</button>
+              <button type="button" data-analysis-preset="month">Este mês</button>
+              <button type="button" data-analysis-preset="prev-month">Mês anterior</button>
+            </div>
+          </div>
           <label class="control select-wrap technician-control">
             <span>Técnico</span>
             <select id="techSelect"></select>
@@ -181,7 +193,7 @@
           <div class="content-grid bottom-grid">
             <article class="card daily-card"><div class="section-title"><div><span class="eyebrow">DIA A DIA</span><h3>Histórico do mês</h3></div><span class="muted" id="dailySummary"></span></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Atendimentos</th><th>Notas 5</th><th>% aval.</th><th>Ritmo</th></tr></thead><tbody id="dailyRows"></tbody></table></div></article>
             <div class="ranking-stack">
-              <article class="card compact-ranking"><div class="section-title"><div><span class="eyebrow">TOP DO SQUAD</span><h3>Ranking atual</h3></div></div><div id="miniRanking" class="ranking-list"></div></article>
+              <article class="card compact-ranking"><div class="section-title"><div><span class="eyebrow">TOP DO SQUAD</span><h3>Ranking do período*</h3></div></div><div id="miniRanking" class="ranking-list"></div></article>
               <article class="card compact-ranking finance-ranking-card"><div class="section-title"><div><span class="eyebrow">BONIFICAÇÃO</span><h3>Ranking por valor recebido</h3></div><span class="muted" id="financeRankingModel">Modelo oficial</span></div><div id="financeRanking" class="ranking-list finance-ranking-list"></div></article>
             </div>
           </div>
@@ -205,7 +217,7 @@
               <article class="card"><span>Média de pontos</span><strong id="teamAvgPoints">0</strong><small class="team-kpi-note" id="teamAvgPointsNote">Referência usada no status da equipe</small></article>
             </div>
 
-            <article class="card leaderboard-card"><div class="section-title"><div><span class="eyebrow">CLASSIFICAÇÃO</span><h3>Ranking completo</h3></div><span class="muted">Atualizado pela última importação</span></div><div id="teamLeaderboard" class="leaderboard"></div></article>
+            <article class="card leaderboard-card"><div class="section-title"><div><span class="eyebrow">CLASSIFICAÇÃO</span><h3>Ranking completo</h3></div><span class="muted">* Pontuação simulada para o intervalo; não altera a pontuação mensal oficial.</span></div><div id="teamLeaderboard" class="leaderboard"></div></article>
 
             <section class="team-history-section">
               <div class="history-section-head card">
@@ -258,15 +270,22 @@
 
       <section id="view-indicators" class="view super-only">
         <div class="help-hero card glass indicator-hero">
-          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com visão mensal, semanal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.</p></div>
+          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com calendário diário, visão semanal/mensal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.</p></div>
           <div class="help-role"><small>ESCOPO</small><strong id="indicatorScopeTitle">Todos os Squads</strong><span id="indicatorScopeText">Selecione um Squad no topo para aprofundar a análise.</span></div>
         </div>
 
         <article class="card indicator-toolbar">
           <div class="section-title"><div><span class="eyebrow">FILTROS</span><h3>Período analisado</h3></div><span class="muted" id="indicatorPeriodLabel">Carregando período...</span></div>
           <div class="indicator-filters">
-            <label class="control select-wrap"><span>De</span><select id="indicatorStartMonth"></select></label>
-            <label class="control select-wrap"><span>Até</span><select id="indicatorEndMonth"></select></label>
+            <label class="control date-control"><span>De</span><input id="indicatorStartDate" type="date" aria-label="Data inicial dos indicadores"></label>
+            <label class="control date-control"><span>Até</span><input id="indicatorEndDate" type="date" aria-label="Data final dos indicadores"></label>
+            <div class="date-quick indicator-date-quick" aria-label="Atalhos de período">
+              <button type="button" data-analysis-preset="today">Hoje</button>
+              <button type="button" data-analysis-preset="7d">7 dias</button>
+              <button type="button" data-analysis-preset="15d">15 dias</button>
+              <button type="button" data-analysis-preset="month">Este mês</button>
+              <button type="button" data-analysis-preset="prev-month">Mês anterior</button>
+            </div>
             <button class="btn primary indicator-fullscreen-btn" id="openAllTechniciansChartBtn" type="button">⛶ Todos os técnicos em tela cheia</button>
           </div>
         </article>
@@ -305,39 +324,39 @@
 
         <section class="sector-overview-section indicator-sector-overview">
           <div class="history-section-head card sector-overview-head">
-            <div><span class="eyebrow">CONSOLIDADO POR SQUAD</span><h2>Volume e taxa de avaliação das equipes</h2><p>Comparação mensal de todos os Squads dentro do período selecionado.</p></div>
+            <div><span class="eyebrow">CONSOLIDADO POR SQUAD</span><h2>Volume e taxa de avaliação das equipes</h2><p>Comparação dos Squads usando somente os dias selecionados no calendário.</p></div>
             <span class="history-chip" id="indicatorSectorPeriod">Período</span>
           </div>
           <div class="sector-chart-grid">
             <article class="card chart-card history-chart-card">
-              <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total mensal por equipe</span></div>
+              <div class="section-title"><div><span class="eyebrow">VOLUME</span><h3>Quantidade de atendimentos por Squad</h3></div><span class="muted">Total dentro do período selecionado</span></div>
               <div id="indicatorSquadAttendanceChart" class="chart history-chart"></div>
             </article>
             <article class="card chart-card history-chart-card">
-              <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação mensal por Squad</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
+              <div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação por Squad no período</h3></div><span class="muted">Avaliações ÷ atendimentos</span></div>
               <div id="indicatorSquadEvaluationChart" class="chart history-chart"></div>
             </article>
           </div>
           <article class="card chart-card history-chart-card sector-daily-card">
-            <div class="section-title"><div><span class="eyebrow">RITMO DIÁRIO DO SETOR</span><h3>Atendimentos diários consolidados x média do período</h3></div><span class="muted" id="indicatorOrgDailyNote">Mês final do filtro x média diária do período</span></div>
+            <div class="section-title"><div><span class="eyebrow">RITMO DIÁRIO DO SETOR</span><h3>Atendimentos diários consolidados x média do período</h3></div><span class="muted" id="indicatorOrgDailyNote">Dias selecionados x média diária do período</span></div>
             <div id="indicatorOrgDailyChart" class="chart history-chart org-daily-chart"></div>
           </article>
         </section>
 
         <div class="indicator-grid">
           <article class="card chart-card indicator-card">
-            <div class="section-title"><div><span class="eyebrow">ACIMA X ABAIXO</span><h3>Status de cada técnico por mês</h3></div><div class="legend"><span><i class="dot note"></i>Acima</span><span><i class="dot att"></i>Abaixo</span></div></div>
+            <div class="section-title"><div><span class="eyebrow">ACIMA X ABAIXO</span><h3>Status oficial de cada técnico por competência</h3></div><div class="legend"><span><i class="dot note"></i>Acima</span><span><i class="dot att"></i>Abaixo</span></div></div>
             <div id="indicatorStatusChart" class="status-matrix-wrap"></div>
           </article>
           <article class="card chart-card indicator-card">
-            <div class="section-title"><div><span class="eyebrow">% DE AVALIAÇÃO</span><h3>Comparativo mensal por grupo</h3></div><span class="muted" id="indicatorMonthlyLegend">Comparativo por Squad no período.</span></div>
+            <div class="section-title"><div><span class="eyebrow">% DE AVALIAÇÃO</span><h3>% de avaliação por grupo no período</h3></div><span class="muted" id="indicatorMonthlyLegend">Comparativo por Squad no período.</span></div>
             <div id="indicatorMonthlyChart" class="chart chart-lg"></div>
           </article>
         </div>
 
         <div class="indicator-grid bottom-grid">
           <article class="card chart-card indicator-card">
-            <div class="section-title"><div><span class="eyebrow">VISÃO SEMANAL</span><h3>Proxy semanal de avaliação por grupo</h3></div><span class="muted" id="indicatorWeeklyNote">Proxy semanal usando notas 5 / atendimentos.</span></div>
+            <div class="section-title"><div><span class="eyebrow">VISÃO SEMANAL</span><h3>Avaliação semanal por grupo</h3></div><span class="muted" id="indicatorWeeklyNote">Proxy semanal usando notas 5 / atendimentos.</span></div>
             <div id="indicatorWeeklyChart" class="chart chart-lg"></div>
           </article>
           <article class="card daily-card indicator-card">
@@ -477,7 +496,7 @@
 
           <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">↓</span><div><span class="eyebrow">RELATÓRIOS</span><h3>Excel e PDF</h3></div></div><ul><li>O Excel traz ambos os modelos, diferença, modelo oficial, valor oficial e todos os ajustes por técnico.</li><li>A aba Resumo mostra totais da folha, métricas da Base do Squad e cancelamento.</li><li>Quando houver comissão do Admin Geral, ela aparece separadamente.</li><li>O PDF apresenta uma conferência compacta do fechamento.</li><li>Prefira gerar os relatórios imediatamente antes de fechar a competência.</li></ul></article>
 
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos</b> abre o comparativo geral em tela cheia com troca de métrica.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos</b> abre o comparativo geral em tela cheia com troca de métrica.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
 
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram fundo, cores, favicon e trilha do próprio Squad.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
         </div>
@@ -540,14 +559,14 @@
     <div class="modal-card fullscreen-chart-modal">
       <button class="modal-close" data-close="allTechniciansModal">×</button>
       <div class="fullscreen-chart-head">
-        <div><span class="eyebrow">TODOS OS SQUADS</span><h2>Todos os técnicos em tela cheia</h2><p id="allTechniciansSubtitle">Comparativo mensal de todos os técnicos dos Squads A, B, D e E, disponível para todos os usuários autenticados.</p></div>
+        <div><span class="eyebrow">TODOS OS SQUADS</span><h2>Todos os técnicos em tela cheia</h2><p id="allTechniciansSubtitle">Comparativo dos técnicos dos Squads A, B, D e E dentro do calendário selecionado. Pontuação permanece oficial por competência.</p></div>
         <div class="fullscreen-chart-controls">
           <label class="control select-wrap"><span>Métrica</span><select id="allTechniciansMetric"><option value="points">Pontuação</option><option value="att">Atendimentos</option><option value="evalPct">% de avaliação</option><option value="avg">Nota média</option></select></label>
           <span class="history-chip" id="allTechniciansPeriod">Período</span>
         </div>
       </div>
       <div id="allTechniciansFullscreenChart" class="chart fullscreen-chart-canvas"></div>
-      <div class="fullscreen-chart-foot"><span>💡 Passe o mouse sobre um mês para comparar todas as séries. Use a legenda para destacar ou fixar um técnico.</span><span id="allTechniciansCount">0 técnicos</span></div>
+      <div class="fullscreen-chart-foot"><span>💡 Passe o mouse sobre um ponto para comparar as séries. Use a legenda para destacar ou fixar um técnico.</span><span id="allTechniciansCount">0 técnicos</span></div>
     </div>
   </div>
 
@@ -576,6 +595,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2.21.0"></script>
 </body>
 </html>
