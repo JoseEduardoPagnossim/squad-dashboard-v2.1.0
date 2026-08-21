@@ -1,4 +1,16 @@
-# Soften Performance Hub V2.23.2
+# Soften Performance Hub V2.24.0
+
+## Novidades da V2.24.0 — Light & Dark Mode Premium
+
+- alternância instantânea por botão Sol/Lua no cabeçalho e na tela de login;
+- preferência Light/Dark persistida no navegador, com detecção automática de `prefers-color-scheme` no primeiro acesso;
+- temas JSON agora suportam `colors.dark` e `colors.light`, preservando compatibilidade de importação com `squad-theme-v1`;
+- modo claro premium com fundo off-white, cards brancos, texto slate, bordas e sombras suaves;
+- modo escuro premium preserva superfícies profundas, glassmorphism, temas e imagens existentes;
+- em **Aparência**, o Admin pode alternar a paleta em edição e personalizar as cores principal/secundária de cada modo separadamente;
+- fundo, favicon, campanha Casa do Dragão e trilha continuam funcionando sem alteração de regra;
+- nenhuma migração SQL ou Edge Function nova é necessária.
+
 
 ## Novidades da V2.23.2 — gráficos e métricas premium
 

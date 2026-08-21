@@ -1,0 +1,42 @@
+{
+  "schema": "squad-theme-v2",
+  "name": "Casa do Dragão",
+  "campaignTitle": "Casa do Dragão",
+  "campaignTagline": "Unifique os squads, mantenha o fogo das metas e avance o reino dos resultados.",
+  "colors": {
+    "dark": {
+      "accent": "#f0a33a",
+      "secondary": "#ef5a29",
+      "bg": "#080b12",
+      "bg2": "#10141e",
+      "panel": "rgba(17,22,31,.88)",
+      "panel2": "rgba(24,30,42,.92)",
+      "text": "#f5f6f8",
+      "muted": "#9aa3b1",
+      "border": "rgba(255,255,255,.09)",
+      "success": "#36c98f",
+      "danger": "#f26363",
+      "warn": "#f2c14e"
+    },
+    "light": {
+      "accent": "#d97706",
+      "secondary": "#ea580c",
+      "bg": "#f3f6fa",
+      "bg2": "#f8fafc",
+      "panel": "rgba(255,255,255,.94)",
+      "panel2": "#ffffff",
+      "text": "#0f172a",
+      "muted": "#64748b",
+      "border": "rgba(148,163,184,.32)",
+      "success": "#16815f",
+      "danger": "#dc4c4c",
+      "warn": "#a16207"
+    }
+  },
+  "background": "assets/vermithor.png",
+  "favicon": "assets/favicon-dragon.png",
+  "soundtrack": "assets/casa-do-dragao-ambient.mp3",
+  "soundtrackName": "Fogo & Conquista",
+  "soundtrackVolume": 0.24,
+  "opacity": 0.28
+}

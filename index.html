@@ -1,12 +1,15 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-color-mode="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b1020" />
+  <script>
+    (()=>{try{const key='softenPerformanceColorModeV1',saved=localStorage.getItem(key),mode=saved==='light'||saved==='dark'?saved:(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.dataset.colorMode=mode;document.documentElement.style.colorScheme=mode;const meta=document.querySelector('meta[name=\"theme-color\"]');if(meta)meta.content=mode==='light'?'#f3f6fa':'#080b12'}catch(e){}})();
+  </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.23.2" />
+  <link rel="stylesheet" href="styles.css?v=2.24.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -28,6 +31,10 @@
         <div class="brand-mark large">S</div>
         <div><strong>SOFTEN</strong><span>Performance Hub</span></div>
       </div>
+      <button class="color-mode-toggle login-mode-toggle" type="button" data-color-mode-toggle aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
+        <span class="mode-icon mode-icon-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path></svg></span>
+        <span class="mode-icon mode-icon-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+      </button>
       <div class="login-card">
         <span class="eyebrow">ACESSO SEGURO</span>
         <h1>Entre no seu Squad</h1>
@@ -40,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.23.2 • indicadores e gráficos premium</small>
+      <small class="login-version">V2.24.0 • Light & Dark Mode premium</small>
     </div>
   </section>
 
@@ -98,7 +105,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.23.2 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.24.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -149,6 +156,10 @@
             <span>Técnico</span>
             <select id="techSelect"></select>
           </label>
+          <button class="color-mode-toggle" type="button" data-color-mode-toggle aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
+            <span class="mode-icon mode-icon-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path></svg></span>
+            <span class="mode-icon mode-icon-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+          </button>
           <div class="top-user profile-shortcut" id="topUserProfileBtn" role="button" tabindex="0" title="Abrir meu perfil"><span class="user-avatar" id="topAvatar">A</span><div><b id="topUserName">Usuário</b><small id="topUserScope">Squad</small></div></div>
         </div>
       </header>
@@ -530,7 +541,7 @@
 
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos</b> abre o comparativo geral em tela cheia com troca de métrica.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
 
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram fundo, cores, favicon e trilha do próprio Squad.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram as paletas clara e escura, fundo, favicon e trilha do próprio Squad.</li><li>O botão ☀/☾ no topo alterna Light/Dark instantaneamente. A preferência fica salva no navegador e, no primeiro acesso, segue o modo do sistema operacional.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
         </div>
 
         <div class="house-motto"><strong>DISCIPLINA • FOCO • RESULTADO</strong><span>Casa do Dragão — grandes conquistas nascem da constância.</span></div>
@@ -550,7 +561,7 @@
           <article class="card admin-card full finance-admin-card admin-section admin-finance"><span class="eyebrow">FECHAMENTO FINANCEIRO</span><h2>Técnicos do Squad</h2><p>Layout responsivo sem rolagem horizontal. Use o checkbox <b>Desconsiderar na quantidade de técnicos do grupo</b> em desligamentos/experiência: os dados continuam no total, mas o técnico sai apenas do denominador financeiro da Base do Squad. Abra <b>Detalhes</b> para auditar os modelos.</p><div id="financeTechnicianRows" class="finance-tech-list"></div><div class="admin-actions finance-report-actions"><span class="muted" id="financeAdminHint">Selecione um mês.</span><button class="btn secondary" id="exportFinanceExcelBtn">↓ Relatório Excel</button><button class="btn secondary" id="exportFinancePdfBtn">↓ Relatório PDF</button><button class="btn primary" id="saveFinanceTechniciansBtn">Salvar valores individuais</button></div></article>
           <article class="card admin-card super-only finance-super-card admin-section admin-finance"><span class="eyebrow">ADMIN GERAL</span><h2>Minha comissão do mês</h2><p>A comissão de Admin Geral é informada manualmente como valor total e não participa das regras dos Squads.</p><div class="admin-form"><label><span>Comissão final (R$)</span><input id="superAdminCommissionInput" type="number" min="0" step="0.01"></label><label><span>Observação</span><input id="superAdminCommissionNotes" type="text" placeholder="Opcional"></label></div><div class="admin-actions"><span class="muted" id="superAdminCommissionPeriod">Selecione um mês.</span><button class="btn primary" id="saveSuperAdminCommissionBtn">Salvar minha comissão</button></div></article>
 
-          <article class="card admin-card full admin-section admin-appearance"><span class="eyebrow">APARÊNCIA • SOMENTE ADMIN</span><h2>Tema e ambientação do Squad</h2><p>Cada Squad pode ter seu próprio fundo, cores, identidade visual, favicon e trilha sonora ambiente. A campanha do setor “Casa do Dragão” permanece fixa na lateral.</p><div class="appearance-actions"><button class="btn primary" id="adminThemeBtn">✦ Personalizar tema</button><button class="btn secondary" id="importThemeBtn">Importar tema JSON</button><button class="btn secondary" id="exportThemeBtn">Exportar tema</button></div><div class="theme-preview"><div><small>ATUAL</small><strong id="themeName">Vermithor</strong></div></div></article>
+          <article class="card admin-card full admin-section admin-appearance"><span class="eyebrow">APARÊNCIA • SOMENTE ADMIN</span><h2>Tema e ambientação do Squad</h2><p>Cada Squad pode ter paletas próprias para modo claro e escuro, mantendo fundo, identidade visual, favicon e trilha sonora. A escolha Light/Dark é individual e fica salva no navegador de cada usuário.</p><div class="appearance-actions"><button class="btn primary" id="adminThemeBtn">✦ Personalizar tema</button><button class="btn secondary" id="importThemeBtn">Importar tema JSON</button><button class="btn secondary" id="exportThemeBtn">Exportar tema</button></div><div class="theme-preview"><div><small>ATUAL</small><strong id="themeName">Vermithor</strong></div><span class="theme-mode-preview" id="themePaletteModeLabel">Modo escuro</span></div></article>
         </div>
       </section>
     </main>
@@ -561,7 +572,7 @@
 
   <div id="importModal" class="modal" aria-hidden="true"><div class="modal-card"><button class="modal-close" data-close="importModal">×</button><div class="modal-icon">↑</div><h2>Importar CSV</h2><p id="importMessage">Selecione o CSV de chamados finalizados.</p><div class="import-progress"><i id="importProgress"></i></div><div class="import-details" id="importDetails"></div><div id="csvPeriodBlock" class="csv-period hidden"><label><span>Mês a importar</span><select id="csvMonthSelect"></select></label><small>O escopo segue o seletor atual: um Squad específico ou Todos os Squads para o Admin geral.</small></div><div class="modal-actions"><button class="btn secondary" data-close="importModal">Cancelar</button><button class="btn secondary" id="chooseFileBtn">Escolher CSV</button><button class="btn primary hidden" id="confirmCsvImportBtn">Importar mês</button></div></div></div>
 
-  <div id="themeModal" class="modal" aria-hidden="true"><div class="modal-card theme-modal"><button class="modal-close" data-close="themeModal">×</button><span class="eyebrow">TEMA DO SQUAD</span><h2>Personalizar experiência</h2><p>Somente administradores podem alterar esta configuração. Fundo, favicon e trilha acompanham o tema do Squad; a campanha do setor na lateral não é afetada.</p><div class="preset-grid"><button class="preset" data-theme="vermithor"><i class="swatch fire"></i><span>Vermithor</span></button><button class="preset" data-theme="soften"><i class="swatch soften"></i><span>Soften</span></button><button class="preset" data-theme="neon"><i class="swatch neon"></i><span>Neon</span></button><button class="preset" data-theme="clean"><i class="swatch clean"></i><span>Claro</span></button></div><div class="custom-theme"><label><span>Cor principal</span><input id="accentColor" type="color" value="#f0a33a"></label><label><span>Cor secundária</span><input id="secondaryColor" type="color" value="#ef5a29"></label><label><span>Nome do tema</span><input id="campaignNameInput" type="text"></label><label><span>Frase do tema</span><input id="campaignTaglineInput" type="text"></label><label><span>Imagem de fundo</span><input id="backgroundFile" type="file" accept="image/*"></label><button class="link-btn" id="removeBg">Remover fundo personalizado</button><div class="favicon-theme-row"><div><span>Favicon do tema</span><small>Ícone exibido na aba do navegador. Prefira uma imagem quadrada.</small></div><div class="favicon-theme-actions"><span class="favicon-preview"><img id="faviconPreview" src="assets/favicon-dragon.png" alt="Prévia do favicon"></span><button class="btn secondary compact" id="chooseFaviconBtn" type="button">Escolher ícone</button><input id="faviconFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><button class="link-btn" id="resetFavicon" type="button">Usar dragão padrão</button></div></div><div class="soundtrack-theme-row"><div class="soundtrack-theme-copy"><span>Trilha sonora do tema</span><small>Use MP3, OGG, WAV, M4A ou AAC de até 3 MB. Prefira material original, licenciado ou royalty-free.</small></div><div class="soundtrack-theme-config"><label class="soundtrack-name-field"><span>Nome</span><input id="soundtrackNameInput" type="text" placeholder="Ex.: Fogo & Conquista"></label><div class="soundtrack-buttons"><button class="btn secondary compact" id="chooseSoundtrackBtn" type="button">♫ Escolher áudio</button><input id="soundtrackFile" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/wav,audio/x-wav,audio/mp4,audio/aac,.mp3,.ogg,.wav,.m4a,.aac" hidden><button class="btn secondary compact" id="previewSoundtrackBtn" type="button">▶ Ouvir trilha</button></div><div class="soundtrack-volume-config"><span>Volume padrão</span><input id="soundtrackDefaultVolume" type="range" min="0" max="100" step="1" value="24"><strong id="soundtrackDefaultVolumeLabel">24%</strong></div><div class="soundtrack-links"><button class="link-btn" id="resetSoundtrack" type="button">Usar trilha original</button><button class="link-btn danger-link" id="removeSoundtrack" type="button">Remover trilha</button></div></div></div></div></div></div>
+  <div id="themeModal" class="modal" aria-hidden="true"><div class="modal-card theme-modal"><button class="modal-close" data-close="themeModal">×</button><span class="eyebrow">TEMA DO SQUAD</span><h2>Personalizar experiência</h2><p>Somente administradores alteram as paletas do Squad. Cores claras e escuras são salvas juntas no JSON; fundo, favicon e trilha continuam compartilhados entre os dois modos.</p><div class="theme-mode-editor"><div><span>Paleta em edição</span><strong>Alterne para ajustar as cores do modo desejado.</strong></div><div class="theme-mode-segmented" role="group" aria-label="Paleta do tema"><button type="button" data-theme-edit-mode="light"><span>☀</span> Claro</button><button type="button" data-theme-edit-mode="dark"><span>☾</span> Escuro</button></div></div><div class="preset-grid"><button class="preset" data-theme="vermithor"><i class="swatch fire"></i><span>Vermithor</span></button><button class="preset" data-theme="soften"><i class="swatch soften"></i><span>Soften</span></button><button class="preset" data-theme="neon"><i class="swatch neon"></i><span>Neon</span></button><button class="preset" data-theme="clean"><i class="swatch clean"></i><span>Claro</span></button></div><div class="custom-theme"><label><span>Cor principal</span><input id="accentColor" type="color" value="#f0a33a"></label><label><span>Cor secundária</span><input id="secondaryColor" type="color" value="#ef5a29"></label><label><span>Nome do tema</span><input id="campaignNameInput" type="text"></label><label><span>Frase do tema</span><input id="campaignTaglineInput" type="text"></label><label><span>Imagem de fundo</span><input id="backgroundFile" type="file" accept="image/*"></label><button class="link-btn" id="removeBg">Remover fundo personalizado</button><div class="favicon-theme-row"><div><span>Favicon do tema</span><small>Ícone exibido na aba do navegador. Prefira uma imagem quadrada.</small></div><div class="favicon-theme-actions"><span class="favicon-preview"><img id="faviconPreview" src="assets/favicon-dragon.png" alt="Prévia do favicon"></span><button class="btn secondary compact" id="chooseFaviconBtn" type="button">Escolher ícone</button><input id="faviconFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><button class="link-btn" id="resetFavicon" type="button">Usar dragão padrão</button></div></div><div class="soundtrack-theme-row"><div class="soundtrack-theme-copy"><span>Trilha sonora do tema</span><small>Use MP3, OGG, WAV, M4A ou AAC de até 3 MB. Prefira material original, licenciado ou royalty-free.</small></div><div class="soundtrack-theme-config"><label class="soundtrack-name-field"><span>Nome</span><input id="soundtrackNameInput" type="text" placeholder="Ex.: Fogo & Conquista"></label><div class="soundtrack-buttons"><button class="btn secondary compact" id="chooseSoundtrackBtn" type="button">♫ Escolher áudio</button><input id="soundtrackFile" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/wav,audio/x-wav,audio/mp4,audio/aac,.mp3,.ogg,.wav,.m4a,.aac" hidden><button class="btn secondary compact" id="previewSoundtrackBtn" type="button">▶ Ouvir trilha</button></div><div class="soundtrack-volume-config"><span>Volume padrão</span><input id="soundtrackDefaultVolume" type="range" min="0" max="100" step="1" value="24"><strong id="soundtrackDefaultVolumeLabel">24%</strong></div><div class="soundtrack-links"><button class="link-btn" id="resetSoundtrack" type="button">Usar trilha original</button><button class="link-btn danger-link" id="removeSoundtrack" type="button">Remover trilha</button></div></div></div></div></div></div>
 
 
   <div id="userModal" class="modal" aria-hidden="true" data-static-backdrop="true"><div class="modal-card user-modal"><button class="modal-close" data-close="userModal">×</button><span class="eyebrow">NOVO ACESSO</span><h2>Criar usuário</h2><p id="userModalHint">Defina o acesso e o vínculo com o Squad.</p><form id="createUserForm" class="user-form">
@@ -627,6 +638,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.23.2"></script>
+  <script src="app.js?v=2.24.0"></script>
 </body>
 </html>
