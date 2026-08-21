@@ -607,9 +607,23 @@ function fillIndicatorSelect(el,monthIds,selected){
   el.innerHTML=monthIds.map(id=>`<option value="${id}" ${id===selected?'selected':''}>${escapeHtml(monthLabelFromId(id))}</option>`).join('');
   el.disabled=!monthIds.length;
 }
+function renderIndicatorSafely(label,renderFn,targetIds=[]){
+  try{
+    renderFn();
+    return true;
+  }catch(error){
+    console.error(`[Indicadores] Falha ao renderizar ${label}:`,error);
+    (targetIds||[]).forEach(id=>{
+      const el=$('#'+id);
+      if(el)el.innerHTML='<div class="chart-empty">Não foi possível renderizar este gráfico. Atualize a página e tente novamente.</div>';
+    });
+    return false;
+  }
+}
+
 function renderIndicators(){
   if(!isSuperAdmin()||!$('#view-indicators'))return;syncAnalysisDateControls();const squads=indicatorScopeSquads(),rangeIds=analysisMonthIds().filter(id=>indicatorMonthIds(squads).includes(id));
-  $('#indicatorScopeTitle').textContent=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;$('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;$('#indicatorPeriodLabel').textContent=analysisRangeLabel();renderIndicatorSquadOverview(rangeIds);renderIndicatorOrgDailyComparison(rangeIds);
+  $('#indicatorScopeTitle').textContent=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;$('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;$('#indicatorPeriodLabel').textContent=analysisRangeLabel();renderIndicatorSafely('consolidado por Squad',()=>renderIndicatorSquadOverview(rangeIds),['indicatorSquadAttendanceChart','indicatorSquadEvaluationChart']);renderIndicatorSafely('ritmo diário do setor',()=>renderIndicatorOrgDailyComparison(rangeIds),['indicatorOrgDailyChart']);
   if(!rangeIds.length){['indicatorStatusChart','indicatorMonthlyChart','indicatorWeeklyChart','indicatorHistoryAttChart','indicatorHistoryDailyAvgChart','indicatorHistoryEvalChart'].forEach(id=>{if($('#'+id))$('#'+id).innerHTML='<div class="chart-empty">Não há dados no período selecionado.</div>';});if($('#indicatorInsights'))$('#indicatorInsights').innerHTML='<div class="insight-item"><strong>Sem dados</strong><small>Escolha um período com dados importados.</small></div>';return;}
   const palette=['var(--accent)','var(--success)','#78b7ff','#ef5a29','#b18cff'],statusItems=[];let totalAtt=0,totalNotes5=0,totalEval=0,totalWorkedDays=0,totalPoints=0,totalTechRecords=0,totalAbove=0,totalBelow=0,squadMonthHits=0,squadMonthTotal=0;const distinctTechs=new Set(),techTotals=new Map();
   const dailySeries=[];
@@ -618,11 +632,11 @@ function renderIndicators(){
   });
   rangeIds.forEach(id=>{let above=0,below=0;squads.forEach(s=>{const m=s.months?.[id];if(!m)return;(m.technicians||[]).forEach(t=>{if(String(t.status).toUpperCase()==='ACIMA')above++;else if(String(t.status).toUpperCase()==='ABAIXO')below++;});});statusItems.push({label:monthLabelFromId(id),above,below});});
   const totalHours=totalWorkedDays*8,totalMinutes=totalHours*60,attPerHour=totalHours?totalAtt/totalHours:0,attPerMinute=totalMinutes?totalAtt/totalMinutes:0,aboveRatio=(totalAbove+totalBelow)?totalAbove/(totalAbove+totalBelow):0,excellence=totalAtt?totalNotes5/totalAtt:0,avgPointsPerTech=totalTechRecords?totalPoints/totalTechRecords:0;$('#indicatorAttPerHour').textContent=fmtNum(attPerHour);$('#indicatorAttPerMinute').textContent=`${fmtNum(attPerMinute)} por minuto`;$('#indicatorWorkedHours').textContent=`${fmtInt(totalHours)} horas consideradas entre ${analysisRangeLabel()}`;$('#indicatorAboveRatio').textContent=fmtPct(aboveRatio);$('#indicatorAboveCount').textContent=`${fmtInt(totalAbove)} acima • ${fmtInt(totalBelow)} abaixo`;$('#indicatorTechVolume').textContent=`${fmtInt(totalTechRecords)} técnicos com produção no período`;const periodAbove=squadMonthHits,periodBelow=Math.max(0,squadMonthTotal-squadMonthHits),periodStatus=periodAbove>periodBelow?'ACIMA':periodBelow>periodAbove?'ABAIXO':'EMPATE';$('#indicatorPeriodStatus').textContent=periodStatus;$('#indicatorPeriodStatus').className=periodStatus==='ACIMA'?'period-status-above':periodStatus==='ABAIXO'?'period-status-below':'period-status-tie';$('#indicatorPeriodStatusDetail').textContent=`${fmtInt(periodAbove)} equipes acima • ${fmtInt(periodBelow)} abaixo`;$('#indicatorPeriodStatusSupport').textContent=`Status calculado com os dados do período diário selecionado.`;$('#indicatorExcellence').textContent=fmtPct(excellence);$('#indicatorAvgPoints').textContent=`${fmtNum(avgPointsPerTech)} pts simulados médios no período`;$('#indicatorExcellenceSupport').textContent=`${fmtInt(distinctTechs.size)} técnicos únicos no período`;
-  renderTechnicianStatusMatrix($('#indicatorStatusChart'),squads,rangeIds);
-  const dateLabels=analysisDateLabels(),evalSeries=dailySeries.map(x=>({name:`Squad ${x.squad}`,color:x.color,values:x.evalValues}));renderIndicatorLineChart($('#indicatorMonthlyChart'),dateLabels.map(x=>x.label),evalSeries,{maxValue:100,percent:true,height:340});$('#indicatorMonthlyLegend').textContent='Taxa diária de avaliações recebidas por Squad dentro do calendário selecionado.';
-  const weekly=weeklyBucketsForAnalysis(squads);renderIndicatorLineChart($('#indicatorWeeklyChart'),weekly.labels,weekly.series,{maxValue:100,percent:true});$('#indicatorWeeklyNote').textContent=`Semanas construídas entre ${analysisRangeLabel()} • avaliações totais ÷ atendimentos.`;
+  renderIndicatorSafely('status oficial por competência',()=>renderTechnicianStatusMatrix($('#indicatorStatusChart'),squads,rangeIds),['indicatorStatusChart']);
+  const dateLabels=analysisDateLabels(),evalSeries=dailySeries.map(x=>({name:`Squad ${x.squad}`,color:x.color,values:x.evalValues}));renderIndicatorSafely('% de avaliação por grupo',()=>{renderIndicatorLineChart($('#indicatorMonthlyChart'),dateLabels.map(x=>x.label),evalSeries,{maxValue:100,percent:true,height:340});$('#indicatorMonthlyLegend').textContent='Taxa diária de avaliações recebidas por Squad dentro do calendário selecionado.';},['indicatorMonthlyChart']);
+  const weekly=weeklyBucketsForAnalysis(squads);renderIndicatorSafely('avaliação semanal por grupo',()=>{renderIndicatorLineChart($('#indicatorWeeklyChart'),weekly.labels,weekly.series,{maxValue:100,percent:true});$('#indicatorWeeklyNote').textContent=`Semanas construídas entre ${analysisRangeLabel()} • avaliações totais ÷ atendimentos.`;},['indicatorWeeklyChart']);
   const techList=[...techTotals.values()],bestTech=techList.sort((a,b)=>safe(b.points)-safe(a.points))[0];let bestSquad={code:'—',score:-1};squads.forEach(s=>{const rows=periodTechniciansForSquad(s),tot=deriveTotals(rows);if(tot.evalPct>bestSquad.score)bestSquad={code:s.code,score:tot.evalPct};});const strongestMonth=[...statusItems].sort((a,b)=>(b.above-b.below)-(a.above-a.below))[0],weakestMonth=[...statusItems].sort((a,b)=>(a.above-a.below)-(b.above-b.below))[0];$('#indicatorInsights').innerHTML=`<div class="insight-item"><strong>Squad destaque</strong><small>${bestSquad.code==='—'?'Sem base suficiente.':`Squad ${bestSquad.code} lidera em % de avaliação com ${fmtPct(bestSquad.score)} no período.`}</small></div><div class="insight-item"><strong>Técnico destaque do período</strong><small>${bestTech?`${escapeHtml(titleWords(bestTech.name))} • Squad ${escapeHtml(bestTech.squad)} • ${fmtNum(bestTech.points)} pts simulados.`:'Sem dados suficientes.'}</small></div><div class="insight-item"><strong>Status mensal oficial</strong><small>${strongestMonth?`${escapeHtml(strongestMonth.label)} teve o melhor saldo entre ACIMA e ABAIXO dentre as competências tocadas pelo filtro.`:'Sem dados suficientes.'}</small></div><div class="insight-item"><strong>Ponto de atenção</strong><small>${weakestMonth?`${escapeHtml(weakestMonth.label)} teve o menor saldo mensal oficial dentro do período.`:'Sem dados suficientes.'}</small></div>`;
-  renderIndicatorFinanceRanking(squads,rangeIds);renderIndicatorHistoricalAnalytics(squads,rangeIds);
+  renderIndicatorSafely('ranking financeiro',()=>renderIndicatorFinanceRanking(squads,rangeIds),['indicatorFinanceRanking']);renderIndicatorSafely('histórico analítico',()=>renderIndicatorHistoricalAnalytics(squads,rangeIds),['indicatorHistoryAttChart','indicatorHistoryDailyAvgChart','indicatorHistoryEvalChart']);
 }
 
 
@@ -945,6 +959,24 @@ function renderHistoryAttendanceChart(el,labels,totals,series){
   const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive"><span class="chart-legend-total"><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
   el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;--chart-height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
   bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[{name:'Total geral',value:totals?.[i],text:fmtInt(totals?.[i]),color:'var(--accent)'},...validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:fmtInt(s.values[i]),color:s.color})]});
+}
+
+function buildStatusMatrix(squads,rangeIds){
+  const map=new Map();
+  const multi=(squads||[]).length>1;
+  (squads||[]).forEach(squad=>{
+    (rangeIds||[]).forEach(id=>{
+      const m=squad?.months?.[id];if(!m)return;
+      (m.technicians||[]).forEach(t=>{
+        const key=`${squad.code}|${historyTechKey(t)}`;
+        if(!map.has(key))map.set(key,{key,name:titleWords(t.name),squad:squad.code,statuses:{}});
+        map.get(key).statuses[id]=String(t.status||'').toUpperCase();
+      });
+    });
+  });
+  return [...map.values()]
+    .sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR'))
+    .map(x=>({...x,label:multi?`Squad ${x.squad} • ${x.name}`:x.name}));
 }
 
 function renderTechnicianStatusMatrix(el,squads,rangeIds){
