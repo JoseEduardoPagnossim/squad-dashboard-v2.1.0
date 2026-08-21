@@ -1,4 +1,18 @@
-# Soften Performance Hub V2.21.0
+# Soften Performance Hub V2.22.0
+
+## Novidades da V2.22.0 — interface premium e seletor de data digitável
+
+- Refatoração visual inspirada em **Shadcn UI / Tailwind**, preservando a aplicação estática existente e toda a lógica de negócio.
+- Cards com raio de 16 px, bordas de baixo contraste, sombras suaves, paddings maiores e hierarquia tipográfica revisada.
+- Sidebar, cabeçalho, KPIs, rankings, tabelas, dialogs, formulários, gráficos e telas administrativas receberam a nova camada visual.
+- O card **Olá, Técnico** mantém a imagem/campanha configurada por tema e ganhou um ranking flutuante mais leve.
+- Atalhos **Hoje / 7 dias / 15 dias / Este mês / Mês anterior** agora funcionam como segmented control.
+- Filtros de data visíveis agora são campos de texto `DD/MM/AAAA`, permitindo digitação direta pelo teclado.
+- O botão de calendário possui área clicável própria e abre o seletor nativo com `showPicker()` quando suportado.
+- A sincronização continua usando ISO (`AAAA-MM-DD`) internamente; nenhuma regra de intervalo diário foi alterada.
+- As variáveis de tema (`accent`, `secondary`, `bg`, `bg2`, `panel`, `text`, background, favicon e campanha) continuam sendo aplicadas pelo mesmo JSON e pelas mesmas rotinas existentes.
+- **Nenhuma migração SQL ou Edge Function nova é necessária.**
+
 
 ## Novidades da V2.21.0 — calendário diário
 

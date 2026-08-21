@@ -218,8 +218,12 @@
     $('#themeJsonInput').addEventListener('change',handleThemeJson);
     $('#exportThemeBtn').addEventListener('click',exportTheme);
     $('#removeBg').addEventListener('click',()=>{if(!isAdmin())return;state.theme.background=null;state.theme.preset='custom';document.documentElement.style.setProperty('--hero-img','none');saveTheme();toast('Fundo removido.');});
-    ['analysisStartDate','indicatorStartDate'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('change',e=>handleAnalysisDateInput('start',e.target.value));});
-    ['analysisEndDate','indicatorEndDate'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('change',e=>handleAnalysisDateInput('end',e.target.value));});
+    [
+      ['analysisStartDate','analysisStartDatePicker','start'],
+      ['analysisEndDate','analysisEndDatePicker','end'],
+      ['indicatorStartDate','indicatorStartDatePicker','start'],
+      ['indicatorEndDate','indicatorEndDatePicker','end']
+    ].forEach(([textId,pickerId,which])=>bindAnalysisDateField(textId,pickerId,which));
     $$('[data-analysis-preset]').forEach(btn=>btn.addEventListener('click',()=>setAnalysisPreset(btn.dataset.analysisPreset)));
     if($('#openAllTechniciansChartBtn'))$('#openAllTechniciansChartBtn').addEventListener('click',()=>openAllTechniciansChart('indicator'));
     if($('#openAllTechniciansChartTeamBtn'))$('#openAllTechniciansChartTeamBtn').addEventListener('click',()=>openAllTechniciansChart('team'));
@@ -320,6 +324,13 @@
 
   function isoDateParts(year,month,day){return `${String(year).padStart(4,'0')}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`}
   function parseIsoAnalysisDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return null;const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));return Number.isNaN(d.getTime())?null:d}
+  function isoToBrDate(value){const d=parseIsoAnalysisDate(value);return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''}
+  function maskBrDate(value){const digits=String(value||'').replace(/\D/g,'').slice(0,8);if(digits.length<=2)return digits;if(digits.length<=4)return `${digits.slice(0,2)}/${digits.slice(2)}`;return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`}
+  function brDateToIso(value){const m=String(value||'').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return null;const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]),d=new Date(year,month-1,day);if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return null;return isoDateParts(year,month,day)}
+  function setDateFieldError(textId,message=''){const field=$(`[data-date-field="${textId}"]`),error=$('#'+textId+'Error'),input=$('#'+textId);if(field)field.classList.toggle('invalid',!!message);if(input)input.setAttribute('aria-invalid',message?'true':'false');if(error)error.textContent=message}
+  function openNativeDatePicker(picker){if(!picker)return;try{if(typeof picker.showPicker==='function')picker.showPicker();else picker.click();}catch(err){try{picker.click()}catch(_){}}}
+  function commitAnalysisTextDate(textId,which){const input=$('#'+textId);if(!input)return false;const iso=brDateToIso(input.value);if(!iso){setDateFieldError(textId,'Informe uma data válida.');return false}setDateFieldError(textId);handleAnalysisDateInput(which,iso);return true}
+  function bindAnalysisDateField(textId,pickerId,which){const input=$('#'+textId),picker=$('#'+pickerId),button=$(`[data-date-picker-for="${textId}"]`);if(!input||!picker)return;input.addEventListener('input',()=>{input.value=maskBrDate(input.value);setDateFieldError(textId)});input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitAnalysisTextDate(textId,which)}else if(e.key==='Escape'){e.preventDefault();syncAnalysisDateControls();input.blur()}});input.addEventListener('blur',()=>{if(input.value.trim())commitAnalysisTextDate(textId,which);else syncAnalysisDateControls()});picker.addEventListener('change',()=>{if(!picker.value)return;setDateFieldError(textId);handleAnalysisDateInput(which,picker.value)});if(button)button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const current=which==='start'?state.analysisStartDate:state.analysisEndDate;picker.value=current||'';openNativeDatePicker(picker)});}
   function localIsoDate(d){return isoDateParts(d.getFullYear(),d.getMonth()+1,d.getDate())}
   function monthIdForDate(value){const d=parseIsoAnalysisDate(value);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`:null}
   function addCalendarDays(value,delta){const d=parseIsoAnalysisDate(value);if(!d)return value;d.setDate(d.getDate()+delta);return localIsoDate(d)}
@@ -347,7 +358,9 @@
     if(state.squadCode==='all'||!state.analysisEndDate)return;const id=monthIdForDate(state.analysisEndDate);if(id&&currentMonths()[id]){state.currentId=id;chooseDefaultTech();}
   }
   function syncAnalysisDateControls(){
-    const bounds=importedDateBounds();['analysisStartDate','indicatorStartDate'].forEach(id=>{const el=$('#'+id);if(!el)return;el.value=state.analysisStartDate||'';el.min=bounds.min||'';el.max=bounds.max||'';});['analysisEndDate','indicatorEndDate'].forEach(id=>{const el=$('#'+id);if(!el)return;el.value=state.analysisEndDate||'';el.min=bounds.min||'';el.max=bounds.max||'';});
+    const bounds=importedDateBounds();
+    [['analysisStartDate','analysisStartDatePicker'],['indicatorStartDate','indicatorStartDatePicker']].forEach(([textId,pickerId])=>{const text=$('#'+textId),picker=$('#'+pickerId);if(text)text.value=isoToBrDate(state.analysisStartDate);if(picker){picker.value=state.analysisStartDate||'';picker.min=bounds.min||'';picker.max=bounds.max||'';}setDateFieldError(textId);});
+    [['analysisEndDate','analysisEndDatePicker'],['indicatorEndDate','indicatorEndDatePicker']].forEach(([textId,pickerId])=>{const text=$('#'+textId),picker=$('#'+pickerId);if(text)text.value=isoToBrDate(state.analysisEndDate);if(picker){picker.value=state.analysisEndDate||'';picker.min=bounds.min||'';picker.max=bounds.max||'';}setDateFieldError(textId);});
     $$('[data-analysis-preset]').forEach(b=>b.classList.toggle('active',b.dataset.analysisPreset===state.analysisPreset));
   }
   function handleAnalysisDateInput(which,value){

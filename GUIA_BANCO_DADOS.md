@@ -249,3 +249,7 @@ A partir da V2.20.3, o status `active=false` controla o **acesso** do usuário, 
 ## V2.20.4 — composição da média da competência
 
 Ao reimportar uma competência aberta, o sistema atualiza os técnicos presentes no CSV e preserva o último consolidado dos técnicos que já possuíam produção naquele mesmo mês, mas deixaram de aparecer na extração posterior por inativação ou movimentação. Esses técnicos continuam compondo as referências de pontuação do mês. Linhas-resumo não são preservadas. A mudança é apenas de frontend/importação e não exige SQL ou Edge Function.
+
+## V2.22.0 — atualização somente de frontend
+
+A V2.22.0 altera somente HTML, JavaScript de interação do seletor de data e CSS visual. Não cria colunas, tabelas, políticas ou funções novas no Supabase. Se a `MIGRACAO_V2.21.0.sql` já foi executada, não existe SQL adicional para esta versão.
