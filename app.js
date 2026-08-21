@@ -517,7 +517,29 @@
   }
 
   function renderChart(t,m,periodMode=false){
-    const data=(periodMode?(t.daily||[]):(t.daily||[]).filter(d=>d.day<=Math.max(m.latestDay||31,1)&&!d.off)).filter(d=>!d.off);const w=720,h=230,p={l:34,r:16,t:15,b:30};const maxVal=Math.max(5,...data.flatMap(d=>[safe(d.att),safe(d.notes5)]));const x=i=>p.l+(data.length<=1?(w-p.l-p.r)/2:i*(w-p.l-p.r)/(data.length-1));const y=v=>p.t+(h-p.t-p.b)-(safe(v)/maxVal)*(h-p.t-p.b);const points=key=>data.map((d,i)=>`${x(i)},${y(d[key])}`).join(' ');const area=data.length?`${p.l},${h-p.b} ${points('att')} ${x(Math.max(0,data.length-1))},${h-p.b}`:'';const yTicks=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=Math.round(maxVal*f);return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="2" y="${yy+4}" class="axis-label">${v}</text>`}).join('');const step=Math.max(1,Math.ceil(data.length/8)),xLabels=data.map((d,i)=>i%step===0?`<text x="${x(i)-10}" y="${h-7}" class="axis-label">${periodMode?String(d.date||'').slice(5).replace('-','/'):String(d.day).padStart(2,'0')}</text>`:'').join('');const circles=(key,cls)=>data.map((d,i)=>`<circle cx="${x(i)}" cy="${y(safe(d[key]))}" r="4" class="chart-point" fill="${cls==='att'?'var(--accent)':'var(--success)'}"><title>${periodMode?(d.date||'Dia'):`Dia ${d.day}`}: ${safe(d[key])}</title></circle>`).join('');$('#dailyChart').innerHTML=data.length?`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="attGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>${yTicks}<polygon points="${area}" class="att-area"/><polyline points="${points('att')}" class="att-line"/><polyline points="${points('notes5')}" class="note-line"/>${circles('att','att')}${circles('notes5','note')}${xLabels}</svg>`:'<div class="muted">Sem lançamentos diários disponíveis no período.</div>';
+    const el=$('#dailyChart');if(!el)return;
+    const data=(periodMode?(t.daily||[]):(t.daily||[]).filter(d=>d.day<=Math.max(m.latestDay||31,1)&&!d.off)).filter(d=>!d.off);
+    if(!data.length){el.innerHTML='<div class="muted">Sem lançamentos diários disponíveis no período.</div>';return;}
+    el.classList.add('interactive-chart','chart-modern','daily-premium-chart');
+    const chartId=nextChartRenderId('daily'),w=720,h=230,p={l:34,r:16,t:15,b:30};
+    const maxVal=Math.max(5,...data.flatMap(d=>[safe(d.att),safe(d.notes5)]));
+    const x=i=>p.l+(data.length<=1?(w-p.l-p.r)/2:i*(w-p.l-p.r)/(data.length-1));
+    const y=v=>p.t+(h-p.t-p.b)-(safe(v)/maxVal)*(h-p.t-p.b),baseline=h-p.b;
+    const attPoints=data.map((d,i)=>({x:x(i),y:y(d.att),index:i,value:safe(d.att)}));
+    const notePoints=data.map((d,i)=>({x:x(i),y:y(d.notes5),index:i,value:safe(d.notes5)}));
+    const yTicks=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=Math.round(maxVal*f);return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="2" y="${yy+4}" class="axis-label">${v}</text>`}).join('');
+    const step=Math.max(1,Math.ceil(data.length/8));
+    const labels=data.map(d=>periodMode?String(d.date||'').slice(5).replace('-','/'):String(d.day).padStart(2,'0'));
+    const xLabels=labels.map((label,i)=>i%step===0?`<text x="${x(i)-10}" y="${h-7}" class="axis-label">${escapeHtml(label)}</text>`:'').join('');
+    const zones=data.map((_,i)=>{const span=data.length<=1?(w-p.l-p.r):(w-p.l-p.r)/(data.length-1),zx=data.length<=1?p.l:Math.max(p.l,x(i)-span/2),zw=data.length<=1?w-p.l-p.r:(i===0||i===data.length-1?span/2:span);return `<rect x="${zx}" y="${p.t}" width="${zw}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`}).join('');
+    const rulers=data.map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${baseline}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
+    const dots=(points,color,seriesIndex)=>points.map(pt=>`<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="${color}" class="chart-point chart-series-shape" style="--series-color:${color}" data-series-index="${seriesIndex}" data-point-index="${pt.index}"></circle>`).join('');
+    const defs=`<defs>${svgSeriesGradient(`${chartId}-att`,'var(--accent)',.24)}${svgSeriesGradient(`${chartId}-note`,'var(--success)',.12)}</defs>`;
+    el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${defs}${yTicks}<path d="${smoothAreaPath(attPoints,baseline)}" fill="url(#${chartId}-att)" class="chart-series-area"></path><path d="${smoothAreaPath(notePoints,baseline)}" fill="url(#${chartId}-note)" class="chart-series-area secondary-area"></path><path d="${smoothSvgPath(attPoints)}" class="att-line chart-series-line chart-series-shape" style="--series-color:var(--accent)" data-series-index="0"></path><path d="${smoothSvgPath(notePoints)}" class="note-line chart-series-line chart-series-shape" style="--series-color:var(--success)" data-series-index="1"></path>${dots(attPoints,'var(--accent)',0)}${dots(notePoints,'var(--success)',1)}${rulers}${zones}${xLabels}</svg>`;
+    bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[
+      {name:'Atendimentos',value:safe(data[i]?.att),text:fmtInt(data[i]?.att),color:'var(--accent)'},
+      {name:'Notas 5',value:safe(data[i]?.notes5),text:fmtInt(data[i]?.notes5),color:'var(--success)'}
+    ]});
   }
   function renderDaily(t,m,periodMode=false){const rows=(periodMode?(t.daily||[]):(t.daily||[]).filter(d=>d.day<=m.latestDay)).filter(d=>!d.off&&(d.att||d.notes5||d.notes4||d.notes3||d.notes2||d.notes1)).sort((a,b)=>periodMode?String(b.date).localeCompare(String(a.date)):b.day-a.day);const avgAtt=rows.length?rows.reduce((sum,d)=>sum+safe(d.att),0)/rows.length:0;$('#dailySummary').textContent=`${analysisRangeLabel()} • média ${avgAtt.toLocaleString('pt-BR',{maximumFractionDigits:1})} atend./dia`;$('#dailyRows').innerHTML=rows.map(d=>{const totalEval=safe(d.notes5)+safe(d.notes4)+safe(d.notes3)+safe(d.notes2)+safe(d.notes1),pct=d.att?totalEval/safe(d.att):0,goal=periodMode&&m?((currentTech()?.goalAtt||0)/Math.max(1,businessDaysMonFri(m.year,m.month))):avgAtt,pace=safe(d.att)>=goal?'good':safe(d.att)>=goal*.72?'mid':'low',label=pace==='good'?'FORTE':pace==='mid'?'OK':'ATENÇÃO',labelDate=periodMode?parseIsoAnalysisDate(d.date)?.toLocaleDateString('pt-BR'):`${String(d.day).padStart(2,'0')}/${String(m.month).padStart(2,'0')}`;return `<tr><td><strong>${labelDate}</strong></td><td>${fmtInt(d.att)}</td><td>${fmtInt(d.notes5)}</td><td>${fmtPct(pct)}</td><td><span class="pace ${pace}">${label}</span></td></tr>`}).join('')||'<tr><td colspan="5" class="muted">Nenhum lançamento diário encontrado no período.</td></tr>'}
   function renderMiniRankingPeriod(list,selected){$('#miniRanking').innerHTML=(list||[]).slice(0,8).map(t=>`<div class="rank-row ${samePersonName(t.name,selected)?'selected':''}"><span class="rank-pos">${t.periodRank||'—'}</span><div><strong>${escapeHtml(shortName(t.name))}</strong><small>${fmtInt(t.att)} atend. • ${fmtInt(t.notes5)} notas 5</small></div><span class="rank-score">${fmtNum(t.periodPoints)} pts*</span></div>`).join('')||'<div class="muted">Sem dados no período.</div>';}
@@ -764,6 +786,40 @@ function renderIndicatorHistoricalAnalytics(squads,rangeIds){
   renderIndicatorLineChart($('#indicatorHistoryDailyAvgChart'),data.labels,data.daily,{maxValue:null,percent:false,decimals:1});
   renderIndicatorLineChart($('#indicatorHistoryEvalChart'),data.labels,data.evaluation,{maxValue:null,percent:true});
 }
+let chartRenderSequence=0;
+function nextChartRenderId(prefix='chart'){
+  chartRenderSequence+=1;
+  return `${prefix}-${chartRenderSequence}`;
+}
+function splitChartPointSegments(values,xFn,yFn){
+  const segments=[];let current=[];
+  (values||[]).forEach((value,index)=>{
+    if(value==null||Number.isNaN(Number(value))){if(current.length){segments.push(current);current=[]}return;}
+    current.push({x:xFn(index),y:yFn(value),index,value:safe(value)});
+  });
+  if(current.length)segments.push(current);
+  return segments;
+}
+function smoothSvgPath(points){
+  if(!points?.length)return'';
+  if(points.length===1)return `M ${points[0].x} ${points[0].y}`;
+  let d=`M ${points[0].x} ${points[0].y}`;
+  for(let i=0;i<points.length-1;i++){
+    const p0=points[i-1]||points[i],p1=points[i],p2=points[i+1],p3=points[i+2]||p2;
+    const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6;
+    const c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;
+    d+=` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+function smoothAreaPath(points,baseline){
+  if(!points?.length)return'';
+  if(points.length===1)return `M ${points[0].x} ${baseline} L ${points[0].x} ${points[0].y} L ${points[0].x} ${baseline} Z`;
+  return `${smoothSvgPath(points)} L ${points[points.length-1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
+}
+function svgSeriesGradient(id,color,startOpacity=.2){
+  return `<linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="${startOpacity}"/><stop offset="58%" stop-color="${color}" stop-opacity="${startOpacity*.28}"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient>`;
+}
 function ensureChartTooltip(el){
   if(!el)return null;
   let tip=el.querySelector('.chart-hover-tooltip');
@@ -845,44 +901,32 @@ function renderHistoryAttendanceChart(el,labels,totals,series){
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!labels?.length||!validSeries.length){el.innerHTML='<div class="chart-empty">Importe pelo menos um mês com técnicos vinculados para visualizar o histórico.</div>';return;}
-  el.classList.add('interactive-chart','history-interactive-chart','chart-modern');
-  const w=Math.max(940,labels.length*136),h=360,p={l:58,r:68,t:34,b:60};
+  el.classList.add('interactive-chart','history-interactive-chart','chart-modern','premium-mixed-chart');
+  const chartId=nextChartRenderId('history'),w=Math.max(940,labels.length*136),h=360,p={l:58,r:68,t:34,b:60};
   const lineVals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
   const lineTop=Math.max(1,...lineVals)*1.12,totalTop=Math.max(1,...(totals||[]).map(safe))*1.12;
-  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(58,slot*.48);
-  const x=i=>p.l+slot*(i+.5), yLine=v=>p.t+(h-p.t-p.b)-(safe(v)/lineTop)*(h-p.t-p.b), yTotal=v=>p.t+(h-p.t-p.b)-(safe(v)/totalTop)*(h-p.t-p.b);
+  const slot=(w-p.l-p.r)/Math.max(1,labels.length),barW=Math.min(58,slot*.48),baseline=h-p.b;
+  const x=i=>p.l+slot*(i+.5),yLine=v=>p.t+(h-p.t-p.b)-(safe(v)/lineTop)*(h-p.t-p.b),yTotal=v=>p.t+(h-p.t-p.b)-(safe(v)/totalTop)*(h-p.t-p.b);
   const leftGrid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),lv=lineTop*f,rv=totalTop*f;return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="6" y="${yy+4}" class="axis-label">${fmtInt(lv)}</text><text x="${w-6}" y="${yy+4}" class="axis-label-right">${fmtInt(rv)}</text>`}).join('');
-  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),height=(h-p.b)-yy;return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${height}" rx="9" class="history-total-bar chart-series-shape" opacity=".58"></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-8)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
+  const defs=[`<linearGradient id="${chartId}-bars" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".92"/><stop offset="100%" stop-color="var(--accent2)" stop-opacity=".28"/></linearGradient>`];
+  validSeries.forEach((s,si)=>defs.push(svgSeriesGradient(`${chartId}-area-${si}`,s.color||'var(--accent)',validSeries.length>4?.055:.10)));
+  const bars=(totals||[]).map((v,i)=>{const yy=yTotal(v),barHeight=Math.max(0,baseline-yy);return `<rect x="${x(i)-barW/2}" y="${yy}" width="${barW}" height="${barHeight}" rx="12" fill="url(#${chartId}-bars)" class="history-total-bar chart-series-shape premium-bar"></rect><text x="${x(i)}" y="${Math.max(p.t+10,yy-8)}" text-anchor="middle" class="history-total-label">${fmtInt(v)}</text>`}).join('');
   const paths=validSeries.map((s,si)=>{
-    const segs=[];let cur=[];
-    (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${yLine(v)}`)});if(cur.length>1)segs.push(cur);
-    const lines=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="chart-series-shape" data-series-index="${si}"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="3.9" fill="${s.color}" class="chart-point chart-series-shape" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
-    return lines+dots;
+    const segments=splitChartPointSegments(s.values,x,yLine),color=s.color||'var(--accent)';
+    const areaOpacity=validSeries.length>6?0:(validSeries.length>4?.55:1);
+    const areas=areaOpacity?segments.filter(seg=>seg.length>1).map(seg=>`<path d="${smoothAreaPath(seg,baseline)}" fill="url(#${chartId}-area-${si})" class="chart-series-area" data-series-index="${si}" style="opacity:${areaOpacity};--series-color:${color}"></path>`).join(''):'';
+    const lines=segments.filter(seg=>seg.length>1).map(seg=>`<path d="${smoothSvgPath(seg)}" fill="none" stroke="${color}" stroke-width="2.65" stroke-linecap="round" stroke-linejoin="round" class="chart-series-line chart-series-shape" style="--series-color:${color}" data-series-index="${si}"></path>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${yLine(v)}" r="3.9" fill="${color}" class="chart-point chart-series-shape" style="--series-color:${color}" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
+    return areas+lines+dots;
   }).join('');
-  const rulers=labels.map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${h-p.b}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
+  const rulers=labels.map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${baseline}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
   const zones=labels.map((_,i)=>`<rect x="${p.l+slot*i}" y="${p.t}" width="${slot}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`).join('');
   const xLabels=labels.map((label,i)=>`<text x="${x(i)}" y="${h-16}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(label)}</text>`).join('');
-  const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive"><span class="chart-legend-total"><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch" style="background:${s.color}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
-  bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[{name:'Total geral',value:totals?.[i],text:`${fmtInt(totals?.[i])} atendimentos`,color:'var(--muted)'},...validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:`${fmtInt(s.values[i])} atendimentos`,color:s.color})]});
+  const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive"><span class="chart-legend-total"><i class="legend-swatch history-total-bar"></i>Total geral</span>${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${leftGrid}${bars}${paths}${rulers}${zones}${xLabels}<text x="${p.l}" y="18" class="history-axis-title">Técnico / grupo</text><text x="${w-p.r}" y="18" text-anchor="end" class="history-axis-title">Total geral</text></svg></div>${legend}`;
+  bindSharedChartTooltip(el,{labels,entriesForIndex:i=>[{name:'Total geral',value:totals?.[i],text:fmtInt(totals?.[i]),color:'var(--accent)'},...validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:fmtInt(s.values[i]),color:s.color})]});
 }
 
-function buildStatusMatrix(squads,rangeIds){
-  const map=new Map();
-  const multi=(squads||[]).length>1;
-  (squads||[]).forEach(squad=>{
-    (rangeIds||[]).forEach(id=>{
-      const m=squad?.months?.[id];if(!m)return;
-      (m.technicians||[]).forEach(t=>{
-        const key=`${squad.code}|${historyTechKey(t)}`;
-        if(!map.has(key))map.set(key,{key,name:titleWords(t.name),squad:squad.code,statuses:{}});
-        map.get(key).statuses[id]=String(t.status||'').toUpperCase();
-      });
-    });
-  });
-  return [...map.values()].sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR')).map(x=>({...x,label:multi?`Squad ${x.squad} • ${x.name}`:x.name}));
-}
 function renderTechnicianStatusMatrix(el,squads,rangeIds){
   if(!el)return;
   const rows=buildStatusMatrix(squads,rangeIds);
@@ -903,31 +947,36 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   if(!el)return;
   const validSeries=(series||[]).filter(s=>(s.values||[]).some(v=>v!=null));
   if(!validSeries.length){el.innerHTML='<div class="chart-empty">Sem dados para este recorte.</div>';return;}
-  el.classList.add('interactive-chart','chart-modern');
+  el.classList.add('interactive-chart','chart-modern','premium-line-chart');
+  const chartId=nextChartRenderId('line');
   const containerWidth=fitWidth?Math.max(0,Math.floor(el.clientWidth||el.getBoundingClientRect?.().width||0)-18):0;
   const w=Math.max(900,(labels?.length||0)*124,containerWidth),h=Math.max(300,safe(height)||340),p=emphasis?{l:70,r:40,t:36,b:72}:{l:56,r:30,t:32,b:60};
   const vals=validSeries.flatMap(s=>s.values).filter(v=>v!=null).map(v=>safe(v));
-  const rawTop=Math.max(1,...vals),top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.1);
+  const rawTop=Math.max(1,...vals),top=maxValue??(percent?Math.max(10,Math.ceil(rawTop/10)*10):rawTop*1.1),baseline=h-p.b;
   const x=i=>p.l+(labels.length<=1?0:i*(w-p.l-p.r)/(labels.length-1)),y=v=>p.t+(h-p.t-p.b)-(safe(v)/top)*(h-p.t-p.b);
   const grid=[0,.25,.5,.75,1].map(f=>{const yy=p.t+(1-f)*(h-p.t-p.b),v=top*f,label=percent?`${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`:v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:decimals});return `<line x1="${p.l}" y1="${yy}" x2="${w-p.r}" y2="${yy}" class="grid-line"/><text x="8" y="${yy+4}" class="axis-label">${label}</text>`}).join('');
   const tickStep=labels.length>24?Math.ceil(labels.length/7):labels.length>16?Math.ceil(labels.length/8):labels.length>12?2:1;
   const xLabels=labels.map((label,i)=>{if(i!==0&&i!==labels.length-1&&i%tickStep!==0)return'';const raw=String(label||''),shown=raw.includes('/')?raw:raw.split(' ')[0].slice(0,3);return `<text x="${x(i)}" y="${h-17}" text-anchor="middle" class="axis-label history-x-label">${escapeHtml(shown)}</text>`}).join('');
+  const defs=[];
+  validSeries.forEach((s,si)=>defs.push(svgSeriesGradient(`${chartId}-area-${si}`,s.color||'var(--accent)',validSeries.length>5?.05:emphasis?.16:.10)));
   const paths=validSeries.map((s,si)=>{
-    const segs=[];let cur=[];
-    (s.values||[]).forEach((v,i)=>{if(v==null){if(cur.length>1)segs.push(cur);cur=[];return}cur.push(`${x(i)},${y(v)}`)});if(cur.length>1)segs.push(cur);
-    const dash=s.dashed?' stroke-dasharray="7 7"':'',lineWidth=emphasis?(s.dashed?2.5:2.9):(s.dashed?2.1:2.55),pointRadius=emphasis?4.6:3.8;
-    const segments=segs.map(seg=>`<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-series-shape" data-series-index="${si}"></polyline>`).join('');
-    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="${pointRadius}" fill="${s.color||'var(--accent)'}" class="chart-point chart-series-shape" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
-    return segments+dots;
+    const color=s.color||'var(--accent)',segments=splitChartPointSegments(s.values,x,y);
+    const dash=s.dashed?' stroke-dasharray="7 7"':'',lineWidth=emphasis?(s.dashed?2.5:3):(s.dashed?2.1:2.65),pointRadius=emphasis?4.6:3.8;
+    const showArea=!s.dashed;
+    const areas=showArea?segments.filter(seg=>seg.length>1).map(seg=>`<path d="${smoothAreaPath(seg,baseline)}" fill="url(#${chartId}-area-${si})" class="chart-series-area" style="--series-color:${color}" data-series-index="${si}"></path>`).join(''):'';
+    const linePaths=segments.filter(seg=>seg.length>1).map(seg=>`<path d="${smoothSvgPath(seg)}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dash} class="chart-series-line chart-series-shape" style="--series-color:${color}" data-series-index="${si}"></path>`).join('');
+    const dots=(s.values||[]).map((v,i)=>v==null?'':`<circle cx="${x(i)}" cy="${y(v)}" r="${pointRadius}" fill="${color}" class="chart-point chart-series-shape" style="--series-color:${color}" data-series-index="${si}" data-point-index="${i}"></circle>`).join('');
+    return areas+linePaths+dots;
   }).join('');
-  const rulers=(labels||[]).map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${h-p.b}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
+  const rulers=(labels||[]).map((_,i)=>`<line x1="${x(i)}" y1="${p.t}" x2="${x(i)}" y2="${baseline}" class="chart-ruler" data-ruler-index="${i}"></line>`).join('');
   const plotWidth=Math.max(1,w-p.l-p.r),zoneWidth=labels.length<=1?plotWidth:plotWidth/(labels.length-1);
   const zones=(labels||[]).map((_,i)=>{const zx=labels.length<=1?p.l:Math.max(p.l,x(i)-zoneWidth/2),zw=labels.length<=1?plotWidth:(i===0||i===labels.length-1?zoneWidth/2:zoneWidth);return `<rect x="${zx}" y="${p.t}" width="${zw}" height="${h-p.t-p.b}" class="chart-hover-zone" data-chart-index="${i}"></rect>`}).join('');
   const legend=`<div class="chart-legend-inline chart-legend-visible chart-legend-interactive">${validSeries.map((s,si)=>`<button type="button" class="chart-legend-item" data-series-index="${si}" aria-pressed="false" title="Passe o mouse para destacar; clique para fixar"><i class="legend-swatch${s.dashed?' dashed':''}" style="background:${s.color||'var(--accent)'}"></i>${escapeHtml(s.name)}</button>`).join('')}</div>`;
   el.classList.toggle('chart-emphasis',!!emphasis);
-  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none">${grid}${paths}${rulers}${zones}${xLabels}</svg></div>${legend}`;
+  el.innerHTML=`<div class="chart-plot-scroll"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" preserveAspectRatio="none"><defs>${defs.join('')}</defs>${grid}${paths}${rulers}${zones}${xLabels}</svg></div>${legend}`;
   bindSharedChartTooltip(el,{labels,entriesForIndex:i=>validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:chartValueText(s.values[i],{percent,decimals}),color:s.color||'var(--accent)'})});
 }
+
 
 
   function renderProfile(){

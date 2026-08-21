@@ -1,4 +1,18 @@
-# Soften Performance Hub V2.22.0
+# Soften Performance Hub V2.23.0
+
+## Novidades da V2.23.0 — gráficos e métricas premium
+
+- linhas dos gráficos agora usam curvas suaves Bezier/Catmull-Rom;
+- preenchimento em área com gradiente derivado da cor de cada série;
+- barras históricas com gradiente do tema, cantos arredondados e glow discreto;
+- tooltips glassmorphism mantêm a régua compartilhada e o ranking das séries;
+- linhas de grade horizontais ficaram pontilhadas e ultradiscretas;
+- barras de progresso ganharam gradiente, ponta iluminada e microinterações;
+- badge de ranking do técnico virou um selo orbital/holográfico baseado em `--accent` e `--accent2`;
+- XP/ring circular também passa a seguir o visual premium;
+- todas as cores continuam consumindo as variáveis CSS atualizadas pelo JSON de tema;
+- nenhuma regra de negócio, cálculo, importação, fechamento, usuário ou financeiro foi alterada.
+
 
 ## Novidades da V2.22.0 — interface premium e seletor de data digitável
 
