@@ -1,21 +1,13 @@
-# Soften Performance Hub V2.25.1
+# Atualização V2.25.1
 
-## Feedback individual
+## Feedbacks — regeneração restaurada
 
-A tela **Gestão → Feedbacks** agora deixa explícitas as duas formas de geração:
+- Adicionado o botão **Regerar em lote** na tela Gestão → Feedbacks.
+- A regeneração em lote atualiza apenas feedbacks não finalizados e também gera os pendentes; feedbacks finalizados permanecem intactos.
+- Adicionado o botão **Regerar** em cada técnico que já possui feedback.
+- Adicionado **Regerar conteúdo** dentro do editor individual.
+- As **Observações do gestor** são preservadas durante a regeneração.
+- Ao regerar individualmente um feedback finalizado, ele volta para **Rascunho**, deixa de ser exibido ao técnico e deverá ser finalizado novamente.
 
-- **Gerar feedbacks pendentes**: cria de uma vez os rascunhos de todos os técnicos ainda sem feedback na competência.
-- **Gerar individual**: cada técnico que ainda estiver como **NÃO GERADO** possui seu próprio botão. O sistema gera somente aquele feedback e já abre o editor para revisão.
-
-Feedbacks já existentes continuam com o botão **Revisar**, evitando sobrescrever acidentalmente alterações feitas pelo gestor.
-
-Esta versão também contém todas as entregas da V2.25.0: feedbacks mensais sem IA, tela Meus feedbacks do técnico, evolução diária em tela cheia e responsividade da legenda do gráfico por competência.
-
-## Produção
-
-1. Faça backup do repositório e preserve o `config.js` de produção.
-2. No Supabase > SQL Editor, execute `MIGRACAO_V2.25.1.sql` (é idempotente; pode ser executada mesmo se a V2.25.0 já tiver sido aplicada).
-3. Suba os arquivos do ZIP `squad-dashboard-v2.25.1-atualizacao-github.zip`.
-4. Não substitua o `config.js`.
-5. Não é necessário republicar Edge Functions.
-6. Aguarde o GitHub Pages publicar, faça logout/login e `Ctrl + F5`.
+## Publicação
+Não há nova migração SQL nem alteração em Edge Functions. Substitua `index.html`, `app.js`, `styles.css` e mantenha o `config.js` atual.

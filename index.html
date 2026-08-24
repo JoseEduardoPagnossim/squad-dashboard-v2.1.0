@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.24.0" />
+  <link rel="stylesheet" href="styles.css?v=2.25.1" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -434,8 +434,8 @@
 
       <section id="view-feedbacks" class="view admin-only">
         <div class="feedback-hero card glass">
-          <div><span class="eyebrow">ACOMPANHAMENTO MENSAL</span><h2>Feedbacks dos técnicos</h2><p>Gere uma base objetiva a partir dos indicadores da competência, em lote ou individualmente, revise com sua liderança e mantenha um histórico funcional por técnico.</p></div>
-          <div class="feedback-hero-actions"><span class="history-chip" id="feedbackMonthLabel">Competência</span><button class="btn primary" id="generateSquadFeedbacksBtn" type="button">✦ Gerar feedbacks pendentes</button></div>
+          <div><span class="eyebrow">ACOMPANHAMENTO MENSAL</span><h2>Feedbacks dos técnicos</h2><p>Gere uma base objetiva a partir dos indicadores da competência, revise com sua liderança e mantenha um histórico funcional por técnico.</p></div>
+          <div class="feedback-hero-actions"><span class="history-chip" id="feedbackMonthLabel">Competência</span><button class="btn secondary" id="regenerateSquadFeedbacksBtn" type="button">↻ Regerar em lote</button><button class="btn primary" id="generateSquadFeedbacksBtn" type="button">✦ Gerar feedbacks pendentes</button></div>
         </div>
         <div id="feedbackScopeEmpty" class="empty-state hidden"><div>✎</div><h2>Selecione um Squad específico</h2><p>Os feedbacks são administrados por Squad e competência mensal.</p></div>
         <div id="feedbackContent">
@@ -446,7 +446,7 @@
             <article class="card feedback-stat"><span>Conclusão</span><strong id="feedbackProgressPct">0%</strong><small>da competência</small></article>
           </div>
           <article class="card feedback-list-card">
-            <div class="section-title"><div><span class="eyebrow">TÉCNICOS DO SQUAD</span><h3>Feedback mensal</h3></div><span class="muted" id="feedbackListHint">Use Gerar individual em um técnico ou gere todos os pendentes de uma vez.</span></div>
+            <div class="section-title"><div><span class="eyebrow">TÉCNICOS DO SQUAD</span><h3>Feedback mensal</h3></div><span class="muted" id="feedbackListHint">Selecione um técnico para revisar.</span></div>
             <div id="feedbackRows" class="feedback-list"></div>
           </article>
         </div>
@@ -641,7 +641,7 @@
         <label class="feedback-field"><span>Observações do gestor</span><textarea id="feedbackManagerNotes" rows="6" placeholder="Complemento livre do gestor."></textarea></label>
       </div>
       <label class="feedback-share-toggle"><input id="feedbackVisibleToTechnician" type="checkbox"><span><strong>Disponibilizar ao técnico</strong><small>O técnico só visualizará após o feedback estar finalizado.</small></span></label>
-      <div class="modal-actions feedback-editor-actions"><button class="btn secondary" type="button" data-close="feedbackEditorModal">Cancelar</button><button class="btn secondary" id="feedbackSaveDraftBtn" type="button">Salvar rascunho</button><button class="btn primary" id="feedbackFinalizeBtn" type="button">Finalizar feedback</button></div>
+      <div class="modal-actions feedback-editor-actions"><button class="btn secondary" type="button" data-close="feedbackEditorModal">Cancelar</button><button class="btn secondary" id="feedbackRegenerateBtn" type="button">↻ Regerar conteúdo</button><button class="btn secondary" id="feedbackSaveDraftBtn" type="button">Salvar rascunho</button><button class="btn primary" id="feedbackFinalizeBtn" type="button">Finalizar feedback</button></div>
     </div>
   </div>
 
@@ -700,6 +700,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.24.0"></script>
+  <script src="app.js?v=2.25.1"></script>
 </body>
 </html>
