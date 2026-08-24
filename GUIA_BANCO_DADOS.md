@@ -253,3 +253,18 @@ Ao reimportar uma competência aberta, o sistema atualiza os técnicos presentes
 ## V2.22.0 — atualização somente de frontend
 
 A V2.22.0 altera somente HTML, JavaScript de interação do seletor de data e CSS visual. Não cria colunas, tabelas, políticas ou funções novas no Supabase. Se a `MIGRACAO_V2.21.0.sql` já foi executada, não existe SQL adicional para esta versão.
+
+
+## V2.25.0 — Feedbacks mensais
+
+Execute `MIGRACAO_V2.25.0.sql` antes de publicar o frontend. A migração cria `technician_feedbacks`.
+
+Permissões:
+
+- Admin Geral: cria, lê e edita feedbacks de qualquer Squad da organização.
+- Admin do Squad: cria, lê e edita apenas feedbacks do próprio Squad.
+- Técnico: lê somente feedbacks próprios que estejam `finalized` e com `visible_to_technician = true`.
+
+O conteúdo inicial é gerado no frontend por regras objetivas a partir de atendimentos, avaliações, nota média, pontuação, ranking, status, metas e comparação com a competência anterior. Não há chamada a IA externa.
+
+O JSON `generated_snapshot` preserva os indicadores usados na geração inicial, enquanto os campos textuais permanecem editáveis pelo gestor.

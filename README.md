@@ -249,3 +249,15 @@ Para que o login de Técnico visualize o ranking completo do próprio Squad resp
 ### V2.24.3
 - Corrige Atendimentos, % de avaliação e Nota média no quadro geral de todos os técnicos, usando consolidado por competência.
 - Ajusta o espaçamento da legenda do KPI de % Avaliado em Meu desempenho.
+
+
+### V2.25.0
+
+- Novo módulo **Gestão → Feedbacks** para Admin Geral e Admin do Squad.
+- Geração automática sem IA externa, baseada nos indicadores mensais já existentes.
+- Feedback em rascunho, edição do gestor, finalização e histórico por competência.
+- Opção **Disponibilizar ao técnico**; quando finalizado, aparece em **Meus feedbacks**.
+- Nova migração `MIGRACAO_V2.25.0.sql` cria `technician_feedbacks` com RLS por organização/Squad.
+- Em **Indicadores**, novo gráfico em tela cheia **Evolução diária dos técnicos**, com Pontuação diária simulada, Atendimentos, % de avaliação e Nota média.
+- O gráfico mensal **Todos os técnicos por competência** continua com sua lógica mensal.
+- Legendas dos gráficos em tela cheia agora reservam espaço próprio e permanecem acessíveis em resoluções/alturas menores.

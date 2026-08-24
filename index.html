@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.24.0" />
+  <link rel="stylesheet" href="styles.css?v=2.25.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.24.3 • Ajustes Meu Desempenho</small>
+      <small class="login-version">V2.25.0 • Feedbacks e evolução diária</small>
     </div>
   </section>
 
@@ -77,10 +77,12 @@
         <div class="nav-group admin-only"><span class="nav-group-label">GESTÃO</span>
           <button class="nav-btn" data-view="admin" data-admin-section="operation"><span>↻</span> Operação</button>
           <button class="nav-btn" data-view="admin" data-admin-section="finance"><span>R$</span> Bonificação</button>
+          <button class="nav-btn" data-view="feedbacks"><span>✎</span> Feedbacks</button>
           <button class="nav-btn" data-view="users"><span>♟</span> Usuários</button>
           <button class="nav-btn" data-view="admin" data-admin-section="appearance"><span>✦</span> Aparência</button>
         </div>
         <div class="nav-group"><span class="nav-group-label">CONTA</span>
+          <button class="nav-btn tech-only" data-view="my-feedbacks"><span>✎</span> Meus feedbacks</button>
           <button class="nav-btn" data-view="profile"><span>◉</span> Meu perfil</button>
           <button class="nav-btn" data-view="help"><span>?</span> Como usar</button>
           <button class="nav-btn logout-nav" id="logoutBtn" type="button"><span>↪</span> Sair</button>
@@ -101,7 +103,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.24.3 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.25.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -325,7 +327,10 @@
               <button type="button" data-analysis-preset="month">Este mês</button>
               <button type="button" data-analysis-preset="prev-month">Mês anterior</button>
             </div>
-            <button class="btn primary indicator-fullscreen-btn" id="openAllTechniciansChartBtn" type="button">⛶ Todos os técnicos em tela cheia</button>
+            <div class="indicator-action-group">
+              <button class="btn secondary indicator-fullscreen-btn" id="openDailyTechniciansChartBtn" type="button">↗ Evolução diária dos técnicos</button>
+              <button class="btn primary indicator-fullscreen-btn" id="openAllTechniciansChartBtn" type="button">⛶ Todos os técnicos por competência</button>
+            </div>
           </div>
         </article>
 
@@ -427,6 +432,27 @@
       </section>
 
 
+      <section id="view-feedbacks" class="view admin-only">
+        <div class="feedback-hero card glass">
+          <div><span class="eyebrow">ACOMPANHAMENTO MENSAL</span><h2>Feedbacks dos técnicos</h2><p>Gere uma base objetiva a partir dos indicadores da competência, revise com sua liderança e mantenha um histórico funcional por técnico.</p></div>
+          <div class="feedback-hero-actions"><span class="history-chip" id="feedbackMonthLabel">Competência</span><button class="btn primary" id="generateSquadFeedbacksBtn" type="button">✦ Gerar feedbacks pendentes</button></div>
+        </div>
+        <div id="feedbackScopeEmpty" class="empty-state hidden"><div>✎</div><h2>Selecione um Squad específico</h2><p>Os feedbacks são administrados por Squad e competência mensal.</p></div>
+        <div id="feedbackContent">
+          <div class="feedback-stats">
+            <article class="card feedback-stat"><span>Técnicos da competência</span><strong id="feedbackTechCount">0</strong><small>com produção no mês</small></article>
+            <article class="card feedback-stat"><span>Finalizados</span><strong id="feedbackFinalizedCount">0</strong><small>registros concluídos</small></article>
+            <article class="card feedback-stat"><span>Rascunhos</span><strong id="feedbackDraftCount">0</strong><small>aguardando revisão</small></article>
+            <article class="card feedback-stat"><span>Conclusão</span><strong id="feedbackProgressPct">0%</strong><small>da competência</small></article>
+          </div>
+          <article class="card feedback-list-card">
+            <div class="section-title"><div><span class="eyebrow">TÉCNICOS DO SQUAD</span><h3>Feedback mensal</h3></div><span class="muted" id="feedbackListHint">Selecione um técnico para revisar.</span></div>
+            <div id="feedbackRows" class="feedback-list"></div>
+          </article>
+        </div>
+      </section>
+
+
       <section id="view-users" class="view admin-only">
         <div class="users-hero card">
           <div><span class="eyebrow">GESTÃO DE ACESSOS</span><h2>Usuários do Performance Hub</h2><p id="usersScopeText">Cadastre e consulte os usuários dentro do escopo que você administra.</p></div>
@@ -439,6 +465,14 @@
           <div class="table-wrap users-table-wrap"><table class="users-table"><thead><tr><th>Usuário</th><th>Perfil</th><th>Squad</th><th>Técnico vinculado</th><th>Status</th><th>Ações</th></tr></thead><tbody id="userRows"></tbody></table></div>
           <div class="admin-note">Por segurança, a criação real no Supabase é feita por uma Edge Function no servidor. A chave <code>service_role</code> nunca fica exposta no navegador.</div>
         </article>
+      </section>
+
+
+      <section id="view-my-feedbacks" class="view tech-only">
+        <div class="feedback-hero card glass">
+          <div><span class="eyebrow">MEU DESENVOLVIMENTO</span><h2>Meus feedbacks</h2><p>Histórico mensal compartilhado pelo gestor. Apenas feedbacks finalizados e liberados para você aparecem aqui.</p></div>
+        </div>
+        <div id="myFeedbackRows" class="my-feedback-list"></div>
       </section>
 
 
@@ -513,7 +547,7 @@
         <div class="how-middle-grid">
           <article class="card how-permissions">
             <div class="how-section-title"><span class="how-icon green">♟</span><div><span class="eyebrow">PERMISSÕES</span><h3>Quem pode fazer o quê?</h3></div></div>
-            <div class="permission-matrix modern"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads no seletor</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Consolidado dos Squads / Todos os técnicos</div><div>✓</div><div>✓</div><div>✓</div><div>Importar CSV / metas / fechamento</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Configurar bonificação / relatórios</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Criar técnicos</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Mover técnico entre Squads</div><div>✓</div><div>—</div><div>—</div><div>Inativar / reativar técnicos</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Aparência, favicon e trilha</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ próprio</div><div>✓ próprio</div><div>Ranking financeiro do próprio Squad</div><div>✓</div><div>✓ próprio</div><div>✓ valores finais</div><div>Alterar a própria senha</div><div>✓</div><div>✓</div><div>✓</div></div>
+            <div class="permission-matrix modern"><div class="pm-head">Ação</div><div class="pm-head">Admin geral</div><div class="pm-head">Admin Squad</div><div class="pm-head">Técnico</div><div>Ver todos os Squads no seletor</div><div>✓</div><div>—</div><div>—</div><div>Indicadores executivos</div><div>✓</div><div>—</div><div>—</div><div>Consolidado dos Squads / Todos os técnicos</div><div>✓</div><div>✓</div><div>✓</div><div>Importar CSV / metas / fechamento</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Configurar bonificação / relatórios</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Gerar e finalizar feedbacks mensais</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Criar técnicos</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Mover técnico entre Squads</div><div>✓</div><div>—</div><div>—</div><div>Inativar / reativar técnicos</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Aparência, favicon e trilha</div><div>✓</div><div>✓ próprio</div><div>—</div><div>Ver desempenho individual</div><div>✓</div><div>✓ próprio</div><div>✓ próprio</div><div>Ranking financeiro do próprio Squad</div><div>✓</div><div>✓ próprio</div><div>✓ valores finais</div><div>Alterar a própria senha</div><div>✓</div><div>✓</div><div>✓</div></div>
           </article>
           <article class="card how-flow admin-help">
             <div class="how-section-title"><span class="how-icon blue">▣</span><div><span class="eyebrow">FLUXO MENSAL</span><h3>Rotina recomendada</h3></div></div>
@@ -535,7 +569,7 @@
 
           <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">↓</span><div><span class="eyebrow">RELATÓRIOS</span><h3>Excel e PDF</h3></div></div><ul><li>O Excel traz ambos os modelos, diferença, modelo oficial, valor oficial e todos os ajustes por técnico.</li><li>A aba Resumo mostra totais da folha, métricas da Base do Squad e cancelamento.</li><li>Quando houver comissão do Admin Geral, ela aparece separadamente.</li><li>O PDF apresenta uma conferência compacta do fechamento.</li><li>Prefira gerar os relatórios imediatamente antes de fechar a competência.</li></ul></article>
 
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos</b> abre o comparativo geral em tela cheia com troca de métrica.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos por competência</b> abre o comparativo mensal em tela cheia. Em Indicadores, <b>Evolução diária dos técnicos</b> usa o calendário dia a dia com as mesmas métricas para alinhamentos semanais.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>Em <b>Gestão → Feedbacks</b>, administradores geram rascunhos mensais por regra, revisam, finalizam e podem liberar o registro ao técnico.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
 
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram as paletas clara e escura, fundo, favicon e trilha do próprio Squad.</li><li>O botão ☀/☾ no topo alterna Light/Dark instantaneamente. A preferência fica salva no navegador e, no primeiro acesso, segue o modo do sistema operacional.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
         </div>
@@ -594,6 +628,38 @@
     <div class="modal-actions"><button class="btn secondary" type="button" data-close="editUserModal">Cancelar</button><button class="btn primary" id="editUserSubmit" type="submit">Salvar alterações</button></div>
   </form></div></div>
 
+  <div id="feedbackEditorModal" class="modal" aria-hidden="true" data-static-backdrop="true">
+    <div class="modal-card feedback-editor-modal">
+      <button class="modal-close" data-close="feedbackEditorModal">×</button>
+      <div class="feedback-editor-head"><div><span class="eyebrow">FEEDBACK MENSAL</span><h2 id="feedbackEditorTech">Técnico</h2><p id="feedbackEditorPeriod">Competência</p></div><span class="feedback-status-badge draft" id="feedbackEditorStatus">RASCUNHO</span></div>
+      <div id="feedbackEditorMetrics" class="feedback-editor-metrics"></div>
+      <div class="feedback-form-grid">
+        <label class="feedback-field full"><span>Resumo do mês</span><textarea id="feedbackSummary" rows="4"></textarea></label>
+        <label class="feedback-field"><span>Pontos positivos</span><textarea id="feedbackStrengths" rows="6"></textarea></label>
+        <label class="feedback-field"><span>Pontos de desenvolvimento</span><textarea id="feedbackImprovements" rows="6"></textarea></label>
+        <label class="feedback-field"><span>Compromissos para o próximo mês</span><textarea id="feedbackNextGoals" rows="6"></textarea></label>
+        <label class="feedback-field"><span>Observações do gestor</span><textarea id="feedbackManagerNotes" rows="6" placeholder="Complemento livre do gestor."></textarea></label>
+      </div>
+      <label class="feedback-share-toggle"><input id="feedbackVisibleToTechnician" type="checkbox"><span><strong>Disponibilizar ao técnico</strong><small>O técnico só visualizará após o feedback estar finalizado.</small></span></label>
+      <div class="modal-actions feedback-editor-actions"><button class="btn secondary" type="button" data-close="feedbackEditorModal">Cancelar</button><button class="btn secondary" id="feedbackSaveDraftBtn" type="button">Salvar rascunho</button><button class="btn primary" id="feedbackFinalizeBtn" type="button">Finalizar feedback</button></div>
+    </div>
+  </div>
+
+  <div id="dailyTechniciansModal" class="modal fullscreen-modal" aria-hidden="true" data-static-backdrop="true">
+    <div class="modal-card fullscreen-chart-modal">
+      <button class="modal-close" data-close="dailyTechniciansModal">×</button>
+      <div class="fullscreen-chart-head">
+        <div><span class="eyebrow">EVOLUÇÃO DIÁRIA</span><h2>Técnicos por dia</h2><p id="dailyTechniciansSubtitle">Comparativo diário dentro do calendário selecionado. A pontuação diária é simulada e não altera a competência oficial.</p></div>
+        <div class="fullscreen-chart-controls">
+          <label class="control select-wrap"><span>Métrica</span><select id="dailyTechniciansMetric"><option value="points">Pontuação diária*</option><option value="att">Atendimentos</option><option value="evalPct">% de avaliação</option><option value="avg">Nota média</option></select></label>
+          <span class="history-chip" id="dailyTechniciansPeriod">Período</span>
+        </div>
+      </div>
+      <div id="dailyTechniciansFullscreenChart" class="chart fullscreen-chart-canvas"></div>
+      <div class="fullscreen-chart-foot"><span>💡 Use períodos curtos, como 7 ou 15 dias, para acompanhar evolução e correções de rota.</span><span id="dailyTechniciansCount">0 técnicos</span></div>
+    </div>
+  </div>
+
   <div id="allTechniciansModal" class="modal fullscreen-modal" aria-hidden="true" data-static-backdrop="true">
     <div class="modal-card fullscreen-chart-modal">
       <button class="modal-close" data-close="allTechniciansModal">×</button>
@@ -634,6 +700,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.24.0"></script>
+  <script src="app.js?v=2.25.0"></script>
 </body>
 </html>

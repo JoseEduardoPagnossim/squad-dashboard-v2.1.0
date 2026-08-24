@@ -82,6 +82,12 @@
     orgTechnicianDailyOverview:[],
     allTechniciansMetric:'points',
     allTechniciansRangeIds:[],
+    dailyTechniciansMetric:'points',
+    feedbackCache:{},
+    feedbackLoading:{},
+    feedbackEditor:null,
+    myFeedbacks:null,
+    myFeedbackLoading:false,
     superAdminCommissions:[],
     financeRankingCache:{},
     financeRankingLoading:{},
@@ -240,8 +246,13 @@
     $$('[data-analysis-preset]').forEach(btn=>btn.addEventListener('click',()=>setAnalysisPreset(btn.dataset.analysisPreset)));
     if($('#openAllTechniciansChartBtn'))$('#openAllTechniciansChartBtn').addEventListener('click',()=>openAllTechniciansChart('indicator'));
     if($('#openAllTechniciansChartTeamBtn'))$('#openAllTechniciansChartTeamBtn').addEventListener('click',()=>openAllTechniciansChart('team'));
+    if($('#openDailyTechniciansChartBtn'))$('#openDailyTechniciansChartBtn').addEventListener('click',openDailyTechniciansChart);
     if($('#allTechniciansMetric'))$('#allTechniciansMetric').addEventListener('change',e=>{state.allTechniciansMetric=e.target.value;renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds);});
-    let allTechResizeTimer=null;window.addEventListener('resize',()=>{if(!$('#allTechniciansModal')?.classList.contains('open'))return;clearTimeout(allTechResizeTimer);allTechResizeTimer=setTimeout(()=>renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds),120);});
+    if($('#dailyTechniciansMetric'))$('#dailyTechniciansMetric').addEventListener('change',e=>{state.dailyTechniciansMetric=e.target.value;renderDailyTechniciansFullscreenChart();});
+    if($('#generateSquadFeedbacksBtn'))$('#generateSquadFeedbacksBtn').addEventListener('click',generateSquadFeedbacks);
+    if($('#feedbackSaveDraftBtn'))$('#feedbackSaveDraftBtn').addEventListener('click',()=>saveFeedbackEditor('draft'));
+    if($('#feedbackFinalizeBtn'))$('#feedbackFinalizeBtn').addEventListener('click',()=>saveFeedbackEditor('finalized'));
+    let allTechResizeTimer=null;window.addEventListener('resize',()=>{const monthlyOpen=$('#allTechniciansModal')?.classList.contains('open'),dailyOpen=$('#dailyTechniciansModal')?.classList.contains('open');if(!monthlyOpen&&!dailyOpen)return;clearTimeout(allTechResizeTimer);allTechResizeTimer=setTimeout(()=>{if(monthlyOpen)renderAllTechniciansFullscreenChart(state.allTechniciansRangeIds);if(dailyOpen)renderDailyTechniciansFullscreenChart();},120);});
   }
 
   async function handleLogin(e){
@@ -300,7 +311,7 @@
 
   async function enterApp(user){
     state.user=user;
-    state.userDirectoryLoaded=false;state.userDirectory=[];state.gameRankingCache={};state.gameRankingLoading={};
+    state.userDirectoryLoaded=false;state.userDirectory=[];state.gameRankingCache={};state.gameRankingLoading={};state.feedbackCache={};state.feedbackLoading={};state.feedbackEditor=null;state.myFeedbacks=null;state.myFeedbackLoading=false;
     state.squadCode=user.role==='super_admin'?'D':(user.squadCode||'D');
     chooseLatestMonth(); chooseDefaultTech();
     state.theme=state.squads[state.squadCode]?.theme||loadThemeForSquad(state.squadCode); applyTheme(state.theme);
@@ -314,10 +325,11 @@
     const admin=isAdmin(), superAdmin=isSuperAdmin();
     $$('.admin-only').forEach(el=>el.classList.toggle('hidden',!admin));
     $$('.super-only').forEach(el=>el.classList.toggle('hidden',!superAdmin));
+    $$('.tech-only').forEach(el=>el.classList.toggle('hidden',!isTechnician()));
     $$('.admin-help').forEach(el=>el.classList.toggle('hidden',!admin));
     $$('.super-help').forEach(el=>el.classList.toggle('hidden',!superAdmin));
     $('.technician-control').classList.toggle('hidden',isTechnician()||state.currentView!=='individual'||state.squadCode==='all');
-    const analyticalView=['individual','team','indicators'].includes(state.currentView);if($('.month-control'))$('.month-control').classList.toggle('hidden',analyticalView||['users','profile','help'].includes(state.currentView));if($('#analysisDateControl'))$('#analysisDateControl').classList.toggle('hidden',!['individual','team'].includes(state.currentView));syncAnalysisDateControls();
+    const analyticalView=['individual','team','indicators'].includes(state.currentView);if($('.month-control'))$('.month-control').classList.toggle('hidden',analyticalView||['users','profile','help','my-feedbacks'].includes(state.currentView));if($('#analysisDateControl'))$('#analysisDateControl').classList.toggle('hidden',!['individual','team'].includes(state.currentView));syncAnalysisDateControls();
     if($('#topUserName'))$('#topUserName').textContent=state.user.fullName;
     if($('#topUserScope'))$('#topUserScope').textContent=state.user.role==='super_admin'?'Acesso geral':`Squad ${state.user.squadCode}`;
     const initial=(state.user.fullName||'U').charAt(0).toUpperCase();if($('#topAvatar'))$('#topAvatar').textContent=initial;
@@ -457,7 +469,8 @@
   }
 
   function showView(name,adminSection=null){
-    if((name==='admin'||name==='users')&&!isAdmin())return;
+    if((name==='admin'||name==='users'||name==='feedbacks')&&!isAdmin())return;
+    if(name==='my-feedbacks'&&!isTechnician())return;
     if(name==='indicators'&&!isSuperAdmin())return;
     if(name==='individual'&&state.squadCode==='all')name='team';
     if(name==='admin'&&adminSection)state.adminSection=adminSection;
@@ -465,11 +478,11 @@
     $$('.view').forEach(v=>v.classList.remove('active')); const view=$('#view-'+name);if(view)view.classList.add('active');
     $$('.nav-btn').forEach(b=>{const sameView=b.dataset.view===name;const sameSection=name!=='admin'||!b.dataset.adminSection||b.dataset.adminSection===state.adminSection;b.classList.toggle('active',sameView&&sameSection)});
     const adminTitles={operation:'Operação',finance:'Bonificação',appearance:'Aparência'};
-    const titles={individual:'Meu desempenho',team:'Visão do Squad',indicators:'Indicadores',users:'Usuários',admin:adminTitles[state.adminSection]||'Gestão',profile:'Meu perfil',help:'Como usar'};
+    const titles={individual:'Meu desempenho',team:'Visão do Squad',indicators:'Indicadores',feedbacks:'Feedbacks',users:'Usuários',admin:adminTitles[state.adminSection]||'Gestão',profile:'Meu perfil','my-feedbacks':'Meus feedbacks',help:'Como usar'};
     $('#pageTitle').textContent=titles[name]||'Performance Hub';
     $('.technician-control').classList.toggle('hidden',name!=='individual'||isTechnician()||state.squadCode==='all');
     const analytical=name==='individual'||name==='team'||name==='indicators';
-    $('.month-control').classList.toggle('hidden',analytical||name==='users'||name==='profile'||name==='help');
+    $('.month-control').classList.toggle('hidden',analytical||name==='users'||name==='profile'||name==='my-feedbacks'||name==='help');
     if($('#analysisDateControl'))$('#analysisDateControl').classList.toggle('hidden',!(name==='individual'||name==='team'));
     syncAnalysisDateControls();
     $('.sidebar').classList.remove('open');
@@ -488,6 +501,8 @@
 
   function render(){
     applyPermissions();
+    if(state.currentView==='feedbacks'){renderFeedbacks();return;}
+    if(state.currentView==='my-feedbacks'){renderMyFeedbacks();return;}
     if(state.currentView==='users')renderUsers().catch(err=>{console.error(err);toast('Não foi possível carregar os usuários.')});
     if(state.currentView==='help')renderHelp();
     if(state.currentView==='profile')renderProfile();
@@ -813,16 +828,55 @@ function openAllTechniciansChart(source='team'){
   // Renderiza depois que o modal estiver visível para usar toda a largura real da tela.
   requestAnimationFrame(()=>requestAnimationFrame(()=>renderAllTechniciansFullscreenChart(rangeIds)));
 }
+function responsiveFullscreenPlotHeight(el){
+  const canvasHeight=Math.max(0,Math.floor(el?.clientHeight||el?.getBoundingClientRect?.().height||0));
+  if(canvasHeight)return Math.max(240,canvasHeight-118);
+  return Math.max(260,Math.min(650,(window.innerHeight||900)-320));
+}
 function renderAllTechniciansFullscreenChart(explicitRange=null){
-  if(!$('#allTechniciansFullscreenChart'))return;
+  const el=$('#allTechniciansFullscreenChart');if(!el)return;
   const rangeIds=(explicitRange&&explicitRange.length)?explicitRange:(state.allTechniciansRangeIds?.length?state.allTechniciansRangeIds:currentIndicatorRangeForFullscreen('team'));
   const cfg=allTechnicianMetricConfig(state.allTechniciansMetric),series=allTechnicianSeries(rangeIds,state.allTechniciansMetric),labels=rangeIds.map(shortHistoryMonth);
   $('#allTechniciansMetric').value=state.allTechniciansMetric;
   $('#allTechniciansPeriod').textContent=analysisRangeLabel();
   $('#allTechniciansSubtitle').textContent=`${cfg.label} de todos os técnicos dos Squads A, B, D e E por competência dentro do período selecionado.`;
   $('#allTechniciansCount').textContent=`${series.length} ${series.length===1?'técnico':'técnicos'} • ${analysisRangeLabel()}`;
-  const viewportHeight=Math.max(620,Math.min(790,(window.innerHeight||900)-235));
-  renderIndicatorLineChart($('#allTechniciansFullscreenChart'),labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:viewportHeight,fitWidth:true,emphasis:true});
+  renderIndicatorLineChart(el,labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:responsiveFullscreenPlotHeight(el),fitWidth:true,emphasis:true});
+}
+
+function dailyTechnicianMetricConfig(metric=state.dailyTechniciansMetric){
+  const configs={
+    points:{label:'Pontuação diária simulada',percent:false,maxValue:null,decimals:1},
+    att:{label:'Atendimentos por dia',percent:false,maxValue:null,decimals:0},
+    evalPct:{label:'% de avaliação por dia',percent:true,maxValue:100,decimals:1},
+    avg:{label:'Nota média por dia',percent:false,maxValue:5,decimals:2}
+  };
+  return configs[metric]||configs.points;
+}
+function dailyTechnicianPointMap(rows){
+  const grouped=new Map(),out=new Map();
+  (rows||[]).forEach(r=>{const key=`${r.squadCode}|${r.date}`,list=grouped.get(key)||[];list.push(r);grouped.set(key,list)});
+  grouped.forEach((list,key)=>{
+    const metrics=list.map(r=>{const totalEval=safe(r.totalEval)||safe(r.notes5)+safe(r.notes4)+safe(r.notes3)+safe(r.notes2)+safe(r.notes1),avg=totalEval?truncate2((safe(r.notes5)*5+safe(r.notes4)*4+safe(r.notes3)*3+safe(r.notes2)*2+safe(r.notes1))/totalEval):0,evalPct=safe(r.att)?roundTo(totalEval/safe(r.att),4):0;return{...r,totalEval,avg,evalPct}}).filter(r=>safe(r.att)>0||safe(r.totalEval)>0);
+    if(!metrics.length)return;
+    const refs={refAtt:roundTo(meanOf(metrics,t=>t.att),0),refTotalEval:roundTo(meanOf(metrics,t=>t.totalEval),0),refAvg:truncate2(meanOf(metrics,t=>t.avg)),refEvalPct:roundTo(meanOf(metrics,t=>t.evalPct),4),bonusAtt:20,bonusTotalEval:30,bonusAvg:40,bonusEvalPct:35};
+    metrics.forEach(r=>out.set(`${key}|${nameLinkKey(r.technicianName)}`,calculateScore(r,refs).points));
+  });
+  return out;
+}
+function dailyTechnicianSeries(metric=state.dailyTechniciansMetric){
+  const scoped=orgTechnicianDailyRows().filter(r=>dateBetween(r.date||isoDateParts(r.year,r.month,r.day))&&(state.squadCode==='all'||String(r.squadCode)===String(state.squadCode)));
+  const labels=analysisDateLabels(),pointMap=metric==='points'?dailyTechnicianPointMap(scoped):null,map=new Map();
+  scoped.forEach(r=>{const name=r.technicianName||'',key=`${r.squadCode}|${nameLinkKey(name)}`;if(!name)return;const entry=map.get(key)||{squad:r.squadCode,name:titleWords(name),values:new Map()};let value=null;if(metric==='att')value=safe(r.att);else if(metric==='evalPct')value=safe(r.att)?safe(r.evalPct)*100:null;else if(metric==='avg')value=safe(r.totalEval)?safe(r.avg):null;else value=pointMap.get(`${r.squadCode}|${r.date}|${nameLinkKey(name)}`);entry.values.set(r.date,value);map.set(key,entry)});
+  const color=i=>`hsl(${Math.round((i*137.508)%360)} 78% 64%)`;
+  const series=[...map.values()].sort((a,b)=>String(a.squad).localeCompare(String(b.squad))||a.name.localeCompare(b.name,'pt-BR')).map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:color(i),values:labels.map(x=>e.values.has(x.date)?e.values.get(x.date):null)}));
+  return{labels:labels.map(x=>x.label),series};
+}
+function openDailyTechniciansChart(){
+  if(!isSuperAdmin())return;const data=dailyTechnicianSeries(state.dailyTechniciansMetric);if(!data.series.length){toast('Não há dados diários de técnicos no período selecionado.');return;}openModal('dailyTechniciansModal');requestAnimationFrame(()=>requestAnimationFrame(renderDailyTechniciansFullscreenChart));
+}
+function renderDailyTechniciansFullscreenChart(){
+  const el=$('#dailyTechniciansFullscreenChart');if(!el)return;const cfg=dailyTechnicianMetricConfig(state.dailyTechniciansMetric),data=dailyTechnicianSeries(state.dailyTechniciansMetric);$('#dailyTechniciansMetric').value=state.dailyTechniciansMetric;$('#dailyTechniciansPeriod').textContent=analysisRangeLabel();$('#dailyTechniciansSubtitle').textContent=state.dailyTechniciansMetric==='points'?`${cfg.label} dentro do calendário selecionado. É uma leitura analítica diária e não altera a pontuação oficial da competência.`:`${cfg.label} dentro do calendário diário selecionado.`;$('#dailyTechniciansCount').textContent=`${data.series.length} ${data.series.length===1?'técnico':'técnicos'} • ${analysisRangeLabel()}`;renderIndicatorLineChart(el,data.labels,data.series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:responsiveFullscreenPlotHeight(el),fitWidth:true,emphasis:true});
 }
 
 function shortHistoryMonth(id){
@@ -1082,6 +1136,85 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   bindSharedChartTooltip(el,{labels,entriesForIndex:i=>validSeries.map(s=>s.values?.[i]==null?null:{name:s.name,value:s.values[i],text:chartValueText(s.values[i],{percent,decimals}),color:s.color||'var(--accent)'})});
 }
 
+
+
+  const FEEDBACK_STORAGE_KEY='squadDashboardFeedbacksV25';
+  function feedbackScopeKey(squad=currentSquad(),m=currentMonth()){return squad&&m?`${squad.code}|${m.id}`:null}
+  function loadDemoFeedbackStore(){try{const rows=JSON.parse(localStorage.getItem(FEEDBACK_STORAGE_KEY)||'[]');return Array.isArray(rows)?rows:[]}catch(e){return[]}}
+  function saveDemoFeedbackStore(rows){localStorage.setItem(FEEDBACK_STORAGE_KEY,JSON.stringify(rows||[]))}
+  function normalizeFeedbackRow(r){return r?{...r,year:safe(r.year),month:safe(r.month),visible_to_technician:!!r.visible_to_technician,status:r.status||'draft',generated_snapshot:r.generated_snapshot||{}}:null}
+  function feedbackMonthTechs(m=currentMonth()){return (m?.technicians||[]).filter(t=>safe(t.att)>0||safe(t.totalEval)>0).sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'))}
+  function feedbackRowForTech(rows,techName){return (rows||[]).find(r=>samePersonName(r.technician_name,techName))||null}
+  function previousMonthForFeedback(squad,m){if(!squad||!m)return null;const ids=Object.keys(squad.months||{}).filter(id=>id<m.id).sort();return ids.length?squad.months[ids[ids.length-1]]:null}
+  function feedbackTrendText(currentValue,previousValue,label,{percent=false,points=false}={}){
+    const cur=safe(currentValue),prev=safe(previousValue);if(!prev)return'';const diff=cur-prev,ratio=Math.abs(diff)/(Math.abs(prev)||1);if(ratio<.03)return `${label} permaneceu estável em relação à competência anterior.`;const dir=diff>0?'evoluiu':'recuou';const formatted=percent?`${Math.abs(diff*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} p.p.`:points?`${Math.abs(diff).toLocaleString('pt-BR',{maximumFractionDigits:1})} pts`:`${Math.abs(diff).toLocaleString('pt-BR',{maximumFractionDigits:0})}`;return `${label} ${dir} ${formatted} em relação à competência anterior.`;
+  }
+  function feedbackSnapshotForTech(t,m=currentMonth(),squad=currentSquad()){
+    const refs=displayScoreRules(m),teamCfg=teamSettings(m),prevMonth=previousMonthForFeedback(squad,m),prev=prevMonth?(prevMonth.technicians||[]).find(x=>samePersonName(x.name,t.name)):null;
+    return{version:1,squad:squad?.code||'',year:m?.year,month:m?.month,monthName:m?.monthName||'',technicianName:t.name,userId:t.userId||null,att:safe(t.att),notes5:safe(t.notes5),totalEval:safe(t.totalEval),avg:safe(t.avg),evalPct:safe(t.evalPct),points:safe(t.points),rank:safe(t.rank)||null,status:String(t.status||''),goalsHit:safe(t.goalsHit),goalAtt:safe(t.goalAtt),goalNotes5:safe(t.goalEval),goalEvalPct:safe(teamCfg.teamGoalEvalPct),refs:{att:safe(refs.refAtt),totalEval:safe(refs.refTotalEval),avg:safe(refs.refAvg),evalPct:safe(refs.refEvalPct)},previous:prev?{id:prevMonth.id,monthName:prevMonth.monthName,year:prevMonth.year,att:safe(prev.att),notes5:safe(prev.notes5),totalEval:safe(prev.totalEval),avg:safe(prev.avg),evalPct:safe(prev.evalPct),points:safe(prev.points),rank:safe(prev.rank)||null,status:String(prev.status||'')}:null};
+  }
+  function generatedFeedbackForTech(t,m=currentMonth(),squad=currentSquad()){
+    const snap=feedbackSnapshotForTech(t,m,squad),monthLabel=`${snap.monthName} de ${snap.year}`,status=snap.status||'SEM STATUS',rankText=snap.rank?`${snap.rank}ª posição`:'posição não definida';
+    const summaryParts=[`Em ${monthLabel}, ${titleWords(t.name)} registrou ${fmtInt(snap.att)} atendimentos, ${fmtInt(snap.totalEval)} avaliações (${fmtPct(snap.evalPct)} dos atendimentos), nota média ${snap.avg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} e ${fmtNum(snap.points)} pontos, encerrando a competência na ${rankText} do Squad ${snap.squad} com status ${status}.`];
+    if(snap.previous){const trends=[feedbackTrendText(snap.att,snap.previous.att,'O volume de atendimentos'),feedbackTrendText(snap.evalPct,snap.previous.evalPct,'A taxa de avaliação',{percent:true}),feedbackTrendText(snap.points,snap.previous.points,'A pontuação',{points:true})].filter(Boolean);if(trends.length)summaryParts.push(trends.join(' '));}
+    const strengths=[];
+    if(status==='ACIMA')strengths.push('Fechou a competência acima da referência geral do Squad, atendendo pelo menos dois dos quatro critérios da gamificação.');
+    if(snap.goalAtt&&snap.att>=snap.goalAtt)strengths.push(`Atingiu a meta mensal de atendimentos (${fmtInt(snap.att)} de ${fmtInt(snap.goalAtt)}).`);
+    if(snap.goalNotes5&&snap.notes5>=snap.goalNotes5)strengths.push(`Atingiu a meta mensal de notas 5 (${fmtInt(snap.notes5)} de ${fmtInt(snap.goalNotes5)}).`);
+    if(snap.goalEvalPct&&snap.evalPct>=snap.goalEvalPct)strengths.push(`Manteve taxa de avaliação acima da meta do Squad (${fmtPct(snap.evalPct)} frente a ${fmtPct(snap.goalEvalPct)}).`);
+    if(snap.avg>=snap.refs.avg&&snap.totalEval>0)strengths.push(`Nota média de ${snap.avg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}, igual ou superior à referência da equipe (${snap.refs.avg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}).`);
+    if(snap.previous&&snap.points>snap.previous.points*1.05)strengths.push('Apresentou evolução relevante de pontuação em relação à competência anterior.');
+    if(!strengths.length)strengths.push('Há produção registrada na competência e uma base objetiva para evolução dos indicadores no próximo ciclo.');
+    const improvements=[];
+    if(snap.goalAtt&&snap.att<snap.goalAtt)improvements.push(`Elevar o volume de atendimentos para alcançar a meta mensal de ${fmtInt(snap.goalAtt)}.`);
+    if(snap.goalNotes5&&snap.notes5<snap.goalNotes5)improvements.push(`Aumentar a quantidade de notas 5 para alcançar a meta mensal de ${fmtInt(snap.goalNotes5)}.`);
+    if(snap.goalEvalPct&&snap.evalPct<snap.goalEvalPct)improvements.push(`Reforçar a solicitação de avaliações ao final dos atendimentos; a taxa ficou em ${fmtPct(snap.evalPct)}, abaixo da meta de ${fmtPct(snap.goalEvalPct)}.`);
+    if(snap.avg<snap.refs.avg&&snap.totalEval>0)improvements.push(`Trabalhar a experiência do cliente para superar a referência de nota média do Squad (${snap.refs.avg.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}).`);
+    if(status==='ABAIXO')improvements.push(`Recuperar pelo menos dois dos quatro critérios da gamificação para voltar ao status ACIMA.`);
+    if(snap.previous&&snap.points<snap.previous.points*.95)improvements.push('Revisar os fatores que provocaram queda de pontuação em relação à competência anterior e definir uma correção de rota objetiva.');
+    if(!improvements.length)improvements.push('Manter a constância dos resultados e buscar evolução incremental sem perder qualidade no atendimento.');
+    const goals=[];
+    if(snap.goalAtt)goals.push(`Atingir pelo menos ${fmtInt(snap.goalAtt)} atendimentos no próximo mês.`);
+    if(snap.goalNotes5)goals.push(`Buscar pelo menos ${fmtInt(snap.goalNotes5)} notas 5 no próximo mês.`);
+    if(snap.goalEvalPct)goals.push(`Manter taxa de avaliação em ${fmtPct(snap.goalEvalPct)} ou superior.`);
+    goals.push(`Manter a nota média igual ou acima da referência do Squad e acompanhar o ranking durante a competência.`);
+    return{summary:summaryParts.join('\n\n'),strengths:strengths.map(x=>`• ${x}`).join('\n'),improvement_points:improvements.map(x=>`• ${x}`).join('\n'),next_month_goals:goals.map(x=>`• ${x}`).join('\n'),manager_notes:'',generated_snapshot:snap};
+  }
+  async function ensureFeedbacksLoaded(force=false){
+    const squad=currentSquad(),m=currentMonth(),key=feedbackScopeKey(squad,m);if(!key)return[];if(!force&&state.feedbackCache[key])return state.feedbackCache[key];if(state.feedbackLoading[key])return state.feedbackCache[key]||[];state.feedbackLoading[key]=true;
+    try{
+      let rows=[];
+      if(state.supabase){const {data,error}=await state.supabase.from('technician_feedbacks').select('*').eq('squad_id',squad.dbId).eq('year',m.year).eq('month',m.month).order('technician_name');if(error)throw error;rows=(data||[]).map(normalizeFeedbackRow);}
+      else rows=loadDemoFeedbackStore().filter(r=>r.squad_code===squad.code&&safe(r.year)===safe(m.year)&&safe(r.month)===safe(m.month)).map(normalizeFeedbackRow);
+      state.feedbackCache[key]=rows;return rows;
+    }catch(err){console.error('Feedbacks indisponíveis',err);state.feedbackCache[key]=[];if(state.currentView==='feedbacks')toast('Não foi possível carregar os feedbacks. Confira se a migração V2.25.0 foi executada.');return[];}
+    finally{delete state.feedbackLoading[key];if(state.currentView==='feedbacks'&&feedbackScopeKey()===key)renderFeedbacks();}
+  }
+  function renderFeedbacks(){
+    if(!isAdmin()||!$('#view-feedbacks'))return;const specific=state.squadCode!=='all',m=currentMonth(),squad=currentSquad();$('#feedbackScopeEmpty').classList.toggle('hidden',specific);$('#feedbackContent').classList.toggle('hidden',!specific);$('#generateSquadFeedbacksBtn').disabled=!specific||!m;if(!specific)return;
+    if(!m){$('#feedbackMonthLabel').textContent='Sem competência';$('#feedbackRows').innerHTML='<div class="chart-empty">Importe uma competência para gerar feedbacks.</div>';return;}
+    $('#feedbackMonthLabel').textContent=`${m.monthName} ${m.year}`;const key=feedbackScopeKey(squad,m),rows=state.feedbackCache[key];if(!rows){$('#feedbackRows').innerHTML='<div class="chart-empty">Carregando feedbacks...</div>';ensureFeedbacksLoaded();return;}
+    const techs=feedbackMonthTechs(m),finalized=rows.filter(r=>r.status==='finalized').length,drafts=rows.filter(r=>r.status==='draft').length;$('#feedbackTechCount').textContent=fmtInt(techs.length);$('#feedbackFinalizedCount').textContent=fmtInt(finalized);$('#feedbackDraftCount').textContent=fmtInt(drafts);$('#feedbackProgressPct').textContent=techs.length?fmtPct(finalized/techs.length):'0%';$('#feedbackListHint').textContent=`${m.monthName} ${m.year} • ${rows.length} de ${techs.length} registros gerados`;
+    $('#feedbackRows').innerHTML=techs.map(t=>{const r=feedbackRowForTech(rows,t.name),status=r?.status==='finalized'?'FINALIZADO':r?'RASCUNHO':'NÃO GERADO',klass=r?.status==='finalized'?'finalized':r?'draft':'pending';return `<div class="feedback-row"><div class="feedback-person"><strong>${escapeHtml(titleWords(t.name))}</strong><small>Squad ${escapeHtml(squad.code)} • ${escapeHtml(m.monthName)} ${m.year}</small></div><div class="feedback-metric"><span>Atend.</span><strong>${fmtInt(t.att)}</strong></div><div class="feedback-metric"><span>% Aval.</span><strong>${fmtPct(t.evalPct)}</strong></div><div class="feedback-metric optional"><span>Pontos</span><strong>${fmtNum(t.points)}</strong></div><div class="feedback-metric optional"><span>Status</span><strong>${escapeHtml(t.status||'—')}</strong></div><div class="feedback-row-actions"><span class="feedback-status-badge ${klass}">${status}</span>${r?`<button class="btn secondary compact" type="button" data-feedback-open="${escapeHtml(t.name)}">Revisar</button>`:`<button class="btn primary compact" type="button" data-feedback-generate="${escapeHtml(t.name)}">Gerar</button>`}</div></div>`}).join('')||'<div class="chart-empty">Nenhum técnico com produção nesta competência.</div>';
+    $$('[data-feedback-open]').forEach(b=>b.addEventListener('click',()=>openFeedbackEditorByName(b.dataset.feedbackOpen)));
+    $$('[data-feedback-generate]').forEach(b=>b.addEventListener('click',()=>generateSingleFeedback(b.dataset.feedbackGenerate)));
+  }
+  function feedbackPayloadForTech(t,generated,existing=null){const m=currentMonth(),squad=currentSquad(),now=new Date().toISOString();return{organization_id:state.user.organizationId||existing?.organization_id||null,squad_id:squad.dbId||existing?.squad_id||null,technician_user_id:t.userId||existing?.technician_user_id||null,technician_name:t.name,year:m.year,month:m.month,summary:generated.summary||'',strengths:generated.strengths||'',improvement_points:generated.improvement_points||'',next_month_goals:generated.next_month_goals||'',manager_notes:generated.manager_notes||'',status:existing?.status||'draft',visible_to_technician:existing?.visible_to_technician===true,generated_snapshot:generated.generated_snapshot||{},created_by:existing?.created_by||state.user.userId||null,updated_by:state.user.userId||null,updated_at:now,finalized_at:existing?.finalized_at||null};}
+  async function persistGeneratedFeedbacks(payloads){
+    if(!payloads.length)return[];if(state.supabase){const {data,error}=await state.supabase.from('technician_feedbacks').upsert(payloads,{onConflict:'organization_id,squad_id,year,month,technician_name'}).select('*');if(error)throw error;return(data||[]).map(normalizeFeedbackRow)}
+    const store=loadDemoFeedbackStore();payloads.forEach(p=>{const ix=store.findIndex(r=>r.squad_code===state.squadCode&&safe(r.year)===safe(p.year)&&safe(r.month)===safe(p.month)&&samePersonName(r.technician_name,p.technician_name));const row={...p,id:ix>=0?store[ix].id:`demo-feedback-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,squad_code:state.squadCode,organization_id:p.organization_id||'demo-org',squad_id:p.squad_id||`demo-${state.squadCode}`};if(ix>=0)store[ix]=row;else store.push(row)});saveDemoFeedbackStore(store);return store.filter(r=>r.squad_code===state.squadCode&&safe(r.year)===safe(currentMonth().year)&&safe(r.month)===safe(currentMonth().month)).map(normalizeFeedbackRow);
+  }
+  async function generateSquadFeedbacks(){
+    if(!isAdmin()||!requireSpecificSquad())return;const m=currentMonth(),squad=currentSquad();if(!m)return toast('Selecione uma competência com dados.');const key=feedbackScopeKey(squad,m),rows=await ensureFeedbacksLoaded(),techs=feedbackMonthTechs(m),missing=techs.filter(t=>!feedbackRowForTech(rows,t.name));if(!missing.length)return toast('Todos os feedbacks desta competência já foram gerados.');const btn=$('#generateSquadFeedbacksBtn');btn.disabled=true;const old=btn.textContent;btn.textContent='Gerando...';try{const payloads=missing.map(t=>feedbackPayloadForTech(t,generatedFeedbackForTech(t,m,squad)));const saved=await persistGeneratedFeedbacks(payloads);state.feedbackCache[key]=state.supabase?[...rows,...saved.filter(n=>!feedbackRowForTech(rows,n.technician_name))]:saved;toast(`${missing.length} feedback(s) gerado(s) como rascunho.`);renderFeedbacks();}catch(err){console.error(err);toast('Não foi possível gerar os feedbacks. Confira a migração V2.25.0.');}finally{btn.disabled=false;btn.textContent=old;}}
+  async function generateSingleFeedback(techName){const m=currentMonth(),squad=currentSquad(),t=feedbackMonthTechs(m).find(x=>samePersonName(x.name,techName));if(!t)return;const key=feedbackScopeKey(squad,m),rows=await ensureFeedbacksLoaded();try{const saved=await persistGeneratedFeedbacks([feedbackPayloadForTech(t,generatedFeedbackForTech(t,m,squad))]);const row=saved.find(x=>samePersonName(x.technician_name,t.name))||saved[0];state.feedbackCache[key]=[...rows.filter(x=>!samePersonName(x.technician_name,t.name)),row];renderFeedbacks();openFeedbackEditor(row,t);}catch(err){console.error(err);toast('Não foi possível gerar este feedback.');}}
+  function openFeedbackEditorByName(techName){const m=currentMonth(),rows=state.feedbackCache[feedbackScopeKey()]||[],t=feedbackMonthTechs(m).find(x=>samePersonName(x.name,techName)),r=feedbackRowForTech(rows,techName);if(t&&r)openFeedbackEditor(r,t)}
+  function openFeedbackEditor(row,t){
+    state.feedbackEditor={row,t};const snap=row.generated_snapshot&&Object.keys(row.generated_snapshot).length?row.generated_snapshot:feedbackSnapshotForTech(t);$('#feedbackEditorTech').textContent=titleWords(t.name);$('#feedbackEditorPeriod').textContent=`${currentMonth().monthName} ${currentMonth().year} • Squad ${state.squadCode}`;const finalized=row.status==='finalized';$('#feedbackEditorStatus').textContent=finalized?'FINALIZADO':'RASCUNHO';$('#feedbackEditorStatus').className=`feedback-status-badge ${finalized?'finalized':'draft'}`;$('#feedbackSummary').value=row.summary||'';$('#feedbackStrengths').value=row.strengths||'';$('#feedbackImprovements').value=row.improvement_points||'';$('#feedbackNextGoals').value=row.next_month_goals||'';$('#feedbackManagerNotes').value=row.manager_notes||'';$('#feedbackVisibleToTechnician').checked=!!row.visible_to_technician;$('#feedbackEditorMetrics').innerHTML=[['Atendimentos',fmtInt(snap.att)],['Avaliações',fmtInt(snap.totalEval)],['% avaliação',fmtPct(snap.evalPct)],['Nota média',safe(snap.avg).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})],['Pontuação',fmtNum(snap.points)],['Ranking',snap.rank?`#${snap.rank}`:'—']].map(([a,b])=>`<div class="feedback-editor-metric"><span>${a}</span><strong>${b}</strong></div>`).join('');openModal('feedbackEditorModal');
+  }
+  async function saveFeedbackEditor(status='draft'){
+    const editor=state.feedbackEditor;if(!editor?.row||!editor?.t)return;const row=editor.row,key=feedbackScopeKey(),now=new Date().toISOString(),payload={summary:$('#feedbackSummary').value.trim(),strengths:$('#feedbackStrengths').value.trim(),improvement_points:$('#feedbackImprovements').value.trim(),next_month_goals:$('#feedbackNextGoals').value.trim(),manager_notes:$('#feedbackManagerNotes').value.trim(),visible_to_technician:$('#feedbackVisibleToTechnician').checked,status,updated_by:state.user.userId||null,updated_at:now,finalized_at:status==='finalized'?now:null};const btn=status==='finalized'?$('#feedbackFinalizeBtn'):$('#feedbackSaveDraftBtn');btn.disabled=true;const old=btn.textContent;btn.textContent='Salvando...';try{let saved;if(state.supabase){const {data,error}=await state.supabase.from('technician_feedbacks').update(payload).eq('id',row.id).select('*').single();if(error)throw error;saved=normalizeFeedbackRow(data);}else{const store=loadDemoFeedbackStore(),ix=store.findIndex(x=>x.id===row.id);saved=normalizeFeedbackRow({...row,...payload});if(ix>=0)store[ix]=saved;saveDemoFeedbackStore(store);}state.feedbackCache[key]=(state.feedbackCache[key]||[]).map(x=>x.id===saved.id?saved:x);state.feedbackEditor={row:saved,t:editor.t};closeModal('feedbackEditorModal');renderFeedbacks();toast(status==='finalized'?'Feedback finalizado.':'Rascunho salvo.');}catch(err){console.error(err);toast('Não foi possível salvar o feedback.');}finally{btn.disabled=false;btn.textContent=old;}}
+  async function loadMyFeedbacks(force=false){if(!isTechnician())return[];if(state.myFeedbacks&&!force)return state.myFeedbacks;if(state.myFeedbackLoading)return state.myFeedbacks||[];state.myFeedbackLoading=true;try{let rows=[];if(state.supabase){const {data,error}=await state.supabase.from('technician_feedbacks').select('*').eq('technician_user_id',state.user.userId).eq('status','finalized').eq('visible_to_technician',true).order('year',{ascending:false}).order('month',{ascending:false});if(error)throw error;rows=(data||[]).map(normalizeFeedbackRow);}else rows=loadDemoFeedbackStore().filter(r=>r.status==='finalized'&&r.visible_to_technician&&samePersonName(r.technician_name,state.user.techName)).sort((a,b)=>(safe(b.year)*100+safe(b.month))-(safe(a.year)*100+safe(a.month))).map(normalizeFeedbackRow);state.myFeedbacks=rows;return rows;}catch(err){console.error(err);state.myFeedbacks=[];return[]}finally{state.myFeedbackLoading=false;if(state.currentView==='my-feedbacks')renderMyFeedbacks();}}
+  function renderMyFeedbacks(){if(!isTechnician()||!$('#myFeedbackRows'))return;if(!state.myFeedbacks){$('#myFeedbackRows').innerHTML='<div class="card chart-empty">Carregando feedbacks...</div>';loadMyFeedbacks();return;}const rows=state.myFeedbacks;$('#myFeedbackRows').innerHTML=rows.map(r=>{const snap=r.generated_snapshot||{},period=`${MONTHS_PT[Math.max(0,safe(r.month)-1)]||r.month}/${r.year}`;return `<article class="card my-feedback-card"><div class="my-feedback-head"><div><span class="eyebrow">${escapeHtml(period)} • SQUAD ${escapeHtml(snap.squad||state.user.squadCode||'')}</span><h3>Feedback mensal</h3><p>Finalizado em ${r.finalized_at?formatDateTime(r.finalized_at):'data não informada'}</p></div><span class="feedback-status-badge finalized">FINALIZADO</span></div><div class="my-feedback-sections"><div class="my-feedback-block full"><span>Resumo</span><p>${escapeHtml(r.summary||'—')}</p></div><div class="my-feedback-block"><span>Pontos positivos</span><p>${escapeHtml(r.strengths||'—')}</p></div><div class="my-feedback-block"><span>Pontos de desenvolvimento</span><p>${escapeHtml(r.improvement_points||'—')}</p></div><div class="my-feedback-block"><span>Compromissos</span><p>${escapeHtml(r.next_month_goals||'—')}</p></div><div class="my-feedback-block"><span>Observações do gestor</span><p>${escapeHtml(r.manager_notes||'Sem observações adicionais.')}</p></div></div></article>`}).join('')||'<div class="empty-state"><div>✎</div><h2>Nenhum feedback compartilhado</h2><p>Quando seu gestor finalizar e liberar um feedback mensal, ele aparecerá aqui.</p></div>';}
 
 
   function renderProfile(){
