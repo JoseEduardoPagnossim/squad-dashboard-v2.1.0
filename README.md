@@ -251,6 +251,13 @@ Para que o login de Técnico visualize o ranking completo do próprio Squad resp
 - Ajusta o espaçamento da legenda do KPI de % Avaliado em Meu desempenho.
 
 
+
+### V2.25.1
+
+- Corrige a abertura de **Evolução diária dos técnicos** no Admin Geral.
+- O gráfico diário passa a priorizar os `daily_metrics` já carregados nas competências, a mesma fonte utilizada pelos demais indicadores diários.
+- O RPC organizacional permanece apenas como fallback; nenhuma nova migração é necessária.
+
 ### V2.25.0
 
 - Novo módulo **Gestão → Feedbacks** para Admin Geral e Admin do Squad.
