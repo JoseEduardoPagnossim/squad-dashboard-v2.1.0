@@ -1,26 +1,21 @@
 # Soften Performance Hub V2.25.1
 
-## Regeneração segura de feedbacks
+## Feedback individual
 
-O botão principal de **Gestão → Feedbacks** agora se chama **Regerar Com Dados Atualizados**.
+A tela **Gestão → Feedbacks** agora deixa explícitas as duas formas de geração:
 
-Ao clicar, o sistema sempre percorre todos os técnicos com produção na competência e recalcula os dados automáticos usando a importação mais recente. O comportamento é único: não existe mais uma ação separada apenas para pendentes.
+- **Gerar feedbacks pendentes**: cria de uma vez os rascunhos de todos os técnicos ainda sem feedback na competência.
+- **Gerar individual**: cada técnico que ainda estiver como **NÃO GERADO** possui seu próprio botão. O sistema gera somente aquele feedback e já abre o editor para revisão.
 
-### Preservação do trabalho do gestor
+Feedbacks já existentes continuam com o botão **Revisar**, evitando sobrescrever acidentalmente alterações feitas pelo gestor.
 
-- **Observações do gestor** são sempre preservadas.
-- Resumo, pontos positivos, pontos de desenvolvimento e compromissos que tenham sido editados manualmente também são preservados.
-- Um campo que permaneceu igual ao texto automático anterior pode ser atualizado automaticamente com os novos números.
-- O snapshot de métricas é sempre atualizado.
-- Status de rascunho/finalizado, compartilhamento com o técnico e data de finalização não são alterados pela regeneração.
-- Técnicos ainda sem registro recebem um novo rascunho normalmente.
+Esta versão também contém todas as entregas da V2.25.0: feedbacks mensais sem IA, tela Meus feedbacks do técnico, evolução diária em tela cheia e responsividade da legenda do gráfico por competência.
 
 ## Produção
 
-Esta versão **não exige SQL novo**. A tabela criada pela `MIGRACAO_V2.25.0.sql` já possui o campo JSON necessário para armazenar a referência do conteúdo automático.
-
-1. Se ainda não publicou a V2.25.0, execute primeiro `MIGRACAO_V2.25.0.sql`.
-2. Suba os arquivos da atualização V2.25.1 no repositório.
-3. Preserve o `config.js` de produção.
-4. Não é necessário republicar Edge Functions.
-5. Faça `Ctrl + F5` após o GitHub Pages publicar.
+1. Faça backup do repositório e preserve o `config.js` de produção.
+2. No Supabase > SQL Editor, execute `MIGRACAO_V2.25.1.sql` (é idempotente; pode ser executada mesmo se a V2.25.0 já tiver sido aplicada).
+3. Suba os arquivos do ZIP `squad-dashboard-v2.25.1-atualizacao-github.zip`.
+4. Não substitua o `config.js`.
+5. Não é necessário republicar Edge Functions.
+6. Aguarde o GitHub Pages publicar, faça logout/login e `Ctrl + F5`.

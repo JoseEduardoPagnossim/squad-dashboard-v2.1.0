@@ -251,18 +251,18 @@ Para que o login de Técnico visualize o ranking completo do próprio Squad resp
 - Ajusta o espaçamento da legenda do KPI de % Avaliado em Meu desempenho.
 
 
-### V2.25.0
+### V2.25.1
 
 - Novo módulo **Gestão → Feedbacks** para Admin Geral e Admin do Squad.
 - Geração automática sem IA externa, baseada nos indicadores mensais já existentes.
 - Feedback em rascunho, edição do gestor, finalização e histórico por competência.
 - Opção **Disponibilizar ao técnico**; quando finalizado, aparece em **Meus feedbacks**.
-- Nova migração `MIGRACAO_V2.25.0.sql` cria `technician_feedbacks` com RLS por organização/Squad.
+- Nova migração `MIGRACAO_V2.25.1.sql` cria `technician_feedbacks` com RLS por organização/Squad.
 - Em **Indicadores**, novo gráfico em tela cheia **Evolução diária dos técnicos**, com Pontuação diária simulada, Atendimentos, % de avaliação e Nota média.
 - O gráfico mensal **Todos os técnicos por competência** continua com sua lógica mensal.
 - Legendas dos gráficos em tela cheia agora reservam espaço próprio e permanecem acessíveis em resoluções/alturas menores.
 
 
-## V2.25.1 — Regeneração segura de feedbacks
+## V2.25.1 — geração individual de feedback
 
-Na tela **Gestão → Feedbacks**, o botão principal passa a se chamar **Regerar Com Dados Atualizados**. Ele recalcula a base automática de todos os técnicos da competência usando os números mais recentes, cria os feedbacks que ainda não existem e atualiza os snapshots dos existentes. Campos que o gestor alterou manualmente são preservados; **Observações do gestor** nunca são apagadas. Se um texto ainda estiver exatamente igual ao conteúdo automático anterior, ele é atualizado para a nova sugestão automática. Status, compartilhamento e data de finalização também são preservados.
+Em Gestão → Feedbacks, além da geração em lote, cada técnico sem feedback possui o botão **Gerar individual**, que cria somente o rascunho selecionado e abre o editor.

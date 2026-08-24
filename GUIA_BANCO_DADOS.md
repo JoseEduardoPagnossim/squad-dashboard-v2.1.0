@@ -255,9 +255,9 @@ Ao reimportar uma competência aberta, o sistema atualiza os técnicos presentes
 A V2.22.0 altera somente HTML, JavaScript de interação do seletor de data e CSS visual. Não cria colunas, tabelas, políticas ou funções novas no Supabase. Se a `MIGRACAO_V2.21.0.sql` já foi executada, não existe SQL adicional para esta versão.
 
 
-## V2.25.0 — Feedbacks mensais
+## V2.25.1 — Feedbacks mensais
 
-Execute `MIGRACAO_V2.25.0.sql` antes de publicar o frontend. A migração cria `technician_feedbacks`.
+Execute `MIGRACAO_V2.25.1.sql` antes de publicar o frontend. A migração cria/valida `technician_feedbacks` e pode ser executada novamente com segurança.
 
 Permissões:
 
