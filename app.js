@@ -781,9 +781,24 @@ function allTechnicianMetricConfig(metric=state.allTechniciansMetric){
   return configs[metric]||configs.points;
 }
 function allTechnicianSeries(rangeIds,metric=state.allTechniciansMetric){
-  const map=new Map(),dailyRows=orgTechnicianDailyRows().filter(r=>dateBetween(r.date||isoDateParts(r.year,r.month,r.day))),monthlyRows=orgTechnicianRows();const ids=rangeIds||analysisMonthIds(),getColor=i=>`hsl(${Math.round((i*137.508)%360)} 78% 64%)`;
-  if(metric==='points')return allTechnicianSeriesMonthlyPoints(ids,getColor,monthlyRows);
-  dailyRows.forEach(r=>{const id=`${r.year}-${String(r.month).padStart(2,'0')}`;if(!ids.includes(id))return;const key=`${r.squadCode}|${nameLinkKey(r.technicianName)}`,entry=map.get(key)||{squad:r.squadCode,name:titleWords(r.technicianName),months:new Map()},m=entry.months.get(id)||{att:0,n5:0,n4:0,n3:0,n2:0,n1:0};m.att+=safe(r.att);m.n5+=safe(r.notes5);m.n4+=safe(r.notes4);m.n3+=safe(r.notes3);m.n2+=safe(r.notes2);m.n1+=safe(r.notes1);entry.months.set(id,m);map.set(key,entry);});const list=[...map.values()].sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR'));return list.map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:getColor(i),values:ids.map(id=>{const m=e.months.get(id);if(!m)return null;const ev=m.n5+m.n4+m.n3+m.n2+m.n1;if(metric==='att')return m.att;if(metric==='evalPct')return m.att?(ev/m.att)*100:null;if(metric==='avg')return ev?((m.n5*5+m.n4*4+m.n3*3+m.n2*2+m.n1)/ev):null;return null;})}));
+  // V2.24.3: o quadro geral em tela cheia é comparativo por competência.
+  // Todas as métricas usam a mesma fonte mensal consolidada da Pontuação. Isso evita
+  // depender do RPC diário para Atendimentos, % de avaliação e Nota média e garante
+  // que as quatro opções do seletor tenham exatamente os mesmos técnicos/competências.
+  const rows=orgTechnicianRows(),ids=rangeIds||analysisMonthIds(),getColor=i=>`hsl(${Math.round((i*137.508)%360)} 78% 64%)`,map=new Map();
+  (rows||[]).filter(r=>ids.includes(r.id)).forEach(r=>{
+    const key=`${r.squadCode}|${nameLinkKey(r.technicianName)}`;
+    if(!map.has(key))map.set(key,{squad:r.squadCode,name:titleWords(r.technicianName),values:new Map()});
+    let value=null;
+    if(metric==='points')value=safe(r.points);
+    else if(metric==='att')value=safe(r.att);
+    else if(metric==='evalPct')value=safe(r.evalPct)*100;
+    else if(metric==='avg')value=safe(r.avg);
+    map.get(key).values.set(r.id,value);
+  });
+  return [...map.values()]
+    .sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR'))
+    .map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:getColor(i),values:ids.map(id=>e.values.has(id)?e.values.get(id):null)}));
 }
 function allTechnicianSeriesMonthlyPoints(ids,getColor,rows=orgTechnicianRows()){const map=new Map();(rows||[]).filter(r=>ids.includes(r.id)).forEach(r=>{const key=`${r.squadCode}|${nameLinkKey(r.technicianName)}`;if(!map.has(key))map.set(key,{squad:r.squadCode,name:titleWords(r.technicianName),values:new Map()});map.get(key).values.set(r.id,safe(r.points));});return[...map.values()].sort((a,b)=>a.squad.localeCompare(b.squad)||a.name.localeCompare(b.name,'pt-BR')).map((e,i)=>({name:`Squad ${e.squad} • ${e.name}`,color:getColor(i),values:ids.map(id=>e.values.has(id)?e.values.get(id):null)}));}
 
@@ -804,7 +819,7 @@ function renderAllTechniciansFullscreenChart(explicitRange=null){
   const cfg=allTechnicianMetricConfig(state.allTechniciansMetric),series=allTechnicianSeries(rangeIds,state.allTechniciansMetric),labels=rangeIds.map(shortHistoryMonth);
   $('#allTechniciansMetric').value=state.allTechniciansMetric;
   $('#allTechniciansPeriod').textContent=analysisRangeLabel();
-  $('#allTechniciansSubtitle').textContent=`${cfg.label} de todos os técnicos dos Squads A, B, D e E dentro do calendário selecionado. Pontuação permanece oficial por competência mensal.`;
+  $('#allTechniciansSubtitle').textContent=`${cfg.label} de todos os técnicos dos Squads A, B, D e E por competência dentro do período selecionado.`;
   $('#allTechniciansCount').textContent=`${series.length} ${series.length===1?'técnico':'técnicos'} • ${analysisRangeLabel()}`;
   const viewportHeight=Math.max(620,Math.min(790,(window.innerHeight||900)-235));
   renderIndicatorLineChart($('#allTechniciansFullscreenChart'),labels,series,{maxValue:cfg.maxValue,percent:cfg.percent,decimals:cfg.decimals,height:viewportHeight,fitWidth:true,emphasis:true});

@@ -245,3 +245,7 @@ Para instalação nova, execute `supabase_schema.sql`, publique as Edge Function
 ## V2.24.2 — ranking do game para Técnicos
 
 Para que o login de Técnico visualize o ranking completo do próprio Squad respeitando o calendário diário, execute `MIGRACAO_V2.24.2.sql`. A função `get_my_squad_game_ranking` é `SECURITY DEFINER` e limita a consulta ao Squad do usuário autenticado.
+
+### V2.24.3
+- Corrige Atendimentos, % de avaliação e Nota média no quadro geral de todos os técnicos, usando consolidado por competência.
+- Ajusta o espaçamento da legenda do KPI de % Avaliado em Meu desempenho.
