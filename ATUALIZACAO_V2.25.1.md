@@ -1,26 +1,26 @@
 # Soften Performance Hub V2.25.1
 
-## Correção — Evolução diária dos técnicos
+## Regeneração segura de feedbacks
 
-Foi corrigido o aviso **“Não há dados diários de técnicos no período selecionado”** exibido ao abrir o novo gráfico diário em Indicadores.
+O botão principal de **Gestão → Feedbacks** agora se chama **Regerar Com Dados Atualizados**.
 
-### Causa
-O botão de evolução diária consultava primeiro o consolidado organizacional carregado por RPC. No Admin Geral isso podia ficar vazio ou incompleto mesmo com os `daily_metrics` já disponíveis dentro das competências — os mesmos dados que alimentavam normalmente os demais indicadores diários da tela.
+Ao clicar, o sistema sempre percorre todos os técnicos com produção na competência e recalcula os dados automáticos usando a importação mais recente. O comportamento é único: não existe mais uma ação separada apenas para pendentes.
 
-### Correção
-Para o **Admin Geral**, o gráfico agora prioriza diretamente os dados diários já carregados em `squad_months → technician_monthly → daily_metrics`.
+### Preservação do trabalho do gestor
 
-Com isso:
-- o período `De → Até` continua sendo respeitado;
-- o filtro por Squad continua sendo respeitado;
-- Pontuação diária simulada, Atendimentos, % de avaliação e Nota média usam os dados diários existentes;
-- o RPC permanece como fallback;
-- não há alteração nas regras mensais oficiais.
+- **Observações do gestor** são sempre preservadas.
+- Resumo, pontos positivos, pontos de desenvolvimento e compromissos que tenham sido editados manualmente também são preservados.
+- Um campo que permaneceu igual ao texto automático anterior pode ser atualizado automaticamente com os novos números.
+- O snapshot de métricas é sempre atualizado.
+- Status de rascunho/finalizado, compartilhamento com o técnico e data de finalização não são alterados pela regeneração.
+- Técnicos ainda sem registro recebem um novo rascunho normalmente.
 
 ## Produção
 
-1. Suba os arquivos da atualização no GitHub.
-2. Preserve o `config.js` atual.
-3. Não execute SQL novo.
+Esta versão **não exige SQL novo**. A tabela criada pela `MIGRACAO_V2.25.0.sql` já possui o campo JSON necessário para armazenar a referência do conteúdo automático.
+
+1. Se ainda não publicou a V2.25.0, execute primeiro `MIGRACAO_V2.25.0.sql`.
+2. Suba os arquivos da atualização V2.25.1 no repositório.
+3. Preserve o `config.js` de produção.
 4. Não é necessário republicar Edge Functions.
-5. Após o GitHub Pages publicar, faça logout/login e `Ctrl + F5`.
+5. Faça `Ctrl + F5` após o GitHub Pages publicar.

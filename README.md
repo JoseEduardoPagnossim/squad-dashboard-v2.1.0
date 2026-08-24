@@ -251,13 +251,6 @@ Para que o login de Técnico visualize o ranking completo do próprio Squad resp
 - Ajusta o espaçamento da legenda do KPI de % Avaliado em Meu desempenho.
 
 
-
-### V2.25.1
-
-- Corrige a abertura de **Evolução diária dos técnicos** no Admin Geral.
-- O gráfico diário passa a priorizar os `daily_metrics` já carregados nas competências, a mesma fonte utilizada pelos demais indicadores diários.
-- O RPC organizacional permanece apenas como fallback; nenhuma nova migração é necessária.
-
 ### V2.25.0
 
 - Novo módulo **Gestão → Feedbacks** para Admin Geral e Admin do Squad.
@@ -268,3 +261,8 @@ Para que o login de Técnico visualize o ranking completo do próprio Squad resp
 - Em **Indicadores**, novo gráfico em tela cheia **Evolução diária dos técnicos**, com Pontuação diária simulada, Atendimentos, % de avaliação e Nota média.
 - O gráfico mensal **Todos os técnicos por competência** continua com sua lógica mensal.
 - Legendas dos gráficos em tela cheia agora reservam espaço próprio e permanecem acessíveis em resoluções/alturas menores.
+
+
+## V2.25.1 — Regeneração segura de feedbacks
+
+Na tela **Gestão → Feedbacks**, o botão principal passa a se chamar **Regerar Com Dados Atualizados**. Ele recalcula a base automática de todos os técnicos da competência usando os números mais recentes, cria os feedbacks que ainda não existem e atualiza os snapshots dos existentes. Campos que o gestor alterou manualmente são preservados; **Observações do gestor** nunca são apagadas. Se um texto ainda estiver exatamente igual ao conteúdo automático anterior, ele é atualizado para a nova sugestão automática. Status, compartilhamento e data de finalização também são preservados.
