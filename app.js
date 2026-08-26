@@ -2055,7 +2055,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     const quality=expectedKind==='quality',service=expectedKind==='service';
     $('#importMessage').textContent=quality?`Selecione o CSV de Produto/Empresa para ${scope}.`:service?`Selecione o CSV operacional de atendimentos para ${scope}.`:`Selecione o CSV para atualizar ${scope}.`;
     $('#importDetails').innerHTML=quality?'<b>CSV Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa. Cada linha representa uma avaliação. <b>NotaServico é ignorada</b> e cliente não é necessário.':service?'<b>CSV Operacional/Serviço:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 1 a 5.':'<b>Operacional/Serviço:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 1 a 5.<br><b>Qualidade Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa. <b>NotaServico é ignorada</b> neste segundo arquivo.';
-    if($('#csvPeriodHint'))$('#csvPeriodHint').textContent=quality?'Produto/Empresa exige que a competência operacional já esteja importada para vincular o técnico ao Squad.':service?'A reimportação substitui Serviço/atendimentos do mês e preserva Produto/Empresa.':'O tipo do CSV é identificado automaticamente.';
+    if($('#csvPeriodHint'))$('#csvPeriodHint').textContent=quality?'Produto/Empresa exige que a competência operacional já esteja importada. Ao confirmar um mês, as demais competências existentes no mesmo CSV e já cadastradas no escopo também são sincronizadas.':service?'A reimportação substitui Serviço/atendimentos do mês e preserva Produto/Empresa.':'O tipo do CSV é identificado automaticamente.';
     $('#importProgress').style.width='0%';$('#chooseFileBtn').disabled=false;$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden');openModal('importModal');
   }
   let confirmDialogResolver=null;
@@ -2086,7 +2086,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
         if(!months.length)throw new Error(scopeAll?'Nenhuma avaliação de Produto/Empresa pôde ser vinculada. Importe primeiro o CSV operacional das competências e confira os nomes dos técnicos.':`Nenhuma avaliação de Produto/Empresa pôde ser vinculada ao Squad ${state.squadCode}. Importe primeiro a competência operacional e confira o nome do técnico.`);
         state.pendingCsv={kind:'quality',fileName:file.name,rows:mapped.rows,ignored:parsed.ignored,total:parsed.total,months,unmatched:mapped.unmatched,ambiguous:mapped.ambiguous,scopeAll,codes};
         $('#csvMonthSelect').innerHTML=months.map(id=>{const [y,m]=id.split('-').map(Number);return `<option value="${id}">${MONTHS_PT[m-1]} ${y}</option>`}).join('');$('#csvPeriodBlock').classList.remove('hidden');$('#confirmCsvImportBtn').classList.remove('hidden');$('#confirmCsvImportBtn').textContent='Importar qualidade';$('#importMessage').textContent='CSV de Produto/Empresa reconhecido.';
-        if($('#csvPeriodHint'))$('#csvPeriodHint').textContent='Cada linha é uma avaliação individual. A importação consolida NotaProduto e NotaEmpresa por técnico + dia. NotaServico é ignorada.';
+        if($('#csvPeriodHint'))$('#csvPeriodHint').textContent='Cada linha é uma avaliação individual. A importação consolida NotaProduto e NotaEmpresa por técnico + dia. NotaServico é ignorada. As outras competências presentes no mesmo CSV também serão sincronizadas quando já existirem no monitor.';
         const un=mapped.unmatched.length?` • <strong>${mapped.unmatched.length} técnico(s) sem vínculo</strong>: ${escapeHtml(mapped.unmatched.slice(0,6).join(', '))}${mapped.unmatched.length>6?'…':''}`:'',amb=mapped.ambiguous.length?` • <strong>${mapped.ambiguous.length} vínculo(s) ambíguo(s)</strong>`:'';
         const hist=safe(mapped.sourceCounts?.['histórico anterior'])+safe(mapped.sourceCounts?.['histórico posterior']),directory=safe(mapped.sourceCounts?.['cadastro de usuário']);
         $('#importDetails').innerHTML=`<strong>${fmtInt(mapped.rows.length)} avaliações vinculadas</strong> • <strong>${months.length} meses disponíveis</strong>${un}${amb} • ${fmtInt(parsed.ignored)} linha(s) inválida(s)/sem nota de Produto ou Empresa. <span class="muted">Vínculos recuperados pelo histórico: ${fmtInt(hist)} • pelo cadastro: ${fmtInt(directory)}. Técnicos desligados podem permanecer na qualidade mesmo sem linha operacional na competência. Clientes, Resolve, comentário e NotaServico não entram nos cálculos.</span>`;$('#importProgress').style.width='100%';return;
@@ -2108,8 +2108,9 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       const pending=state.pendingCsv,[year,month]=id.split('-').map(Number);$('#importProgress').style.width='35%';
       if(pending.kind==='quality'){
         $('#importMessage').textContent='Consolidando Produto e Empresa por técnico e dia...';let importedSquads=0,importedRows=0;const codes=pending.codes.filter(code=>pending.rows.some(r=>r.group===code&&r.id===id));if(!codes.length)throw new Error('Nenhum Squad possui avaliações vinculadas para este mês.');
-        for(const code of codes){const squad=state.squads[code],m=squad?.months?.[id];if(!m)continue;const result=applyQualityMonthImport(m,pending.rows.filter(r=>r.group===code&&r.id===id),pending.fileName);importedSquads++;importedRows+=result.sourceRows;if(state.supabase){$('#importMessage').textContent=`Gravando qualidade do Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,codes.length)*40))+'%';await persistQualityMonth(m,pending.fileName)}}
-        saveDemoSquads();render();state.pendingCsv=null;state.expectedCsvKind=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${fmtInt(importedRows)} avaliações de Produto/Empresa consolidadas em ${importedSquads} Squad(s).`);return;
+        for(const code of codes){const squad=state.squads[code],m=squad?.months?.[id];if(!m)continue;const result=applyQualityMonthImport(m,pending.rows.filter(r=>r.group===code&&r.id===id),pending.fileName);importedSquads++;importedRows+=result.sourceRows;if(state.supabase){$('#importMessage').textContent=`Gravando qualidade do Squad ${code}...`;$('#importProgress').style.width=(45+Math.round(importedSquads/Math.max(1,codes.length)*30))+'%';await persistQualityMonth(m,pending.fileName)}}
+        $('#importMessage').textContent='Sincronizando Produto/Empresa das demais competências do mesmo CSV...';$('#importProgress').style.width='82%';const historySync=await syncHistoricalQualityFromCsv(pending,id);
+        saveDemoSquads();render();state.pendingCsv=null;state.expectedCsvKind=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${fmtInt(importedRows)} avaliações de Produto/Empresa consolidadas em ${importedSquads} Squad(s).${historySync.monthsPatched?` Histórico de qualidade sincronizado em ${historySync.monthsPatched} competência(s).`:''}`);return;
       }
       $('#importMessage').textContent='Consolidando dados do mês...';let importedSquads=0,importedTechs=0;
       if(pending.scopeAll){
@@ -2157,6 +2158,21 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     for(let i=0;i<inserts.length;i+=500){const {error}=await state.supabase.from('quality_person_daily_metrics').insert(inserts.slice(i,i+500));if(error)throw error}
     // Limpa a tabela V2.26 para evitar dados antigos concorrentes; ela permanece apenas como compatibilidade histórica.
     for(const t of m.technicians||[]){if(!t.dbId)continue;const {error}=await state.supabase.from('quality_daily_metrics').delete().eq('technician_month_id',t.dbId);if(error)console.warn('Não foi possível limpar quality_daily_metrics legado.',error);}
+  }
+
+  async function syncHistoricalQualityFromCsv(pending,selectedId){
+    const synced=[];let sourceRows=0,externalRows=0;
+    for(const code of pending?.codes||[]){
+      const squad=state.squads?.[code];if(!squad)continue;
+      for(const id of pending?.months||[]){
+        if(id===selectedId)continue;
+        const mon=squad.months?.[id];if(!mon)continue;
+        const rows=(pending.rows||[]).filter(r=>r.group===code&&r.id===id);if(!rows.length)continue;
+        const result=applyQualityMonthImport(mon,rows,pending.fileName);sourceRows+=result.sourceRows;externalRows+=result.externalRows;synced.push({code,id,rows:result.sourceRows});
+        if(state.supabase)await persistQualityMonth(mon,pending.fileName);
+      }
+    }
+    return{synced,monthsPatched:new Set(synced.map(x=>x.id)).size,squadsPatched:new Set(synced.map(x=>x.code)).size,sourceRows,externalRows};
   }
 
   function serviceCsvMonthTechMap(rows,id,squadCode){

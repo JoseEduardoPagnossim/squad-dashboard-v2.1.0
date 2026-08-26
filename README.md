@@ -1,4 +1,13 @@
-# Soften Performance Hub V2.27.2
+# Soften Performance Hub V2.27.4
+
+
+## V2.27.4 — Sincronização histórica de Produto/Empresa
+
+- Mantém o gráfico **Notas baixas acumuladas** da V2.27.2. A V2.27.3 foi descartada.
+- Ao importar o CSV Produto/Empresa e confirmar uma competência, o sistema também sincroniza automaticamente as demais competências presentes no mesmo arquivo que já existirem no monitor, seguindo a mesma ideia usada no CSV operacional.
+- `NotaServico` continua ignorada no CSV de qualidade.
+- Nenhuma nova migração SQL é necessária além da `MIGRACAO_V2.27.0.sql` já aplicada.
+- O CSV de qualidade usado na validação atual contém somente **julho/2026 e agosto/2026**. Portanto, Produto/Empresa só podem aparecer nesses meses até que arquivos de competências anteriores sejam importados.
 
 ## V2.27.2 — Correção do comparativo por dias úteis
 
