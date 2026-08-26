@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.27.4" />
+  <link rel="stylesheet" href="styles.css?v=2.28.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.27.4 • Qualidade e comparativos</small>
+      <small class="login-version">V2.28.0 • Férias, custos e legibilidade</small>
     </div>
   </section>
 
@@ -77,6 +77,7 @@
         <div class="nav-group admin-only"><span class="nav-group-label">GESTÃO</span>
           <button class="nav-btn" data-view="admin" data-admin-section="operation"><span>↻</span> Operação</button>
           <button class="nav-btn" data-view="admin" data-admin-section="finance"><span>R$</span> Bonificação</button>
+          <button class="nav-btn super-only" data-view="admin" data-admin-section="costs"><span>⏱</span> Custos</button>
           <button class="nav-btn" data-view="feedbacks"><span>✎</span> Feedbacks</button>
           <button class="nav-btn" data-view="users"><span>♟</span> Usuários</button>
           <button class="nav-btn" data-view="admin" data-admin-section="appearance"><span>✦</span> Aparência</button>
@@ -103,7 +104,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.27.4 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.28.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -693,6 +694,23 @@
           <article class="card admin-card full finance-admin-card admin-section admin-finance"><span class="eyebrow">FECHAMENTO FINANCEIRO</span><h2>Técnicos do Squad</h2><p>Layout responsivo sem rolagem horizontal. Use o checkbox <b>Desconsiderar na quantidade de técnicos do grupo</b> em desligamentos/experiência: os dados continuam no total, mas o técnico sai apenas do denominador financeiro da Base do Squad. Abra <b>Detalhes</b> para auditar os modelos.</p><div id="financeTechnicianRows" class="finance-tech-list"></div><div class="admin-actions finance-report-actions"><span class="muted" id="financeAdminHint">Selecione um mês.</span><button class="btn secondary" id="exportFinanceExcelBtn">↓ Relatório Excel</button><button class="btn secondary" id="exportFinancePdfBtn">↓ Relatório PDF</button><button class="btn primary" id="saveFinanceTechniciansBtn">Salvar valores individuais</button></div></article>
           <article class="card admin-card super-only finance-super-card admin-section admin-finance"><span class="eyebrow">ADMIN GERAL</span><h2>Minha comissão do mês</h2><p>A comissão de Admin Geral é informada manualmente como valor total e não participa das regras dos Squads.</p><div class="admin-form"><label><span>Comissão final (R$)</span><input id="superAdminCommissionInput" type="number" min="0" step="0.01"></label><label><span>Observação</span><input id="superAdminCommissionNotes" type="text" placeholder="Opcional"></label></div><div class="admin-actions"><span class="muted" id="superAdminCommissionPeriod">Selecione um mês.</span><button class="btn primary" id="saveSuperAdminCommissionBtn">Salvar minha comissão</button></div></article>
 
+          <article class="card admin-card full admin-section admin-costs support-cost-hero super-only">
+            <div class="section-title"><div><span class="eyebrow">BASE CONFIDENCIAL • SUPORTE TÉCNICO</span><h2>Custo-hora histórico do suporte</h2></div><span class="privacy-chip">🔒 ADMIN GERAL</span></div>
+            <p>Cadastre o custo-hora de cada técnico por competência. Esta base é corporativa e considera o <b>suporte técnico como um todo</b>, sem filtro ou cálculo por Squad. A análise de custo dos chamados será adicionada somente quando a estrutura do novo CSV de tempos estiver definida.</p>
+            <div class="support-cost-toolbar">
+              <label><span>Competência</span><select id="supportCostMonthSelect"></select></label>
+              <div class="support-cost-scope"><span>Escopo</span><strong>Suporte técnico completo</strong><small>Todos os Squads • histórico por competência</small></div>
+              <div class="support-cost-actions"><button class="btn secondary" id="copyPreviousSupportCostsBtn" type="button">↻ Copiar mês anterior</button><button class="btn primary" id="saveSupportCostsBtn" type="button">Salvar custos da competência</button></div>
+            </div>
+            <div id="supportCostSummary" class="support-cost-summary"></div>
+          </article>
+          <article class="card admin-card full admin-section admin-costs support-cost-table-card super-only">
+            <div class="section-title"><div><span class="eyebrow">CADASTRO HISTÓRICO</span><h2>Valores por técnico</h2></div><span class="muted" id="supportCostStatus">Selecione uma competência.</span></div>
+            <p class="support-cost-note">Os valores abaixo formam apenas a base de cálculo futura. Não alteram bonificação, metas, pontuação ou indicadores atuais.</p>
+            <div class="table-wrap support-cost-table-wrap"><table class="support-cost-table"><thead><tr><th>Técnico</th><th>Presença na competência</th><th>Custo por hora (R$)</th><th>Última atualização</th></tr></thead><tbody id="supportCostRows"></tbody></table></div>
+            <div class="support-cost-footer"><span>Valores confidenciais e visíveis somente ao Admin Geral.</span><strong id="supportCostCoverage">0 de 0 preenchidos</strong></div>
+          </article>
+
           <article class="card admin-card full admin-section admin-appearance"><span class="eyebrow">APARÊNCIA • SOMENTE ADMIN</span><h2>Tema e ambientação do Squad</h2><p>Cada Squad pode ter paletas próprias para modo claro e escuro, mantendo fundo, identidade visual, favicon e trilha sonora. A escolha Light/Dark é individual e fica salva no navegador de cada usuário.</p><div class="appearance-actions"><button class="btn primary" id="adminThemeBtn">✦ Personalizar tema</button><button class="btn secondary" id="importThemeBtn">Importar tema JSON</button><button class="btn secondary" id="exportThemeBtn">Exportar tema</button></div><div class="theme-preview"><div><small>ATUAL</small><strong id="themeName">Vermithor</strong></div><span class="theme-mode-preview" id="themePaletteModeLabel">Modo escuro</span></div></article>
         </div>
       </section>
@@ -804,6 +822,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.27.4"></script>
+  <script src="app.js?v=2.28.0"></script>
 </body>
 </html>

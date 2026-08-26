@@ -1153,3 +1153,109 @@ html[data-color-mode="light"]{
 
 /* V2.27.0 - Distribuicao por dias uteis */
 .business-days-distribution-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}.business-days-distribution-card{min-width:0}.business-days-distribution-card .table-wrap{max-height:390px}.business-days-distribution-card table{min-width:560px}.business-days-distribution-card th,.business-days-distribution-card td{white-space:nowrap}.business-days-note-share{display:inline-flex;min-width:54px;justify-content:flex-end;font-variant-numeric:tabular-nums}.business-days-note-share small{color:var(--muted);margin-left:3px}@media(max-width:1250px){.business-days-distribution-grid{grid-template-columns:1fr}}
+
+/* V2.28.0 — contexto de férias, custos do Suporte e revisão global de legibilidade */
+:root{
+  --text-operational:11px;
+  --text-label:10px;
+  --text-secondary:11px;
+}
+
+/* Férias: sinalização contextual. Não altera cálculo, meta, status ou bonificação. */
+.vacation-badge{
+  display:inline-flex;align-items:center;gap:4px;margin-left:7px;padding:3px 7px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--warn) 42%,var(--border));
+  background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn);
+  font-size:10px;font-weight:900;letter-spacing:.04em;vertical-align:middle;white-space:nowrap;
+}
+.vacation-badge.compact{padding:2px 5px;margin-left:5px;font-size:10px;letter-spacing:0}
+.vacation-point-halo{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--warn) 55%,transparent));pointer-events:none}
+.vacation-point{stroke:var(--warn)!important;stroke-width:2.2!important;filter:drop-shadow(0 0 4px color-mix(in srgb,var(--warn) 35%,transparent))}
+.status-cell.vacation{position:relative;outline:1px solid color-mix(in srgb,var(--warn) 55%,transparent);outline-offset:-2px}
+.vacation-cell-badge{position:absolute;right:2px;top:1px;font-size:9px;font-style:normal;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.table-tech-name{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px}
+
+/* Escala tipográfica: nenhuma informação operacional relevante abaixo de 10 px. */
+.muted{font-size:12px;line-height:1.45}
+.eyebrow,.nav-group-label{font-size:10px!important}
+.axis-label,.axis-label-right,.chart-modern .axis-label,.chart-modern .axis-label-right,.daily-premium-chart .axis-label{font-size:11px!important}
+.history-axis-title,.quality-axis-title,.quality-right-axis-label{font-size:11px!important}
+.legend,.chart-legend-item,.chart-legend-total{font-size:11px!important}
+.chart-tooltip-head strong{font-size:12px!important}.chart-tooltip-head span{font-size:11px!important}
+.chart-tooltip-row,.chart-tooltip-row strong{font-size:11px!important;line-height:1.35}
+.rank-row strong{font-size:12px}.rank-row small{font-size:10.5px;line-height:1.35}.rank-score{font-size:12px}
+.team-result span{font-size:10px}.leader-item .name{font-size:13px}.leader-item .metric span{font-size:10px}.leader-item .metric strong{font-size:13px}.leader-item .status{font-size:10px}
+.pace,.finance-status{font-size:10px!important}
+th{font-size:10.5px!important;line-height:1.35}td{font-size:12px!important;line-height:1.45}
+.metric-sub,.field-help{font-size:10px!important;line-height:1.4!important}
+.reconciliation-summary span,.reconciliation-summary small,.business-days-toolbar label>span{font-size:10px!important}
+.reconcile-detail-btn{font-size:10px!important}
+.detail-rank-main strong{font-size:12px}.detail-rank-main small,.detail-rank-score small{font-size:10px!important;line-height:1.4}.detail-note-card strong{font-size:12px}.detail-note-card p{font-size:11px}
+.finance-ranking-item strong{font-size:12px}.finance-ranking-item small{font-size:10px!important}.finance-ranking-item>b{font-size:13px}
+.finance-base-audit small{font-size:10px!important;line-height:1.4}.finance-note{font-size:11px!important}
+.finance-total small,.finance-vacation,.finance-break-item span,.finance-break-item small,.finance-month-grid label>span,.finance-readonly span,.finance-transition-compare>div:first-child span,.finance-transition-compare>div:first-child small,.transition-values>span{font-size:10px!important;line-height:1.35}
+.finance-rules-details summary,.finance-tier-grid h4{font-size:11px!important}.finance-tier-row input{font-size:11px!important}
+.feedback-person small,.feedback-metric span,.feedback-status,.my-feedback-head p,.my-feedback-block span{font-size:10px!important}
+
+/* Bonificação: preservar conteúdo, mas organizar em blocos que respiram e quebram em telas menores. */
+.finance-tech-card{padding:17px 18px;border-radius:16px}
+.finance-tech-head{align-items:flex-start;gap:16px}
+.finance-tech-head>div:first-child{align-items:center;flex-wrap:wrap;row-gap:6px}
+.finance-tech-head>div:first-child>strong{font-size:13px;white-space:normal;overflow:visible;text-overflow:clip}
+.finance-tech-total small{font-size:10px!important;line-height:1.3}.finance-tech-total strong{font-size:19px;margin-top:4px}
+.finance-tech-metrics{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin-top:13px}
+.finance-tech-metrics>div{padding:10px 11px}
+.finance-tech-metrics span{font-size:10px!important;line-height:1.3;letter-spacing:.035em}.finance-tech-metrics b{font-size:12px;margin-top:5px}
+.finance-tech-inputs{grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;margin-top:11px}
+.finance-tech-inputs label,.finance-auto-adjust{padding:10px 11px;min-height:68px}
+.finance-tech-inputs label>span,.finance-auto-adjust span{font-size:10px!important;line-height:1.35}
+.finance-tech-inputs input[type=number]{padding:8px 9px;font-size:12px}
+.finance-tech-details{margin-top:12px;padding-top:10px}.finance-tech-details summary{font-size:11px!important;line-height:1.4;padding:2px 0}
+.finance-count-control small{font-size:10px!important;line-height:1.35;margin-top:4px;display:block;color:var(--muted)}
+.finance-vacation-control,.finance-count-control{display:grid!important;grid-template-columns:auto 1fr;column-gap:8px;align-content:center}
+.finance-vacation-control>span,.finance-count-control>span,.finance-count-control>small{grid-column:2}
+.finance-vacation-control input,.finance-count-control input{grid-column:1;grid-row:1 / span 2;align-self:center}
+.finance-breakdown{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}.finance-month-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+
+/* Gestão > Custos — base corporativa do Suporte, sem filtro por Squad. */
+.support-cost-hero{padding:22px;margin-bottom:14px}
+.support-cost-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:16px}
+.support-cost-toolbar label{display:grid;gap:6px;min-width:210px}.support-cost-toolbar label>span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.support-cost-toolbar select{min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--panel2);color:var(--text);padding:0 12px;font-size:12px}
+.support-cost-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.support-cost-scope-chip,.support-cost-privacy-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--accent) 25%,var(--border));background:color-mix(in srgb,var(--accent) 7%,transparent);border-radius:999px;padding:6px 9px;color:var(--text);font-size:10px;font-weight:800}
+.support-cost-privacy-chip{border-color:color-mix(in srgb,var(--warn) 28%,var(--border));background:color-mix(in srgb,var(--warn) 7%,transparent);color:var(--warn)}
+.support-cost-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.support-cost-summary-card{padding:13px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.018);min-width:0}
+.support-cost-summary-card span,.support-cost-summary-card strong,.support-cost-summary-card small{display:block}.support-cost-summary-card span{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800}.support-cost-summary-card strong{font-size:18px;margin-top:5px}.support-cost-summary-card small{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4}.support-cost-summary-card.confidential strong{color:var(--accent)}
+.support-cost-table-wrap{max-height:560px}.support-cost-table{min-width:820px}.support-cost-table td:first-child strong{font-size:12px}.support-cost-tech-note{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.support-cost-presence{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}.support-cost-presence.present{background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)}.support-cost-presence.historical{background:color-mix(in srgb,var(--warn) 10%,transparent);color:var(--warn)}
+.support-cost-input-wrap{display:flex;align-items:center;gap:7px;max-width:190px}.support-cost-input-wrap>span{font-size:11px;color:var(--muted);font-weight:800}.support-cost-input{width:130px;min-height:38px;border:1px solid var(--border);border-radius:9px;background:var(--panel2);color:var(--text);padding:0 9px;font-size:12px;font-variant-numeric:tabular-nums}
+.support-cost-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:12px;color:var(--muted);font-size:11px}.support-cost-footer strong{color:var(--text);font-size:11px}
+
+/* Responsividade deve reorganizar, nunca encolher texto operacional. */
+@media(max-width:1100px){
+  .support-cost-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .finance-tech-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .finance-tech-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-grid,.team-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .support-cost-summary,.finance-tech-metrics,.finance-tech-inputs,.finance-breakdown,.finance-month-grid{grid-template-columns:1fr}
+  .support-cost-toolbar,.support-cost-footer{align-items:stretch;flex-direction:column}.support-cost-actions{display:grid;grid-template-columns:1fr}.support-cost-actions .btn{width:100%}
+  .finance-tech-head{flex-direction:column;align-items:stretch}.finance-tech-total{text-align:left;justify-items:start}
+  .kpi-grid,.team-kpis{grid-template-columns:1fr}
+  .leader-item .metric span,.leader-item .status,.rank-row small,.axis-label{font-size:10px!important}
+}
+@media(max-width:620px){
+  .kpi-monthly-target span{font-size:10px!important}
+  .date-control input[type=date]{font-size:11px!important}
+}
+.support-cost-scope{min-width:220px;padding:9px 12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.016)}
+.support-cost-scope span,.support-cost-scope strong,.support-cost-scope small{display:block}.support-cost-scope span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.support-cost-scope strong{font-size:12px;margin-top:3px}.support-cost-scope small,.support-cost-note{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.privacy-chip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--warn) 28%,var(--border));background:color-mix(in srgb,var(--warn) 7%,transparent);color:var(--warn);font-size:10px;font-weight:900;white-space:nowrap}
+@media(max-width:720px){.support-cost-scope{width:100%}}
+/* V2.28.0 — complemento de legibilidade para dados secundários e controles */
+.top-user small,.squad-summary span,.status-summary small,.status-summary,.history-row .tag,.user-mini small,.user-stat span,.search-field span,.filter-field span,.user-cell small,.role-pill,.user-form label>span,.user-form label small,.table-action,.audit-item small,.team-result small,.profile-data-list span,.profile-password-rules span,.history-x-label,.date-control>span,.date-field-error,.date-quick button,.fullscreen-chart-foot,.feedback-status-badge,.feedback-editor-metric span{font-size:10px!important;line-height:1.35}
+.mini-line span,.history-total-label,.finance-compare-card span,.finance-compare-card small,.finance-base-audit span,.finance-vacation-control span,.finance-count-control span,.finance-detail-grid span,.finance-detail-grid strong,.finance-auto-adjust b,.finance-model-option small,.finance-model-detail h4{font-size:10px!important;line-height:1.4}
+.user-stat strong,.squad-summary strong{line-height:1.2}

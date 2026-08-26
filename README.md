@@ -1,4 +1,17 @@
-# Soften Performance Hub V2.27.4
+# Soften Performance Hub V2.28.0
+
+
+## V2.28.0 — Férias, legibilidade e base de custos
+
+- reaproveita o checkbox mensal de férias da Bonificação como contexto visual nos indicadores, sem alterar a regra financeira de 50%;
+- competências com férias recebem marcador diferenciado, tooltip e badges em rankings/tabelas;
+- revisa a escala tipográfica do sistema, aumentando textos operacionais secundários e fazendo cards quebrarem responsivamente em vez de reduzir fonte;
+- reorganiza principalmente os cards de Bonificação para leitura mais confortável;
+- adiciona **Gestão > Custos**, exclusiva do Admin Geral, com base histórica `Técnico + competência + custo/hora`;
+- a tela de Custos é corporativa para todo o Suporte técnico, sem filtro por Squad;
+- permite copiar os custos da competência anterior;
+- a análise de custo de chamados fica propositalmente para uma próxima etapa, após definição do CSV de tempos;
+- exige executar `MIGRACAO_V2.28.0.sql` antes da publicação.
 
 
 ## V2.27.4 — Sincronização histórica de Produto/Empresa

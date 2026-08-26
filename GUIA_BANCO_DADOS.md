@@ -291,3 +291,26 @@ Antes de publicar a V2.27.0, execute no SQL Editor do Supabase:
 A migração cria `quality_person_daily_metrics`, usada para Produto/Empresa por técnico e dia sem exigir uma linha correspondente em `technician_monthly`. Isso é necessário para preservar avaliações de técnicos inativos/desligados que não aparecem no CSV operacional da competência.
 
 Depois da migração e da publicação do frontend, reimporte o CSV Produto/Empresa da competência atual para aproveitar a recuperação de vínculo por histórico/cadastro.
+
+
+## V2.28.0 — Base histórica de custo-hora do Suporte
+
+Execute `MIGRACAO_V2.28.0.sql` antes de publicar a V2.28.0.
+
+A tabela `support_technician_hourly_costs` armazena o custo-hora histórico por técnico e competência com as chaves principais:
+
+- `organization_id`;
+- `technician_user_id` (quando houver vínculo);
+- `technician_name` / `technician_key`;
+- `year` / `month`;
+- `hourly_cost`.
+
+A unicidade é `organization_id + year + month + technician_key`. A estrutura não possui `squad_id`: o cadastro é uma base corporativa do Suporte e a tela **Gestão > Custos** não utiliza filtro por Squad.
+
+### Segurança
+
+A tabela possui RLS. Somente usuários `super_admin` da mesma organização podem selecionar, inserir, atualizar ou excluir valores. Admin de Squad e técnicos não recebem acesso à base de custo-hora.
+
+### Uso nesta versão
+
+A V2.28.0 somente cadastra e preserva a base histórica. Nenhum custo de chamado é calculado ainda. A futura análise de custos será implementada após definição do CSV de tempos de atendimento.
