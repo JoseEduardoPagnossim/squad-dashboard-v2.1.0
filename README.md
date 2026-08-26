@@ -1,4 +1,12 @@
-# Soften Performance Hub V2.27.0
+# Soften Performance Hub V2.27.1
+
+
+## V2.27.1 — Correção do histórico diário de notas
+
+- **Indicadores > Por dias úteis** valida se Nota 1 a 5 do detalhamento diário fecham com o consolidado mensal antes de calcular Serviço.
+- Reimportar o CSV operacional atual sincroniza automaticamente o detalhamento diário de notas das competências históricas já existentes no mesmo escopo, desde que os totais do CSV coincidam com o consolidado mensal.
+- Não altera metas, financeiro, bonificação, Produto/Empresa ou os consolidados mensais históricos.
+- Não exige nova migração SQL.
 
 ## V2.27.0 — Conciliação, dias úteis e detalhamento
 
