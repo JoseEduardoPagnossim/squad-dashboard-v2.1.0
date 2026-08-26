@@ -1,4 +1,13 @@
-# Soften Performance Hub V2.26.0
+# Soften Performance Hub V2.26.1
+
+## V2.26.1 — Correção do histórico de notas e importação visível
+
+- Corrige **Indicadores > Qualidade > Notas Serviço** para usar o consolidado mensal oficial quando o filtro cobre toda a competência importada. Isso recupera corretamente Notas 1, 2, 3 e 4 de meses históricos cuja tabela diária antiga não possuía essas colunas.
+- Mantém o detalhamento diário para recortes parciais de período.
+- Adiciona botão explícito **Importar CSV Produto/Empresa** em **Gestão > Operação**.
+- Adiciona também o atalho **Importar Produto/Empresa** no topo de **Indicadores > Qualidade** para administradores.
+- Cada botão valida o tipo de CSV escolhido.
+- Não há nova migração de banco nesta correção; permanece válida a `MIGRACAO_V2.26.0.sql`.
 
 ## V2.26.0 — Indicadores de Qualidade e importação Produto/Empresa
 

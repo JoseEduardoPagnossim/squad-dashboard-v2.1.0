@@ -1140,3 +1140,6 @@ html[data-color-mode="light"]{
 .quality-card-empty{padding:34px 20px;color:var(--muted);text-align:center}
 @media (max-width:1100px){.quality-squad-grid,.quality-chart-grid{grid-template-columns:1fr}.quality-source-note{align-items:flex-start;flex-direction:column}.indicator-section-tabs{width:100%}.indicator-section-tab{flex:1}}
 @media (max-width:720px){.indicator-section-tabs{overflow-x:auto}.indicator-section-tab{padding:9px 13px}.quality-source-note{padding:18px}.quality-chart-lg,.quality-distribution-chart{min-height:330px}}
+
+/* V2.26.1 — importação de qualidade explícita */
+.admin-import-actions{display:grid;grid-template-columns:1fr;gap:9px;margin-top:16px}.admin-import-actions .btn.wide{margin-top:0}.quality-source-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.quality-source-actions .btn{padding:9px 12px;font-size:11px}@media(max-width:1100px){.quality-source-actions{width:100%;justify-content:flex-start}}@media(max-width:720px){.quality-source-actions{display:grid;grid-template-columns:1fr}.quality-source-actions .btn{width:100%}}

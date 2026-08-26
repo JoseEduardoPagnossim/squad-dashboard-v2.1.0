@@ -167,7 +167,9 @@
     $('#squadSelect').addEventListener('change',async e=>{await selectSquad(e.target.value);});
     $('#monthSelect').addEventListener('change',e=>{state.currentId=e.target.value; chooseDefaultTech(); refreshSelectors(); render();});
     $('#techSelect').addEventListener('change',e=>{state.techName=e.target.value; renderIndividual();});
-    $('#adminImportBtn').addEventListener('click',openImport);
+    $('#adminImportBtn').addEventListener('click',()=>openImport('service'));
+    if($('#adminQualityImportBtn'))$('#adminQualityImportBtn').addEventListener('click',()=>openImport('quality'));
+    if($('#qualityImportBtn'))$('#qualityImportBtn').addEventListener('click',()=>openImport('quality'));
     $('#adminThemeBtn').addEventListener('click',()=>{if(requireSpecificSquad())openModal('themeModal')});
     if($('#openUsersBtn'))$('#openUsersBtn').addEventListener('click',()=>showView('users'));
     $('#newUserBtn').addEventListener('click',openCreateUser);
@@ -1061,14 +1063,27 @@ function bindChartTooltips(el){
 function qualityNoteTotal(row){return safe(row?.notes5)+safe(row?.notes4)+safe(row?.notes3)+safe(row?.notes2)+safe(row?.notes1)}
 function qualityWeightedSum(row){return safe(row?.notes5)*5+safe(row?.notes4)*4+safe(row?.notes3)*3+safe(row?.notes2)*2+safe(row?.notes1)}
 function qualitySummaryFinalize(row){const total=qualityNoteTotal(row),weighted=qualityWeightedSum(row);return{...row,total,avg:total?weighted/total:0,lowPct:total?(safe(row.notes1)+safe(row.notes2)+safe(row.notes3))/total:0}}
+function analysisCoversImportedMonth(m){
+  if(!m||!state.analysisStartDate||!state.analysisEndDate)return false;
+  const first=isoDateParts(m.year,m.month,1),last=isoDateParts(m.year,m.month,Math.max(1,safe(m.latestDay)||new Date(m.year,m.month,0).getDate()));
+  return state.analysisStartDate<=first&&state.analysisEndDate>=last;
+}
 function qualityMonthlySummary(type,squads,rangeIds){
   const ids=[...(rangeIds||[])],out=new Map(ids.map(id=>[id,{id,att:0,notes5:0,notes4:0,notes3:0,notes2:0,notes1:0}]));
   for(const squad of squads||[]){
     for(const id of ids){
       const m=squad?.months?.[id];if(!m)continue;const bucket=out.get(id);if(!bucket)continue;
+      const useMonthlyServiceTotals=type==='service'&&analysisCoversImportedMonth(m);
       for(const t of m.technicians||[]){
         if(type==='service'){
-          for(const d of t.daily||[]){const date=isoDateParts(m.year,m.month,d.day);if(!dateBetween(date)||d.off)continue;bucket.att+=safe(d.att);bucket.notes5+=safe(d.notes5);bucket.notes4+=safe(d.notes4);bucket.notes3+=safe(d.notes3);bucket.notes2+=safe(d.notes2);bucket.notes1+=safe(d.notes1);}
+          // V2.26.1: para a competência inteira, usar o consolidado mensal oficial.
+          // Meses antigos podem ter Nota 1 a 4 no technician_monthly e zeros no daily_metrics,
+          // porque essas colunas diárias só passaram a existir na V2.21.
+          if(useMonthlyServiceTotals){
+            bucket.att+=safe(t.att);bucket.notes5+=safe(t.notes5);bucket.notes4+=safe(t.notes4);bucket.notes3+=safe(t.notes3);bucket.notes2+=safe(t.notes2);bucket.notes1+=safe(t.notes1);
+          }else{
+            for(const d of t.daily||[]){const date=isoDateParts(m.year,m.month,d.day);if(!dateBetween(date)||d.off)continue;bucket.att+=safe(d.att);bucket.notes5+=safe(d.notes5);bucket.notes4+=safe(d.notes4);bucket.notes3+=safe(d.notes3);bucket.notes2+=safe(d.notes2);bucket.notes1+=safe(d.notes1);}
+          }
         }else{
           for(const q of t.qualityDaily||[]){if(q.qualityType!==type)continue;const date=isoDateParts(m.year,m.month,q.day);if(!dateBetween(date))continue;bucket.notes5+=safe(q.notes5);bucket.notes4+=safe(q.notes4);bucket.notes3+=safe(q.notes3);bucket.notes2+=safe(q.notes2);bucket.notes1+=safe(q.notes1);}
         }
@@ -1923,11 +1938,14 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   function title(s=''){return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
   function titleWords(s=''){return s.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}
 
-  function openImport(){
+  function openImport(expectedKind=null){
     if(!isAdmin())return;if(state.squadCode==='all'&&!isSuperAdmin())return;
     const scope=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;
-    state.pendingCsv=null;$('#importMessage').textContent=`Selecione o CSV para atualizar ${scope}.`;
-    $('#importDetails').innerHTML='<b>Operacional/Serviço:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 1 a 5.<br><b>Qualidade Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa. <b>NotaServico é ignorada</b> neste segundo arquivo.';if($('#csvPeriodHint'))$('#csvPeriodHint').textContent='O tipo do CSV é identificado automaticamente. Produto/Empresa exige que a competência operacional já esteja importada para vincular o técnico ao Squad.';
+    state.pendingCsv=null;state.expectedCsvKind=expectedKind;
+    const quality=expectedKind==='quality',service=expectedKind==='service';
+    $('#importMessage').textContent=quality?`Selecione o CSV de Produto/Empresa para ${scope}.`:service?`Selecione o CSV operacional de atendimentos para ${scope}.`:`Selecione o CSV para atualizar ${scope}.`;
+    $('#importDetails').innerHTML=quality?'<b>CSV Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa. Cada linha representa uma avaliação. <b>NotaServico é ignorada</b> e cliente não é necessário.':service?'<b>CSV Operacional/Serviço:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 1 a 5.':'<b>Operacional/Serviço:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 1 a 5.<br><b>Qualidade Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa. <b>NotaServico é ignorada</b> neste segundo arquivo.';
+    if($('#csvPeriodHint'))$('#csvPeriodHint').textContent=quality?'Produto/Empresa exige que a competência operacional já esteja importada para vincular o técnico ao Squad.':service?'A reimportação substitui Serviço/atendimentos do mês e preserva Produto/Empresa.':'O tipo do CSV é identificado automaticamente.';
     $('#importProgress').style.width='0%';$('#chooseFileBtn').disabled=false;$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden');openModal('importModal');
   }
   let confirmDialogResolver=null;
@@ -1950,6 +1968,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     if(!isAdmin())return;const file=e.target.files?.[0];if(!file)return;openModal('importModal');$('#chooseFileBtn').disabled=true;$('#importMessage').textContent='Lendo CSV...';$('#importProgress').style.width='25%';
     try{
       const text=await file.text(),kind=detectCsvKind(text);$('#importProgress').style.width='45%';
+      if(state.expectedCsvKind&&kind!==state.expectedCsvKind)throw new Error(state.expectedCsvKind==='quality'?'Este botão é exclusivo para o CSV de Produto/Empresa. Selecione o arquivo com Time, nomeApresentativo, NotaProduto e NotaEmpresa.':'Este botão é exclusivo para o CSV operacional de atendimentos.');
       if(!state.userDirectoryLoaded)await loadUserDirectory();
       const scopeAll=isSuperAdmin()&&state.squadCode==='all',codes=scopeAll?Object.keys(state.squads):[state.squadCode];
       if(kind==='quality'){
@@ -1979,14 +1998,14 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
       if(pending.kind==='quality'){
         $('#importMessage').textContent='Consolidando Produto e Empresa por técnico e dia...';let importedSquads=0,importedRows=0;const codes=pending.codes.filter(code=>pending.rows.some(r=>r.group===code&&r.id===id));if(!codes.length)throw new Error('Nenhum Squad possui avaliações vinculadas para este mês.');
         for(const code of codes){const squad=state.squads[code],m=squad?.months?.[id];if(!m)continue;const result=applyQualityMonthImport(m,pending.rows.filter(r=>r.group===code&&r.id===id),pending.fileName);importedSquads++;importedRows+=result.sourceRows;if(state.supabase){$('#importMessage').textContent=`Gravando qualidade do Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,codes.length)*40))+'%';await persistQualityMonth(m,pending.fileName)}}
-        saveDemoSquads();render();state.pendingCsv=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${fmtInt(importedRows)} avaliações de Produto/Empresa consolidadas em ${importedSquads} Squad(s).`);return;
+        saveDemoSquads();render();state.pendingCsv=null;state.expectedCsvKind=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${fmtInt(importedRows)} avaliações de Produto/Empresa consolidadas em ${importedSquads} Squad(s).`);return;
       }
       $('#importMessage').textContent='Consolidando dados do mês...';let importedSquads=0,importedTechs=0;
       if(pending.scopeAll){
         const candidates=pending.codes.filter(code=>pending.rows.some(r=>r.group===code&&r.id===id));if(!candidates.length)throw new Error('Nenhum Squad possui registros vinculados para este mês.');const closedCodes=candidates.filter(code=>state.squads[code]?.months?.[id]?.isClosed);if(closedCodes.length)throw new Error(`${MONTHS_PT[month-1]} ${year} está fechado no(s) Squad(s) ${closedCodes.join(', ')}. Reabra o mês antes de importar.`);
-        for(const code of candidates){const s=state.squads[code],previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,code);s.months[id]=data;importedSquads++;importedTechs+=data.technicians.length;if(state.supabase){$('#importMessage').textContent=`Gravando Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,candidates.length)*40))+'%';await persistImportedMonth(data,s)}}saveDemoSquads();state.financeRankingCache={};if(state.analysisPreset==='month')resetAnalysisRange(true);refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${importedSquads} Squads e ${importedTechs} técnicos atualizados.`);
+        for(const code of candidates){const s=state.squads[code],previous=s.months[id],data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,code);s.months[id]=data;importedSquads++;importedTechs+=data.technicians.length;if(state.supabase){$('#importMessage').textContent=`Gravando Squad ${code}...`;$('#importProgress').style.width=(55+Math.round(importedSquads/Math.max(1,candidates.length)*40))+'%';await persistImportedMonth(data,s)}}saveDemoSquads();state.financeRankingCache={};if(state.analysisPreset==='month')resetAnalysisRange(true);refreshSelectors();render();state.pendingCsv=null;state.expectedCsvKind=null;closeModal('importModal');toast(`${MONTHS_PT[month-1]} ${year}: ${importedSquads} Squads e ${importedTechs} técnicos atualizados.`);
       }else{
-        const s=currentSquad(),previous=s.months[id];if(previous?.isClosed)throw new Error(`${MONTHS_PT[month-1]} ${year} está fechado no Squad ${state.squadCode}. Reabra o mês antes de importar.`);const data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,state.squadCode);s.months[id]=data;state.currentId=id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();if(state.analysisPreset==='month')resetAnalysisRange(true);if(state.supabase){$('#importMessage').textContent='Gravando no banco de dados...';$('#importProgress').style.width='70%';await persistImportedMonth(data,s)}state.financeRankingCache={};refreshSelectors();render();state.pendingCsv=null;closeModal('importModal');toast(`${data.monthName} ${data.year} importado: ${data.technicians.length} técnicos.`);
+        const s=currentSquad(),previous=s.months[id];if(previous?.isClosed)throw new Error(`${MONTHS_PT[month-1]} ${year} está fechado no Squad ${state.squadCode}. Reabra o mês antes de importar.`);const data=buildMonthFromCsv(pending.rows,id,pending.fileName,previous,state.squadCode);s.months[id]=data;state.currentId=id;state.techName=data.technicians[0]?.name||'';saveDemoSquads();if(state.analysisPreset==='month')resetAnalysisRange(true);if(state.supabase){$('#importMessage').textContent='Gravando no banco de dados...';$('#importProgress').style.width='70%';await persistImportedMonth(data,s)}state.financeRankingCache={};refreshSelectors();render();state.pendingCsv=null;state.expectedCsvKind=null;closeModal('importModal');toast(`${data.monthName} ${data.year} importado: ${data.technicians.length} técnicos.`);
       }
     }catch(err){console.error(err);$('#importMessage').textContent='Não foi possível concluir a importação.';$('#importDetails').textContent=(err.message||String(err))+((state.pendingCsv?.kind==='quality'&&state.supabase)?' Se a tabela de qualidade ainda não existir, execute MIGRACAO_V2.26.0.sql no Supabase.':'');$('#importProgress').style.width='100%'}finally{btn.disabled=false;btn.textContent=state.pendingCsv?.kind==='quality'?'Importar qualidade':'Importar mês'}
   }
