@@ -1,4 +1,16 @@
-# Soften Performance Hub V2.26.1
+# Soften Performance Hub V2.27.0
+
+## V2.27.0 — Conciliação, dias úteis e detalhamento
+
+- adiciona conciliação Serviço x Produto x Empresa em **Gestão > Operação** e **Indicadores > Qualidade**, com detalhamento por técnico;
+- cria `quality_person_daily_metrics`, permitindo manter Produto/Empresa mesmo quando o técnico não aparece no CSV operacional daquela competência;
+- vínculo de qualidade tenta a própria competência, histórico do técnico e cadastro (inclusive inativo);
+- mantém as duas importações com a mesma lógica de escopo por Squad / Todos os Squads;
+- adiciona **Indicadores > Por dias úteis**, equalizando competências pelo mesmo N.º dia útil e trazendo atendimentos, produtividade, avaliação, qualidade, status acima/abaixo e distribuição de Nota 1 a 5;
+- adiciona **Indicadores > Detalhamento**, com Top 10 de notas 1 a 3 de Serviço, Produto e Empresa no período;
+- `NotaServico` do CSV Produto/Empresa continua ignorada;
+- exige executar `MIGRACAO_V2.27.0.sql` antes de publicar o frontend.
+
 
 ## V2.26.1 — Correção do histórico de notas e importação visível
 

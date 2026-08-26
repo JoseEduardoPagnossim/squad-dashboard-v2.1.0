@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.26.1" />
+  <link rel="stylesheet" href="styles.css?v=2.27.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.26.1 • Qualidade Produto/Empresa</small>
+      <small class="login-version">V2.27.0 • Qualidade e comparativos</small>
     </div>
   </section>
 
@@ -103,7 +103,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.26.1 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.27.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -302,9 +302,11 @@
         <div class="indicator-section-tabs" role="tablist" aria-label="Seções dos indicadores">
           <button type="button" class="indicator-section-tab active" data-indicator-section="performance" role="tab" aria-selected="true">Desempenho</button>
           <button type="button" class="indicator-section-tab" data-indicator-section="quality" role="tab" aria-selected="false">Qualidade</button>
+          <button type="button" class="indicator-section-tab" data-indicator-section="business-days" role="tab" aria-selected="false">Por dias úteis</button>
+          <button type="button" class="indicator-section-tab" data-indicator-section="detail" role="tab" aria-selected="false">Detalhamento</button>
         </div>
 
-        <article class="card indicator-toolbar">
+        <article class="card indicator-toolbar" id="indicatorGlobalToolbar">
           <div class="section-title"><div><span class="eyebrow">FILTROS</span><h3>Período analisado</h3></div><span class="muted" id="indicatorPeriodLabel">Carregando período...</span></div>
           <div class="indicator-filters">
             <div class="control date-control date-field" data-date-field="indicatorStartDate">
@@ -443,6 +445,12 @@
             <div class="quality-source-actions"><span class="history-chip" id="qualityImportStatus">Aguardando importação Produto/Empresa</span><button type="button" class="btn secondary admin-only" id="qualityImportBtn">↑ Importar Produto/Empresa</button></div>
           </div>
 
+          <article class="card quality-reconciliation-card">
+            <div class="section-title"><div><span class="eyebrow">CONCILIAÇÃO DAS FONTES</span><h3>Serviço x Produto x Empresa</h3></div><span class="muted">Diferenças são auditadas, não corrigidas artificialmente</span></div>
+            <div id="qualityReconciliationSummary" class="reconciliation-summary"></div>
+            <div class="table-wrap reconciliation-table-wrap"><table><thead><tr><th>Competência</th><th>Serviço</th><th>Produto</th><th>Empresa</th><th>Dif. Produto</th><th>Dif. Empresa</th><th>Técnicos divergentes</th><th></th></tr></thead><tbody id="qualityReconciliationRows"></tbody></table></div>
+          </article>
+
           <div class="indicator-kpis quality-kpis">
             <article class="card indicator-kpi"><span>Avaliações de Serviço</span><strong id="qualityServiceTotal">0</strong><small id="qualityServiceRate">0% dos atendimentos</small><p id="qualityServiceAvg">Nota média 0,00</p></article>
             <article class="card indicator-kpi"><span>Nota média Produto</span><strong id="qualityProductAvg">—</strong><small id="qualityProductTotal">0 avaliações</small><p id="qualityProductLow">0% notas 1 a 3</p></article>
@@ -478,6 +486,49 @@
             <div class="section-title"><div><span class="eyebrow">EMPRESA</span><h3>Nota Empresa</h3></div><span class="muted" id="qualityCompanyChartNote">Notas vazias/zero não entram no cálculo</span></div>
             <div id="qualityCompanyNotesChart" class="chart quality-distribution-chart"></div>
           </article>
+        </div>
+
+        <div id="indicatorBusinessDaysPanel" class="hidden">
+          <div class="history-section-head card business-days-head">
+            <div><span class="eyebrow">COMPARAÇÃO JUSTA ENTRE COMPETÊNCIAS</span><h2>Por dias úteis</h2><p>Compara meses diferentes no mesmo estágio do mês. Se a competência base estiver no 18º dia útil, as demais também são cortadas no 18º dia útil.</p></div>
+            <span class="history-chip" id="businessDaysScopeChip">Mesmo estágio do mês</span>
+          </div>
+          <article class="card business-days-toolbar">
+            <label><span>Competência base</span><select id="businessDaysBaseMonth"></select></label>
+            <label><span>Comparar</span><select id="businessDaysCompareCount"><option value="3">Últimas 3 competências</option><option value="6" selected>Últimas 6 competências</option><option value="12">Últimas 12 competências</option></select></label>
+            <label><span>Até o dia útil</span><select id="businessDaysCutoff"></select></label>
+            <label><span>Notas baixas do gráfico</span><select id="businessDaysLowType"><option value="service">Serviço</option><option value="product">Produto</option><option value="company">Empresa</option></select></label>
+          </article>
+          <div class="indicator-kpis business-days-kpis">
+            <article class="card indicator-kpi"><span>Atendimentos x mês anterior</span><strong id="businessDaysAttDelta">—</strong><small id="businessDaysAttValues">Sem comparação</small><p>Mesmo número de dias úteis</p></article>
+            <article class="card indicator-kpi"><span>Taxa de avaliação</span><strong id="businessDaysEvalDelta">—</strong><small id="businessDaysEvalValues">Sem comparação</small><p>Variação em pontos percentuais</p></article>
+            <article class="card indicator-kpi"><span>Notas baixas Produto</span><strong id="businessDaysProductDelta">—</strong><small id="businessDaysProductValues">Sem base de qualidade</small><p>Notas 1 a 3</p></article>
+            <article class="card indicator-kpi"><span>Notas baixas Empresa</span><strong id="businessDaysCompanyDelta">—</strong><small id="businessDaysCompanyValues">Sem base de qualidade</small><p>Notas 1 a 3</p></article>
+          </div>
+          <article class="card chart-card business-days-chart-card"><div class="section-title"><div><span class="eyebrow">RITMO ACUMULADO</span><h3>Atendimentos acumulados por dia útil</h3></div><span class="muted" id="businessDaysAttendanceNote">Competências no mesmo estágio</span></div><div id="businessDaysAttendanceChart" class="chart business-days-chart"></div></article>
+          <div class="history-chart-grid business-days-chart-grid">
+            <article class="card chart-card"><div class="section-title"><div><span class="eyebrow">AVALIAÇÃO</span><h3>Taxa de avaliação acumulada</h3></div><span class="muted">Avaliações de Serviço ÷ atendimentos</span></div><div id="businessDaysEvaluationChart" class="chart business-days-chart"></div></article>
+            <article class="card chart-card"><div class="section-title"><div><span class="eyebrow">QUALIDADE</span><h3>Notas baixas acumuladas</h3></div><span class="muted" id="businessDaysLowNote">Serviço • notas 1 a 3</span></div><div id="businessDaysLowChart" class="chart business-days-chart"></div></article>
+          </div>
+          <article class="card business-days-table-card"><div class="section-title"><div><span class="eyebrow">RESUMO EQUALIZADO</span><h3>Competências no mesmo número de dias úteis</h3></div><span class="muted" id="businessDaysTableNote">—</span></div><div class="table-wrap"><table><thead><tr><th>Competência</th><th>Dias úteis</th><th>Atendimentos</th><th>Atend./téc./dia</th><th>Taxa avaliação</th><th>Notas Serviço</th><th>Baixas Serviço</th><th>Notas Produto</th><th>Baixas Produto</th><th>Notas Empresa</th><th>Baixas Empresa</th><th>Acima</th><th>Abaixo</th></tr></thead><tbody id="businessDaysRows"></tbody></table></div></article>
+          <div class="business-days-distribution-grid">
+            <article class="card business-days-distribution-card"><div class="section-title"><div><span class="eyebrow">SERVIÇO</span><h3>Distribuição Nota 1 a 5</h3></div><span class="muted">Mesmo corte de dias úteis</span></div><div class="table-wrap"><table><thead><tr><th>Competência</th><th>N1</th><th>N2</th><th>N3</th><th>N4</th><th>N5</th><th>Total</th></tr></thead><tbody id="businessDaysServiceDistributionRows"></tbody></table></div></article>
+            <article class="card business-days-distribution-card"><div class="section-title"><div><span class="eyebrow">PRODUTO</span><h3>Distribuição Nota 1 a 5</h3></div><span class="muted">CSV Produto/Empresa</span></div><div class="table-wrap"><table><thead><tr><th>Competência</th><th>N1</th><th>N2</th><th>N3</th><th>N4</th><th>N5</th><th>Total</th></tr></thead><tbody id="businessDaysProductDistributionRows"></tbody></table></div></article>
+            <article class="card business-days-distribution-card"><div class="section-title"><div><span class="eyebrow">EMPRESA</span><h3>Distribuição Nota 1 a 5</h3></div><span class="muted">CSV Produto/Empresa</span></div><div class="table-wrap"><table><thead><tr><th>Competência</th><th>N1</th><th>N2</th><th>N3</th><th>N4</th><th>N5</th><th>Total</th></tr></thead><tbody id="businessDaysCompanyDistributionRows"></tbody></table></div></article>
+          </div>
+        </div>
+
+        <div id="indicatorDetailPanel" class="hidden">
+          <div class="history-section-head card detail-head">
+            <div><span class="eyebrow">INVESTIGAÇÃO DE QUALIDADE</span><h2>Detalhamento</h2><p>Ranking dos técnicos com maior acúmulo de notas baixas no período selecionado. Nota baixa = Nota 1 + Nota 2 + Nota 3.</p></div>
+            <span class="history-chip" id="detailPeriodChip">Período</span>
+          </div>
+          <div class="detail-ranking-grid">
+            <article class="card detail-ranking-card"><div class="section-title"><div><span class="eyebrow">SERVIÇO</span><h3>Top 10 notas baixas</h3></div><span class="muted">Fonte operacional</span></div><div id="detailServiceRanking" class="detail-ranking-list"></div></article>
+            <article class="card detail-ranking-card"><div class="section-title"><div><span class="eyebrow">PRODUTO</span><h3>Top 10 notas baixas</h3></div><span class="muted">CSV Produto/Empresa</span></div><div id="detailProductRanking" class="detail-ranking-list"></div></article>
+            <article class="card detail-ranking-card"><div class="section-title"><div><span class="eyebrow">EMPRESA</span><h3>Top 10 notas baixas</h3></div><span class="muted">CSV Produto/Empresa</span></div><div id="detailCompanyRanking" class="detail-ranking-list"></div></article>
+          </div>
+          <article class="card detail-note-card"><strong>Como interpretar</strong><p>O ranking principal usa quantidade acumulada de notas 1 a 3. O percentual de notas baixas também é exibido para contextualizar técnicos com volumes de avaliação diferentes.</p></article>
         </div>
       </section>
 
@@ -619,7 +670,7 @@
 
           <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">↓</span><div><span class="eyebrow">RELATÓRIOS</span><h3>Excel e PDF</h3></div></div><ul><li>O Excel traz ambos os modelos, diferença, modelo oficial, valor oficial e todos os ajustes por técnico.</li><li>A aba Resumo mostra totais da folha, métricas da Base do Squad e cancelamento.</li><li>Quando houver comissão do Admin Geral, ela aparece separadamente.</li><li>O PDF apresenta uma conferência compacta do fechamento.</li><li>Prefira gerar os relatórios imediatamente antes de fechar a competência.</li></ul></article>
 
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos por competência</b> abre o comparativo mensal em tela cheia. Em Indicadores, <b>Evolução diária dos técnicos</b> usa o calendário dia a dia com as mesmas métricas para alinhamentos semanais.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo ranking financeiro pelo valor oficial recebido no período.</li><li>Em <b>Gestão → Feedbacks</b>, administradores geram rascunhos mensais por regra, revisam, finalizam e podem liberar o registro ao técnico.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos por competência</b> abre o comparativo mensal em tela cheia. Em Indicadores, <b>Evolução diária dos técnicos</b> usa o calendário dia a dia com as mesmas métricas para alinhamentos semanais.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo <b>Qualidade</b>, <b>Por dias úteis</b>, <b>Detalhamento</b> e ranking financeiro pelo valor oficial recebido no período.</li><li>Em <b>Gestão → Feedbacks</b>, administradores geram rascunhos mensais por regra, revisam, finalizam e podem liberar o registro ao técnico.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
 
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram as paletas clara e escura, fundo, favicon e trilha do próprio Squad.</li><li>O botão ☀/☾ no topo alterna Light/Dark instantaneamente. A preferência fica salva no navegador e, no primeiro acesso, segue o modo do sistema operacional.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
         </div>
@@ -630,7 +681,8 @@
       <section id="view-admin" class="view admin-only">
         <div class="admin-context card"><span class="eyebrow">ESCOPO DE ADMINISTRAÇÃO</span><div><h2 id="adminScopeTitle">Squad D</h2><p id="adminScopeText">Tudo o que você alterar abaixo será aplicado somente a este Squad.</p></div></div>
         <div class="admin-grid">
-          <article class="card admin-card admin-section admin-operation"><span class="eyebrow">DADOS • SOMENTE ADMIN</span><h2>Importação de dados</h2><p>As duas fontes ficam separadas: <b>Serviço/atendimentos</b> pelo CSV operacional e <b>Produto/Empresa</b> pelo CSV individual de avaliações.</p><div class="admin-import-actions"><button class="btn primary wide" id="adminImportBtn">↑ Importar CSV de atendimentos</button><button class="btn secondary wide" id="adminQualityImportBtn">★ Importar CSV Produto/Empresa</button></div><div class="admin-note"><b>Atendimentos:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 5 a Nota 1.<br><b>Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa; NotaServico é ignorada. O CSV pode conter vários meses e você escolhe a competência após a leitura.</div></article>
+          <article class="card admin-card admin-section admin-operation"><span class="eyebrow">DADOS • SOMENTE ADMIN</span><h2>Importação de dados</h2><p>As duas fontes ficam separadas: <b>Serviço/atendimentos</b> pelo CSV operacional e <b>Produto/Empresa</b> pelo CSV individual de avaliações.</p><div class="admin-import-actions"><button class="btn primary wide" id="adminImportBtn">↑ Importar CSV de atendimentos</button><button class="btn secondary wide" id="adminQualityImportBtn">★ Importar CSV Produto/Empresa</button></div><div class="admin-note"><b>Atendimentos:</b> time, Tecnico, grupoAtendimento, Quantidade e Nota 5 a Nota 1.<br><b>Produto/Empresa:</b> Time, nomeApresentativo, NotaProduto e NotaEmpresa; NotaServico é ignorada. O CSV pode conter vários meses e você escolhe a competência após a leitura. Técnicos desligados podem ser recuperados pelo histórico/cadastro mesmo quando não aparecem no CSV operacional da competência.</div></article>
+          <article class="card admin-card full admin-section admin-operation reconciliation-card admin-reconciliation-card"><div class="section-title"><div><span class="eyebrow">CONCILIAÇÃO DA COMPETÊNCIA</span><h2>Serviço x Produto x Empresa</h2></div><span id="adminReconciliationChip" class="period-chip">—</span></div><p>Auditoria informativa das duas importações no mesmo escopo. Diferenças não bloqueiam nem alteram nenhuma fonte; use o detalhamento para localizar os técnicos responsáveis pela variação.</p><div id="adminReconciliationSummary" class="reconciliation-summary"></div><div class="table-wrap reconciliation-table-wrap"><table><thead><tr><th>Competência</th><th>Serviço</th><th>Produto</th><th>Empresa</th><th>Dif. Produto</th><th>Dif. Empresa</th><th>Técnicos divergentes</th><th></th></tr></thead><tbody id="adminReconciliationRows"></tbody></table></div></article>
           <article class="card admin-card admin-section admin-operation"><span class="eyebrow">METAS DO SQUAD</span><h2>Metas do mês selecionado</h2><p>Defina as metas usadas nos cards. Atendimento pode ser calculado por dias úteis × 10 × quantidade de técnicos.</p><div class="admin-form"><label><span>Meta de atendimentos do Squad</span><input id="teamGoalAttInput" type="number" min="0" step="1"></label><label><span>Meta de % de avaliação</span><div class="input-suffix"><input id="teamGoalPctInput" type="number" min="0" max="100" step="0.1"><b>%</b></div></label></div><div class="auto-goal" id="autoGoalHint">Selecione um mês com dados.</div><div class="admin-actions"><button class="btn secondary" id="autoGoalBtn">↻ Cálculo automático</button><button class="btn primary" id="saveGoalsBtn">Salvar metas</button></div></article>
           <article class="card admin-card full admin-section admin-operation"><span class="eyebrow">PONTUAÇÃO AUTOMÁTICA</span><h2>Referências atuais do Squad</h2><p>Para reproduzir a planilha oficial, os quatro critérios usam a média atual dos técnicos com atendimento no Squad com os mesmos arredondamentos do Excel: <b>atendimentos e avaliações em 0 casas, nota média truncada em 2 casas e % avaliado arredondado em 4 casas</b>. No fechamento, as referências ficam congeladas.</p><div class="admin-form scoring-grid"><label><span>Média de atendimentos</span><input id="scoreRefAtt" type="number" disabled></label><label><span>Média de total de avaliações</span><input id="scoreRefEval" type="number" disabled></label><label><span>Média da nota</span><input id="scoreRefAvg" type="number" disabled></label><label><span>Média de % avaliado</span><div class="input-suffix"><input id="scoreRefPct" type="number" disabled><b>%</b></div></label></div><div class="score-formula"><code>Pontos = Atend. × Média + (±20 atend.) + (±30 avaliações) + (±40 média) + (±35 % avaliado)</code><small>Status: 2, 3 ou 4 critérios = ACIMA; 0 ou 1 = ABAIXO. Técnico sem atendimento fica sem status.</small></div><div class="auto-goal" id="scoreAutoHint">Importe um mês para calcular as médias do Squad.</div><div class="admin-actions hidden"><button class="btn primary" id="saveScoreSettingsBtn" disabled>Referências automáticas</button></div></article>
           <article class="card admin-card full admin-section admin-operation"><span class="eyebrow">MÉTRICAS INDIVIDUAIS</span><h2>Metas e pontuação do mês</h2><p>Atendimentos, avaliações, nota média, % avaliado, critérios, status, pontuação e ranking são calculados automaticamente. Aqui o administrador preenche apenas as metas individuais.</p><div class="table-wrap monthly-metrics-wrap"><table class="monthly-metrics-table"><thead><tr><th>Técnico</th><th>Atend.</th><th>Avaliações</th><th>Média</th><th>% Aval.</th><th>Meta atend.</th><th>Meta notas 5</th><th>Status / critérios</th><th>Pontos mês</th><th>Acumulado</th></tr></thead><tbody id="monthlyMetricsRows"></tbody></table></div><div class="admin-actions"><span class="muted" id="monthlyMetricsHint">Importe um mês para preencher as métricas.</span><button class="btn secondary" id="copyPreviousGoalsBtn">↻ Copiar metas do mês anterior</button><button class="btn primary" id="saveMonthlyMetricsBtn">Salvar metas</button></div></article>
@@ -649,6 +701,8 @@
 
   <input id="csvInput" type="file" accept=".csv,text/csv" hidden>
   <input id="themeJsonInput" type="file" accept=".json,application/json" hidden>
+
+  <div id="reconciliationModal" class="modal" aria-hidden="true"><div class="modal-card reconciliation-modal-card"><button class="modal-close" data-close="reconciliationModal">×</button><div class="modal-icon">≠</div><h2 id="reconciliationModalTitle">Conciliação da competência</h2><p id="reconciliationModalText">Técnicos com diferença entre as fontes.</p><div class="table-wrap reconciliation-detail-wrap"><table><thead><tr><th>Técnico</th><th>Squad</th><th>Serviço</th><th>Produto</th><th>Empresa</th><th>Dif. Produto</th><th>Dif. Empresa</th></tr></thead><tbody id="reconciliationDetailRows"></tbody></table></div><div class="modal-actions"><button class="btn secondary" data-close="reconciliationModal">Fechar</button></div></div></div>
 
   <div id="importModal" class="modal" aria-hidden="true"><div class="modal-card"><button class="modal-close" data-close="importModal">×</button><div class="modal-icon">↑</div><h2>Importar CSV</h2><p id="importMessage">Selecione o CSV operacional ou o CSV de Produto/Empresa.</p><div class="import-progress"><i id="importProgress"></i></div><div class="import-details" id="importDetails"></div><div id="csvPeriodBlock" class="csv-period hidden"><label><span>Mês a importar</span><select id="csvMonthSelect"></select></label><small id="csvPeriodHint">O escopo segue o seletor atual: um Squad específico ou Todos os Squads para o Admin geral.</small></div><div class="modal-actions"><button class="btn secondary" data-close="importModal">Cancelar</button><button class="btn secondary" id="chooseFileBtn">Escolher CSV</button><button class="btn primary hidden" id="confirmCsvImportBtn">Importar mês</button></div></div></div>
 
@@ -750,6 +804,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.26.1"></script>
+  <script src="app.js?v=2.27.0"></script>
 </body>
 </html>

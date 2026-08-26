@@ -279,3 +279,15 @@ Permissões:
 O conteúdo inicial é gerado no frontend por regras objetivas a partir de atendimentos, avaliações, nota média, pontuação, ranking, status, metas e comparação com a competência anterior. Não há chamada a IA externa.
 
 O JSON `generated_snapshot` preserva os indicadores usados na geração inicial, enquanto os campos textuais permanecem editáveis pelo gestor.
+
+## V2.27.0 — Qualidade independente e novas análises
+
+Antes de publicar a V2.27.0, execute no SQL Editor do Supabase:
+
+```sql
+-- conteúdo do arquivo MIGRACAO_V2.27.0.sql
+```
+
+A migração cria `quality_person_daily_metrics`, usada para Produto/Empresa por técnico e dia sem exigir uma linha correspondente em `technician_monthly`. Isso é necessário para preservar avaliações de técnicos inativos/desligados que não aparecem no CSV operacional da competência.
+
+Depois da migração e da publicação do frontend, reimporte o CSV Produto/Empresa da competência atual para aproveitar a recuperação de vínculo por histórico/cadastro.
