@@ -1,4 +1,14 @@
-# Soften Performance Hub V2.21.0 — Banco, segurança e operação
+# Soften Performance Hub V2.26.0 — Banco, segurança e operação
+
+## Atualização V2.26.0 — Qualidade Produto/Empresa
+
+Antes de publicar o frontend, execute `MIGRACAO_V2.26.0.sql`. A migração cria `quality_daily_metrics`, usada exclusivamente para as avaliações de **Produto** e **Empresa**.
+
+O CSV atual de Qualidade não precisa conter cliente. O vínculo é feito pelo `nomeApresentativo`, competência operacional já importada e Squad histórico do técnico. `NotaServico` deste arquivo é ignorada: Serviço permanece exclusivamente em `daily_metrics`.
+
+Cada linha do CSV representa uma avaliação individual. Na importação, as notas válidas de 1 a 5 são consolidadas por técnico + dia + tipo (`product`/`company`). Zero, vazio e valores fora de 1–5 não viram nota.
+
+A reimportação operacional preserva a base de Qualidade; a reimportação de Qualidade não altera Serviço, atendimentos, pontuação, status ou financeiro.
 
 ## Atualização V2.21.0 — filtros diários
 
@@ -22,7 +32,8 @@ O projeto usa Supabase Postgres + Authentication + RLS. Os principais blocos sã
 - `profile_squad_history`: vigência histórica do usuário em cada Squad;
 - `squad_months`: competência do Squad, metas, regras, fechamento e snapshots;
 - `technician_monthly`: desempenho mensal;
-- `daily_metrics`: histórico diário;
+- `daily_metrics`: histórico diário de atendimentos e Serviço;
+- `quality_daily_metrics`: histórico diário consolidado de Produto e Empresa;
 - `technician_finance_monthly`: campos financeiros manuais e cálculo persistido;
 - `super_admin_commissions`: comissão mensal manual do Admin Geral;
 - `squad_themes`: tema/ambientação.

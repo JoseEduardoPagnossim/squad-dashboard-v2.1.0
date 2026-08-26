@@ -1112,3 +1112,31 @@ html[data-color-mode="light"]{
   .feedback-editor-actions .btn{flex:1 1 auto}
   .feedback-hero-actions .btn{flex:1 1 180px}
 }
+
+/* V2.26.0 — Indicadores > Qualidade */
+.indicator-section-tabs{display:flex;gap:8px;align-items:center;margin:12px 0 14px;padding:6px;border:1px solid var(--border);background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:14px;width:max-content;max-width:100%}
+.indicator-section-tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:800;padding:10px 18px;border-radius:10px;cursor:pointer;transition:.18s ease;white-space:nowrap}
+.indicator-section-tab:hover{color:var(--text);background:color-mix(in srgb,var(--panel2) 84%,transparent)}
+.indicator-section-tab.active{color:#111;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 22%,transparent)}
+.quality-source-note{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px;margin-bottom:14px}
+.quality-source-note h3{margin:3px 0 6px;font-size:1.15rem}
+.quality-source-note p{margin:0;color:var(--muted);max-width:1000px;line-height:1.55}
+.quality-kpis{margin-top:0}
+.quality-section{margin-top:14px}
+.quality-squad-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.quality-squad-card{min-width:0}
+.quality-squad-card .chart{min-height:315px}
+.quality-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.quality-wide-card{margin-top:14px}
+.quality-chart-lg{min-height:390px}
+.quality-distribution-chart{min-height:380px}
+.quality-grouped-bar-chart,.quality-mixed-chart{position:relative;min-width:0}
+.quality-grouped-bar-chart .chart-plot-scroll,.quality-mixed-chart .chart-plot-scroll{overflow-x:auto;overflow-y:hidden}
+.quality-grouped-bar-chart svg,.quality-mixed-chart svg{display:block;min-width:100%}
+.quality-bar{transition:opacity .16s ease,filter .16s ease}
+.quality-bar:hover{filter:brightness(1.18)}
+.quality-right-axis-label{fill:var(--muted);font-size:11px;text-anchor:end}
+.quality-axis-title{fill:var(--muted);font-size:11px;font-weight:800;letter-spacing:.04em}
+.quality-card-empty{padding:34px 20px;color:var(--muted);text-align:center}
+@media (max-width:1100px){.quality-squad-grid,.quality-chart-grid{grid-template-columns:1fr}.quality-source-note{align-items:flex-start;flex-direction:column}.indicator-section-tabs{width:100%}.indicator-section-tab{flex:1}}
+@media (max-width:720px){.indicator-section-tabs{overflow-x:auto}.indicator-section-tab{padding:9px 13px}.quality-source-note{padding:18px}.quality-chart-lg,.quality-distribution-chart{min-height:330px}}

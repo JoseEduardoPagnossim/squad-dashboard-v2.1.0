@@ -1,4 +1,17 @@
-# Soften Performance Hub V2.24.2
+# Soften Performance Hub V2.26.0
+
+## V2.26.0 — Indicadores de Qualidade e importação Produto/Empresa
+
+- nova aba **Indicadores > Qualidade**, mantendo os filtros de período do painel;
+- reprodução dos gráficos de qualidade da apresentação semanal: **Avaliação x Qtd. Atendimento por Squad**, **Percentual x Benchmark**, **Notas Serviço**, **Nota Produto** e **Nota Empresa**;
+- novo CSV de Qualidade sem necessidade de cliente: obrigatórios apenas `Time`, `nomeApresentativo`, `NotaProduto` e `NotaEmpresa`;
+- `NotaServico` do CSV de Qualidade é ignorada e nunca altera a base oficial de Serviço;
+- avaliações individuais de Produto/Empresa são consolidadas por técnico + dia antes da gravação;
+- nova tabela `quality_daily_metrics`, independente de `daily_metrics`;
+- correção da **Evolução diária dos técnicos** para o Admin Geral utilizando a base diária já carregada no painel;
+- preservada a regra de técnico inativo/desligado: permanece na competência/comissão e pode ser removido somente do denominador via **Desconsiderar na quantidade de técnicos do grupo**.
+
+> Antes de publicar esta versão, execute `MIGRACAO_V2.26.0.sql`.
 
 ## V2.24.2 — ajustes em Meu desempenho
 

@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.25.1" />
+  <link rel="stylesheet" href="styles.css?v=2.26.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.25.1 • Feedbacks e evolução diária</small>
+      <small class="login-version">V2.26.0 • Qualidade Produto/Empresa</small>
     </div>
   </section>
 
@@ -103,7 +103,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.25.1 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.26.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -295,8 +295,13 @@
 
       <section id="view-indicators" class="view super-only">
         <div class="help-hero card glass indicator-hero">
-          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2>Indicadores gerais</h2><p>Leitura consolidada para o Admin geral com calendário diário, visão semanal/mensal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.</p></div>
+          <div><span class="eyebrow">PAINEL EXECUTIVO</span><h2 id="indicatorHeroTitle">Indicadores gerais</h2><p id="indicatorHeroText">Leitura consolidada para o Admin geral com calendário diário, visão semanal/mensal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.</p></div>
           <div class="help-role"><small>ESCOPO</small><strong id="indicatorScopeTitle">Todos os Squads</strong><span id="indicatorScopeText">Selecione um Squad no topo para aprofundar a análise.</span></div>
+        </div>
+
+        <div class="indicator-section-tabs" role="tablist" aria-label="Seções dos indicadores">
+          <button type="button" class="indicator-section-tab active" data-indicator-section="performance" role="tab" aria-selected="true">Desempenho</button>
+          <button type="button" class="indicator-section-tab" data-indicator-section="quality" role="tab" aria-selected="false">Qualidade</button>
         </div>
 
         <article class="card indicator-toolbar">
@@ -327,13 +332,14 @@
               <button type="button" data-analysis-preset="month">Este mês</button>
               <button type="button" data-analysis-preset="prev-month">Mês anterior</button>
             </div>
-            <div class="indicator-action-group">
+            <div class="indicator-action-group" id="indicatorPerformanceActions">
               <button class="btn secondary indicator-fullscreen-btn" id="openDailyTechniciansChartBtn" type="button">↗ Evolução diária dos técnicos</button>
               <button class="btn primary indicator-fullscreen-btn" id="openAllTechniciansChartBtn" type="button">⛶ Todos os técnicos por competência</button>
             </div>
           </div>
         </article>
 
+        <div id="indicatorPerformancePanel">
         <div class="indicator-kpis">
           <article class="card indicator-kpi">
             <span>Atendimentos por hora</span>
@@ -429,6 +435,50 @@
             </article>
           </div>
         </section>
+        </div>
+
+        <div id="indicatorQualityPanel" class="hidden">
+          <div class="quality-source-note card">
+            <div><span class="eyebrow">FONTES DE QUALIDADE</span><h3>Serviço separado de Produto e Empresa</h3><p>Serviço continua vindo exclusivamente do CSV operacional consolidado por técnico/dia. Produto e Empresa vêm do CSV individual de avaliações. A coluna <b>NotaServico</b> do CSV de qualidade é ignorada para não alterar os indicadores já existentes.</p></div>
+            <span class="history-chip" id="qualityImportStatus">Aguardando importação Produto/Empresa</span>
+          </div>
+
+          <div class="indicator-kpis quality-kpis">
+            <article class="card indicator-kpi"><span>Avaliações de Serviço</span><strong id="qualityServiceTotal">0</strong><small id="qualityServiceRate">0% dos atendimentos</small><p id="qualityServiceAvg">Nota média 0,00</p></article>
+            <article class="card indicator-kpi"><span>Nota média Produto</span><strong id="qualityProductAvg">—</strong><small id="qualityProductTotal">0 avaliações</small><p id="qualityProductLow">0% notas 1 a 3</p></article>
+            <article class="card indicator-kpi"><span>Nota média Empresa</span><strong id="qualityCompanyAvg">—</strong><small id="qualityCompanyTotal">0 avaliações</small><p id="qualityCompanyLow">0% notas 1 a 3</p></article>
+            <article class="card indicator-kpi"><span>Qualidade no período</span><strong id="qualityOverallStatus">—</strong><small id="qualityOverallDetail">Sem dados de Produto/Empresa</small><p>Leitura complementar; não altera pontuação nem bonificação.</p></article>
+          </div>
+
+          <section class="quality-section">
+            <div class="history-section-head card">
+              <div><span class="eyebrow">AVALIAÇÃO X QTD. ATENDIMENTO</span><h2>Volume e taxa de avaliação por Squad</h2><p>Reprodução do acompanhamento da apresentação semanal: quantidade de atendimentos e percentual avaliado por competência.</p></div>
+              <span class="history-chip" id="qualitySquadPeriod">Período</span>
+            </div>
+            <div id="qualitySquadCharts" class="quality-squad-grid"></div>
+          </section>
+
+          <article class="card chart-card quality-wide-card">
+            <div class="section-title"><div><span class="eyebrow">PERCENTUAL X BENCHMARK</span><h3>Taxa de avaliação e notas baixas</h3></div><span class="muted">Benchmark mínimo 20% • benchmark bom 60%</span></div>
+            <div id="qualityBenchmarkChart" class="chart quality-chart-lg"></div>
+          </article>
+
+          <div class="quality-chart-grid">
+            <article class="card chart-card">
+              <div class="section-title"><div><span class="eyebrow">SERVIÇO</span><h3>Notas Serviço</h3></div><span class="muted" id="qualityServiceChartNote">Distribuição de notas 1 a 5</span></div>
+              <div id="qualityServiceNotesChart" class="chart quality-distribution-chart"></div>
+            </article>
+            <article class="card chart-card">
+              <div class="section-title"><div><span class="eyebrow">PRODUTO</span><h3>Nota Produto</h3></div><span class="muted" id="qualityProductChartNote">Distribuição de notas 1 a 5</span></div>
+              <div id="qualityProductNotesChart" class="chart quality-distribution-chart"></div>
+            </article>
+          </div>
+
+          <article class="card chart-card quality-wide-card">
+            <div class="section-title"><div><span class="eyebrow">EMPRESA</span><h3>Nota Empresa</h3></div><span class="muted" id="qualityCompanyChartNote">Notas vazias/zero não entram no cálculo</span></div>
+            <div id="qualityCompanyNotesChart" class="chart quality-distribution-chart"></div>
+          </article>
+        </div>
       </section>
 
 
@@ -600,7 +650,7 @@
   <input id="csvInput" type="file" accept=".csv,text/csv" hidden>
   <input id="themeJsonInput" type="file" accept=".json,application/json" hidden>
 
-  <div id="importModal" class="modal" aria-hidden="true"><div class="modal-card"><button class="modal-close" data-close="importModal">×</button><div class="modal-icon">↑</div><h2>Importar CSV</h2><p id="importMessage">Selecione o CSV de chamados finalizados.</p><div class="import-progress"><i id="importProgress"></i></div><div class="import-details" id="importDetails"></div><div id="csvPeriodBlock" class="csv-period hidden"><label><span>Mês a importar</span><select id="csvMonthSelect"></select></label><small>O escopo segue o seletor atual: um Squad específico ou Todos os Squads para o Admin geral.</small></div><div class="modal-actions"><button class="btn secondary" data-close="importModal">Cancelar</button><button class="btn secondary" id="chooseFileBtn">Escolher CSV</button><button class="btn primary hidden" id="confirmCsvImportBtn">Importar mês</button></div></div></div>
+  <div id="importModal" class="modal" aria-hidden="true"><div class="modal-card"><button class="modal-close" data-close="importModal">×</button><div class="modal-icon">↑</div><h2>Importar CSV</h2><p id="importMessage">Selecione o CSV operacional ou o CSV de Produto/Empresa.</p><div class="import-progress"><i id="importProgress"></i></div><div class="import-details" id="importDetails"></div><div id="csvPeriodBlock" class="csv-period hidden"><label><span>Mês a importar</span><select id="csvMonthSelect"></select></label><small id="csvPeriodHint">O escopo segue o seletor atual: um Squad específico ou Todos os Squads para o Admin geral.</small></div><div class="modal-actions"><button class="btn secondary" data-close="importModal">Cancelar</button><button class="btn secondary" id="chooseFileBtn">Escolher CSV</button><button class="btn primary hidden" id="confirmCsvImportBtn">Importar mês</button></div></div></div>
 
   <div id="themeModal" class="modal" aria-hidden="true"><div class="modal-card theme-modal"><button class="modal-close" data-close="themeModal">×</button><span class="eyebrow">TEMA DO SQUAD</span><h2>Personalizar experiência</h2><p>Somente administradores alteram as paletas do Squad. Cores claras e escuras são salvas juntas no JSON; fundo, favicon e trilha continuam compartilhados entre os dois modos.</p><div class="theme-mode-editor"><div><span>Paleta em edição</span><strong>Alterne para ajustar as cores do modo desejado.</strong></div><div class="theme-mode-segmented" role="group" aria-label="Paleta do tema"><button type="button" data-theme-edit-mode="light"><span>☀</span> Claro</button><button type="button" data-theme-edit-mode="dark"><span>☾</span> Escuro</button></div></div><div class="preset-grid"><button class="preset" data-theme="vermithor"><i class="swatch fire"></i><span>Vermithor</span></button><button class="preset" data-theme="soften"><i class="swatch soften"></i><span>Soften</span></button><button class="preset" data-theme="neon"><i class="swatch neon"></i><span>Neon</span></button><button class="preset" data-theme="clean"><i class="swatch clean"></i><span>Claro</span></button></div><div class="custom-theme"><label><span>Cor principal</span><input id="accentColor" type="color" value="#f0a33a"></label><label><span>Cor secundária</span><input id="secondaryColor" type="color" value="#ef5a29"></label><label><span>Nome do tema</span><input id="campaignNameInput" type="text"></label><label><span>Frase do tema</span><input id="campaignTaglineInput" type="text"></label><label><span>Imagem de fundo</span><input id="backgroundFile" type="file" accept="image/*"></label><button class="link-btn" id="removeBg">Remover fundo personalizado</button><div class="favicon-theme-row"><div><span>Favicon do tema</span><small>Ícone exibido na aba do navegador. Prefira uma imagem quadrada.</small></div><div class="favicon-theme-actions"><span class="favicon-preview"><img id="faviconPreview" src="assets/favicon-dragon.png" alt="Prévia do favicon"></span><button class="btn secondary compact" id="chooseFaviconBtn" type="button">Escolher ícone</button><input id="faviconFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><button class="link-btn" id="resetFavicon" type="button">Usar dragão padrão</button></div></div><div class="soundtrack-theme-row"><div class="soundtrack-theme-copy"><span>Trilha sonora do tema</span><small>Use MP3, OGG, WAV, M4A ou AAC de até 3 MB. Prefira material original, licenciado ou royalty-free.</small></div><div class="soundtrack-theme-config"><label class="soundtrack-name-field"><span>Nome</span><input id="soundtrackNameInput" type="text" placeholder="Ex.: Fogo & Conquista"></label><div class="soundtrack-buttons"><button class="btn secondary compact" id="chooseSoundtrackBtn" type="button">♫ Escolher áudio</button><input id="soundtrackFile" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/wav,audio/x-wav,audio/mp4,audio/aac,.mp3,.ogg,.wav,.m4a,.aac" hidden><button class="btn secondary compact" id="previewSoundtrackBtn" type="button">▶ Ouvir trilha</button></div><div class="soundtrack-volume-config"><span>Volume padrão</span><input id="soundtrackDefaultVolume" type="range" min="0" max="100" step="1" value="24"><strong id="soundtrackDefaultVolumeLabel">24%</strong></div><div class="soundtrack-links"><button class="link-btn" id="resetSoundtrack" type="button">Usar trilha original</button><button class="link-btn danger-link" id="removeSoundtrack" type="button">Remover trilha</button></div></div></div></div></div></div>
 
@@ -700,6 +750,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.25.1"></script>
+  <script src="app.js?v=2.26.0"></script>
 </body>
 </html>
