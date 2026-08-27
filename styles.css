@@ -1259,3 +1259,15 @@ th{font-size:10.5px!important;line-height:1.35}td{font-size:12px!important;line-
 .top-user small,.squad-summary span,.status-summary small,.status-summary,.history-row .tag,.user-mini small,.user-stat span,.search-field span,.filter-field span,.user-cell small,.role-pill,.user-form label>span,.user-form label small,.table-action,.audit-item small,.team-result small,.profile-data-list span,.profile-password-rules span,.history-x-label,.date-control>span,.date-field-error,.date-quick button,.fullscreen-chart-foot,.feedback-status-badge,.feedback-editor-metric span{font-size:10px!important;line-height:1.35}
 .mini-line span,.history-total-label,.finance-compare-card span,.finance-compare-card small,.finance-base-audit span,.finance-vacation-control span,.finance-count-control span,.finance-detail-grid span,.finance-detail-grid strong,.finance-auto-adjust b,.finance-model-option small,.finance-model-detail h4{font-size:10px!important;line-height:1.4}
 .user-stat strong,.squad-summary strong{line-height:1.2}
+
+/* V2.28.1 - custo geral do Suporte */
+.support-cost-toolbar-simple{align-items:flex-end}
+.support-cost-input-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.support-cost-input-grid label{display:grid;gap:6px;min-width:0;padding:13px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.018)}
+.support-cost-input-grid label>span{font-size:11px;color:var(--text);font-weight:800;line-height:1.35}
+.support-cost-input-grid input{width:100%;min-height:42px;border:1px solid var(--border);border-radius:10px;background:var(--panel2);color:var(--text);padding:0 11px;font-size:13px;font-variant-numeric:tabular-nums}
+.support-cost-input-grid small{font-size:10.5px;color:var(--muted);line-height:1.45}
+.support-cost-summary-wide{grid-template-columns:repeat(3,minmax(0,1fr))}
+.support-cost-summary-wide .support-cost-summary-card strong{font-size:20px}
+@media(max-width:1050px){.support-cost-input-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.support-cost-summary-wide{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.support-cost-input-grid,.support-cost-summary-wide{grid-template-columns:1fr}}

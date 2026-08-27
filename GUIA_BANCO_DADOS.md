@@ -314,3 +314,8 @@ A tabela possui RLS. Somente usuários `super_admin` da mesma organização pode
 ### Uso nesta versão
 
 A V2.28.0 somente cadastra e preserva a base histórica. Nenhum custo de chamado é calculado ainda. A futura análise de custos será implementada após definição do CSV de tempos de atendimento.
+
+
+## V2.28.1 — support_monthly_costs
+
+Tabela confidencial, visível apenas ao Admin Geral, usada em **Gestão > Custos** para armazenar o custo geral do Suporte por competência. Campos principais: `payroll_cost`, `other_costs`, `technician_count` e `hours_per_day`. O custo individual por técnico da V2.28.0 deixa de ser usado pela interface.

@@ -206,6 +206,7 @@
     if($('#supportCostMonthSelect'))$('#supportCostMonthSelect').addEventListener('change',e=>{state.supportCostMonthId=e.target.value;renderSupportCosts();});
     if($('#copyPreviousSupportCostsBtn'))$('#copyPreviousSupportCostsBtn').addEventListener('click',copyPreviousSupportCosts);
     if($('#saveSupportCostsBtn'))$('#saveSupportCostsBtn').addEventListener('click',saveSupportCosts);
+    ['#supportPayrollCost','#supportOtherCosts','#supportTechnicianCount','#supportHoursPerDay'].forEach(sel=>{if($(sel))$(sel).addEventListener('input',updateSupportCostPreview)});
     $('#copyPreviousGoalsBtn').addEventListener('click',copyGoalsFromPreviousMonth);
     $('#saveScoreSettingsBtn').addEventListener('click',saveScoreSettings);
     $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
@@ -1755,7 +1756,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     body.innerHTML=`<tr><td><strong>${escapeHtml(rec.label)}</strong></td><td>${fmtInt(rec.service)}</td><td>${rec.hasQuality?fmtInt(rec.product):'—'}</td><td>${rec.hasQuality?fmtInt(rec.company):'—'}</td><td>${rec.hasQuality?`<span class="reconcile-diff ${diffClass(rec.diffProduct)}">${diffText(rec.diffProduct)}</span>`:'—'}</td><td>${rec.hasQuality?`<span class="reconcile-diff ${diffClass(rec.diffCompany)}">${diffText(rec.diffCompany)}</span>`:'—'}</td><td>${rec.hasQuality?fmtInt(rec.divergent):'—'}</td><td>${rec.hasQuality?`<button type="button" class="btn secondary reconcile-detail-btn" data-reconcile-id="${escapeHtml(rec.id)}">Ver técnicos</button>`:'<span class="muted">Sem qualidade</span>'}</td></tr>`;
   }
 
-  const SUPPORT_COST_DEMO_KEY='squadDashboardSupportHourlyCostsV228';
+  const SUPPORT_COST_DEMO_KEY='squadDashboardSupportMonthlyCostsV2281';
   function loadDemoSupportCosts(){try{const rows=JSON.parse(localStorage.getItem(SUPPORT_COST_DEMO_KEY)||'[]');return Array.isArray(rows)?rows:[]}catch(e){return[]}}
   function saveDemoSupportCosts(rows){localStorage.setItem(SUPPORT_COST_DEMO_KEY,JSON.stringify(rows||[]))}
   function supportCostMonthIds(){
@@ -1763,94 +1764,82 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     Object.values(state.squads||{}).forEach(squad=>Object.keys(squad?.months||{}).forEach(id=>ids.add(id)));
     return [...ids].filter(id=>/^\d{4}-\d{2}$/.test(id)).sort();
   }
-  function supportCostRoster(id,savedRows=[]){
-    const map=new Map();
+  function supportCostDetectedTechnicians(id){
+    const names=new Set();
     Object.values(state.squads||{}).forEach(squad=>{
       const m=squad?.months?.[id];if(!m)return;
-      (m.technicians||[]).forEach(t=>{
-        const key=nameLinkKey(t.name);if(!key)return;
-        const row=map.get(key)||{technicianKey:key,name:titleWords(t.name),userId:t.userId||null,present:true};
-        row.name=row.name||titleWords(t.name);row.userId=row.userId||t.userId||null;row.present=true;map.set(key,row);
-      });
+      (m.technicians||[]).forEach(t=>{const key=nameLinkKey(t.name);if(key)names.add(key);});
     });
-    (savedRows||[]).forEach(r=>{
-      const key=r.technician_key||nameLinkKey(r.technician_name);if(!key)return;
-      const row=map.get(key)||{technicianKey:key,name:titleWords(r.technician_name||key),userId:r.technician_user_id||null,present:false};
-      row.name=row.name||titleWords(r.technician_name||key);row.userId=row.userId||r.technician_user_id||null;map.set(key,row);
-    });
-    return [...map.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
+    return names.size;
   }
   function supportCostMonthParts(id){const [year,month]=String(id||'').split('-').map(Number);return{year,month}}
   function supportCostHasCache(id){return !!id&&Object.prototype.hasOwnProperty.call(state.supportCostCache||{},id)}
   async function ensureSupportCostsLoaded(id,{force=false}={}){
-    if(!id||!isSuperAdmin())return[];
-    if(!force&&supportCostHasCache(id))return state.supportCostCache[id]||[];
+    if(!id||!isSuperAdmin())return null;
+    if(!force&&supportCostHasCache(id))return state.supportCostCache[id]||null;
     if(state.supportCostLoading[id])return state.supportCostLoading[id];
     const task=(async()=>{
-      const {year,month}=supportCostMonthParts(id);let rows=[];
+      const {year,month}=supportCostMonthParts(id);let row=null;
       if(state.supabase){
-        const {data,error}=await state.supabase.from('support_technician_hourly_costs').select('id,organization_id,technician_user_id,technician_name,technician_key,year,month,hourly_cost,updated_at').eq('organization_id',state.user.organizationId).eq('year',year).eq('month',month).order('technician_name');
-        if(error)throw error;rows=data||[];
+        const {data,error}=await state.supabase.from('support_monthly_costs').select('id,organization_id,year,month,payroll_cost,other_costs,technician_count,hours_per_day,updated_at').eq('organization_id',state.user.organizationId).eq('year',year).eq('month',month).maybeSingle();
+        if(error)throw error;row=data||null;
       }else{
-        rows=loadDemoSupportCosts().filter(r=>safe(r.year)===year&&safe(r.month)===month);
+        row=loadDemoSupportCosts().find(r=>safe(r.year)===year&&safe(r.month)===month)||null;
       }
-      state.supportCostCache[id]=rows;return rows;
+      state.supportCostCache[id]=row;return row;
     })();
     state.supportCostLoading[id]=task;
     try{return await task}finally{delete state.supportCostLoading[id];if(state.currentView==='admin'&&state.adminSection==='costs'&&state.supportCostMonthId===id)renderSupportCosts();}
   }
+  function supportCostInputValue(sel,def=0){const el=$(sel);const v=safe(el?.value);return v>0?v:def}
+  function updateSupportCostPreview(){
+    if(!isSuperAdmin()||!state.supportCostMonthId||!$('#supportCostSummary'))return;
+    const id=state.supportCostMonthId,{year,month}=supportCostMonthParts(id),payroll=Math.max(0,safe($('#supportPayrollCost')?.value)),other=Math.max(0,safe($('#supportOtherCosts')?.value)),techs=Math.max(0,Math.round(safe($('#supportTechnicianCount')?.value))),hoursPerDay=Math.max(.5,safe($('#supportHoursPerDay')?.value)||8),days=businessDaysMonFri(year,month),total=payroll+other,technicianDays=techs*days,totalHours=technicianDays*hoursPerDay,totalMinutes=totalHours*60,costDay=technicianDays?total/technicianDays:0,costHour=totalHours?total/totalHours:0,costMinute=totalMinutes?total/totalMinutes:0;
+    $('#supportCostSummary').innerHTML=`<div class="support-cost-summary-card confidential"><span>Custo total do Suporte</span><strong>${fmtMoney(total)}</strong><small>Pagamentos + outros custos</small></div><div class="support-cost-summary-card"><span>Dias úteis</span><strong>${fmtInt(days)}</strong><small>${fmtInt(techs)} técnico(s) × ${hoursPerDay.toLocaleString('pt-BR',{maximumFractionDigits:1})}h/dia</small></div><div class="support-cost-summary-card"><span>Capacidade útil</span><strong>${totalHours.toLocaleString('pt-BR',{maximumFractionDigits:1})} h</strong><small>${fmtInt(totalMinutes)} minutos técnicos na competência</small></div><div class="support-cost-summary-card"><span>Custo / dia útil técnico</span><strong>${technicianDays?fmtMoney(costDay):'—'}</strong><small>Total ÷ técnicos ÷ dias úteis</small></div><div class="support-cost-summary-card"><span>Custo / hora técnica</span><strong>${totalHours?fmtMoney(costHour):'—'}</strong><small>Total ÷ técnicos ÷ dias ÷ horas</small></div><div class="support-cost-summary-card"><span>Custo / minuto técnico</span><strong>${totalMinutes?fmtMoney(costMinute):'—'}</strong><small>Referência para o futuro cálculo por atendimento</small></div>`;
+  }
   function renderSupportCosts(){
-    if(!isSuperAdmin()||!$('#supportCostRows'))return;
+    if(!isSuperAdmin()||!$('#supportCostMonthSelect'))return;
     let ids=supportCostMonthIds();
     if(!ids.length){
-      $('#supportCostMonthSelect').innerHTML='';$('#supportCostRows').innerHTML='<tr><td colspan="4" class="muted">Importe ao menos uma competência para cadastrar os custos por hora.</td></tr>';$('#supportCostStatus').textContent='Sem competências disponíveis.';$('#supportCostCoverage').textContent='0 de 0 preenchidos';$('#supportCostSummary').innerHTML='';return;
+      $('#supportCostMonthSelect').innerHTML='';$('#supportCostStatus').textContent='Sem competências disponíveis.';$('#supportCostSummary').innerHTML='';return;
     }
     if(!state.supportCostMonthId||!ids.includes(state.supportCostMonthId))state.supportCostMonthId=ids[ids.length-1];
     const id=state.supportCostMonthId;
     $('#supportCostMonthSelect').innerHTML=ids.map(mid=>`<option value="${mid}" ${mid===id?'selected':''}>${escapeHtml(monthLabelFromId(mid))}</option>`).join('');
     if(!supportCostHasCache(id)){
-      $('#supportCostStatus').textContent='Carregando valores confidenciais...';$('#supportCostRows').innerHTML='<tr><td colspan="4" class="muted">Carregando custos por hora...</td></tr>';$('#supportCostCoverage').textContent='—';ensureSupportCostsLoaded(id).catch(err=>{console.error(err);$('#supportCostStatus').textContent='Não foi possível carregar os custos. Confira a migração V2.28.0.';toast('Não foi possível carregar a base de custos. Confira a migração V2.28.0.');});return;
+      $('#supportCostStatus').textContent='Carregando custo geral...';ensureSupportCostsLoaded(id).catch(err=>{console.error(err);$('#supportCostStatus').textContent='Não foi possível carregar os custos. Confira a migração V2.28.1.';toast('Não foi possível carregar a base de custos. Confira a migração V2.28.1.');});return;
     }
-    const saved=state.supportCostCache[id]||[],byKey=new Map(saved.map(r=>[r.technician_key||nameLinkKey(r.technician_name),r])),roster=supportCostRoster(id,saved),filled=roster.filter(t=>safe(byKey.get(t.technicianKey)?.hourly_cost)>0).length;
-    $('#supportCostStatus').textContent=`${monthLabelFromId(id)} • escopo geral do Suporte`;
-    $('#supportCostCoverage').textContent=`${filled} de ${roster.length} preenchidos`;
-    $('#supportCostSummary').innerHTML=`<div class="support-cost-summary-card"><span>Competência</span><strong>${escapeHtml(monthLabelFromId(id))}</strong><small>Base histórica independente de Squad</small></div><div class="support-cost-summary-card"><span>Técnicos encontrados</span><strong>${fmtInt(roster.length)}</strong><small>União das equipes de Suporte na competência</small></div><div class="support-cost-summary-card"><span>Custos cadastrados</span><strong>${fmtInt(filled)}</strong><small>${roster.length?fmtPct(filled/roster.length):'0,0%'} de cobertura</small></div><div class="support-cost-summary-card confidential"><span>Escopo</span><strong>Suporte completo</strong><small>Sem filtro por Squad • confidencial</small></div>`;
-    $('#supportCostRows').innerHTML=roster.map(t=>{const r=byKey.get(t.technicianKey),cost=safe(r?.hourly_cost),status=t.present?'Com produção importada':'Somente cadastro histórico';return `<tr data-support-cost-row="${escapeHtml(t.technicianKey)}"><td><strong>${escapeHtml(t.name)}</strong><small class="support-cost-tech-note">Valor histórico da competência</small></td><td><span class="support-cost-presence ${t.present?'present':'historical'}">${status}</span></td><td><label class="support-cost-input-wrap"><span>R$</span><input class="support-cost-input" data-support-cost-key="${escapeHtml(t.technicianKey)}" data-support-cost-name="${escapeHtml(t.name)}" data-support-cost-user="${escapeHtml(t.userId||'')}" type="number" min="0" step="0.01" inputmode="decimal" value="${cost>0?cost.toFixed(2):''}" placeholder="0,00"></label></td><td>${r?.updated_at?escapeHtml(formatDateTime(r.updated_at)):'—'}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">Nenhum técnico encontrado nesta competência.</td></tr>';
+    const saved=state.supportCostCache[id]||null,detected=supportCostDetectedTechnicians(id),techs=safe(saved?.technician_count)>0?Math.round(safe(saved.technician_count)):detected,hours=safe(saved?.hours_per_day)>0?safe(saved.hours_per_day):8;
+    $('#supportPayrollCost').value=safe(saved?.payroll_cost)>0?safe(saved.payroll_cost).toFixed(2):'';
+    $('#supportOtherCosts').value=safe(saved?.other_costs)>0?safe(saved.other_costs).toFixed(2):'';
+    $('#supportTechnicianCount').value=techs||'';
+    $('#supportHoursPerDay').value=hours;
+    $('#supportDetectedTechnicians').textContent=`Quantidade detectada na competência: ${fmtInt(detected)}${saved&&techs!==detected?' • valor salvo mantido':''}`;
+    $('#supportCostStatus').textContent=saved?.updated_at?`${monthLabelFromId(id)} • atualizado em ${formatDateTime(saved.updated_at)}`:`${monthLabelFromId(id)} • ainda não salvo`;
+    updateSupportCostPreview();
   }
   async function saveSupportCosts(){
     if(!isSuperAdmin())return;
     const id=state.supportCostMonthId;if(!id)return toast('Selecione uma competência.');
-    if(!supportCostHasCache(id))await ensureSupportCostsLoaded(id);
-    const {year,month}=supportCostMonthParts(id),existing=state.supportCostCache[id]||[],existingByKey=new Map(existing.map(r=>[r.technician_key||nameLinkKey(r.technician_name),r])),upserts=[],deleteIds=[];
-    $$('.support-cost-input').forEach(inp=>{
-      const key=inp.dataset.supportCostKey,name=inp.dataset.supportCostName,userId=inp.dataset.supportCostUser||null,value=Math.max(0,safe(inp.value)),old=existingByKey.get(key);
-      if(value>0)upserts.push({organization_id:state.user.organizationId||'demo',technician_user_id:userId||null,technician_name:name,technician_key:key,year,month,hourly_cost:Number(value.toFixed(2)),updated_by:state.user.userId||null,updated_at:new Date().toISOString()});
-      else if(old?.id)deleteIds.push(old.id);
-    });
+    const {year,month}=supportCostMonthParts(id),payroll=Math.max(0,safe($('#supportPayrollCost')?.value)),other=Math.max(0,safe($('#supportOtherCosts')?.value)),detected=supportCostDetectedTechnicians(id),techs=Math.max(1,Math.round(safe($('#supportTechnicianCount')?.value)||detected||1)),hours=Math.max(.5,safe($('#supportHoursPerDay')?.value)||8),row={organization_id:state.user.organizationId||'demo',year,month,payroll_cost:Number(payroll.toFixed(2)),other_costs:Number(other.toFixed(2)),technician_count:techs,hours_per_day:Number(hours.toFixed(2)),updated_by:state.user.userId||null,updated_at:new Date().toISOString()};
     const btn=$('#saveSupportCostsBtn');if(btn){btn.disabled=true;btn.textContent='Salvando...';}
     try{
-      if(state.supabase){
-        if(upserts.length){const {error}=await state.supabase.from('support_technician_hourly_costs').upsert(upserts,{onConflict:'organization_id,year,month,technician_key'});if(error)throw error;}
-        if(deleteIds.length){const {error}=await state.supabase.from('support_technician_hourly_costs').delete().in('id',deleteIds);if(error)throw error;}
-      }else{
-        let store=loadDemoSupportCosts().filter(r=>!(safe(r.year)===year&&safe(r.month)===month));
-        upserts.forEach((r,i)=>store.push({...r,id:`demo-${id}-${i}-${r.technician_key}`,organization_id:'demo'}));saveDemoSupportCosts(store);
-      }
-      await ensureSupportCostsLoaded(id,{force:true});toast(`Custos por hora de ${monthLabelFromId(id)} salvos com segurança.`);
-    }catch(err){console.error(err);toast('Não foi possível salvar os custos. Confira a migração V2.28.0 e suas permissões.');}
-    finally{if(btn){btn.disabled=false;btn.textContent='Salvar custos da competência';}}
+      if(state.supabase){const {error}=await state.supabase.from('support_monthly_costs').upsert(row,{onConflict:'organization_id,year,month'});if(error)throw error;}
+      else{let store=loadDemoSupportCosts().filter(r=>!(safe(r.year)===year&&safe(r.month)===month));store.push({...row,id:`demo-${id}`});saveDemoSupportCosts(store);}
+      await ensureSupportCostsLoaded(id,{force:true});toast(`Custo geral de ${monthLabelFromId(id)} salvo com segurança.`);
+    }catch(err){console.error(err);toast('Não foi possível salvar o custo geral. Confira a migração V2.28.1 e suas permissões.');}
+    finally{if(btn){btn.disabled=false;btn.textContent='Salvar competência';}}
   }
   async function copyPreviousSupportCosts(){
     if(!isSuperAdmin())return;
     const current=state.supportCostMonthId,ids=supportCostMonthIds();if(!current)return toast('Selecione uma competência.');
     const prevIds=ids.filter(id=>id<current).sort().reverse();if(!prevIds.length)return toast('Não existe uma competência anterior disponível.');
-    let previousId=null,previousRows=[];
-    for(const id of prevIds){try{const rows=await ensureSupportCostsLoaded(id);if((rows||[]).some(r=>safe(r.hourly_cost)>0)){previousId=id;previousRows=rows;break;}}catch(err){console.error(err);return toast('Não foi possível carregar os custos da competência anterior.');}}
-    if(!previousId)return toast('Nenhuma competência anterior possui custos por hora cadastrados.');
-    const byKey=new Map(previousRows.map(r=>[r.technician_key||nameLinkKey(r.technician_name),r])),inputs=$$('.support-cost-input');let copied=0;
-    inputs.forEach(inp=>{const r=byKey.get(inp.dataset.supportCostKey);if(r&&safe(r.hourly_cost)>0){inp.value=safe(r.hourly_cost).toFixed(2);copied++;}});
-    $('#supportCostStatus').textContent=`${monthLabelFromId(current)} • ${copied} valor(es) copiados de ${monthLabelFromId(previousId)} • clique em Salvar`;
-    toast(`${copied} custo(s) copiado(s) de ${monthLabelFromId(previousId)}. Revise e clique em Salvar.`);
+    let previousId=null,previous=null;
+    for(const id of prevIds){try{const row=await ensureSupportCostsLoaded(id);if(row&&(safe(row.payroll_cost)>0||safe(row.other_costs)>0)){previousId=id;previous=row;break;}}catch(err){console.error(err);return toast('Não foi possível carregar os custos da competência anterior.');}}
+    if(!previousId||!previous)return toast('Nenhuma competência anterior possui custo geral cadastrado.');
+    $('#supportPayrollCost').value=safe(previous.payroll_cost).toFixed(2);$('#supportOtherCosts').value=safe(previous.other_costs).toFixed(2);$('#supportTechnicianCount').value=safe(previous.technician_count)||supportCostDetectedTechnicians(current)||'';$('#supportHoursPerDay').value=safe(previous.hours_per_day)||8;updateSupportCostPreview();
+    $('#supportCostStatus').textContent=`${monthLabelFromId(current)} • valores copiados de ${monthLabelFromId(previousId)} • revise e salve`;
+    toast(`Custos gerais copiados de ${monthLabelFromId(previousId)}. Revise a quantidade de técnicos antes de salvar.`);
   }
 
   function renderAdmin(){
@@ -1868,7 +1857,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     renderFinanceAdmin(m,specific,locked);
     if(state.adminSection==='costs'){
       $('#adminScopeTitle').textContent='Custos do Suporte';
-      $('#adminScopeText').textContent='Base confidencial e histórica de custo por hora de todo o Suporte técnico. Esta tela não usa filtro por Squad e ainda não calcula custos de chamados; essa análise será criada quando a estrutura do CSV de tempos estiver definida.';
+      $('#adminScopeText').textContent='Base confidencial do custo geral do Suporte técnico. Informe pagamentos, outros custos, quantidade total de técnicos e horas úteis por dia; o sistema calcula o custo médio por dia, hora e minuto técnico sem separar por Squad.';
       renderSupportCosts();updateThemeName();return;
     }
     if(!specific||!m){

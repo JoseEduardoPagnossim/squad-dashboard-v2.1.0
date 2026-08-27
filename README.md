@@ -1,5 +1,17 @@
-# Soften Performance Hub V2.28.0
+# Soften Performance Hub V2.28.1
 
+
+## V2.28.1 — Custo geral do Suporte
+
+- simplifica **Gestão > Custos** para uma única base mensal do Suporte, sem custo individual por técnico;
+- inputs: **custo total com pagamentos**, **outros custos**, **total de técnicos** e **horas úteis por dia**;
+- a quantidade de técnicos é sugerida automaticamente a partir da competência importada, mas pode ser ajustada pelo Admin Geral;
+- calcula automaticamente **custo total**, **dias úteis**, **capacidade útil em horas/minutos**, **custo por dia útil técnico**, **custo por hora técnica** e **custo por minuto técnico**;
+- mantém o botão **Copiar mês anterior** para reaproveitar os valores e revisar a quantidade de técnicos;
+- a antiga tabela individual da V2.28.0 fica apenas como legado e não é usada pela tela;
+- exige executar `MIGRACAO_V2.28.1.sql` antes de usar a nova tela.
+
+**Fórmula-base:** `custo total = pagamentos + outros custos`; `custo/minuto = custo total ÷ técnicos ÷ dias úteis ÷ horas/dia ÷ 60`.
 
 ## V2.28.0 — Férias, legibilidade e base de custos
 
