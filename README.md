@@ -1,5 +1,13 @@
-# Soften Performance Hub V2.29.0
+# Soften Performance Hub V2.29.1
 
+
+
+## V2.29.1 — Leitura estratégica do impacto financeiro
+- adiciona quatro KPIs executivos em `Indicadores > Impacto financeiro`: cobertura financeira, exposição entre clientes ouvidos, principal origem do risco e receita sem feedback;
+- adiciona gráfico histórico `Receita representada x Receita sob sinal`, usando o ticket médio salvo em cada competência;
+- amplia a tabela Serviço/Produto/Empresa com a participação de cada dimensão no total de sinais de notas 1 a 3 e destaca a principal origem;
+- nenhuma nova informação de cliente é armazenada e não existe nova migração SQL nesta versão;
+- todos os indicadores são estimativas baseadas no ticket médio e continuam sem representar churn ou receita perdida confirmada.
 
 ## V2.29.0 — Impacto financeiro da qualidade
 

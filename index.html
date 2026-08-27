@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.29.0" />
+  <link rel="stylesheet" href="styles.css?v=2.29.1" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.29.0 • Impacto financeiro da qualidade</small>
+      <small class="login-version">V2.29.1 • Leitura estratégica da qualidade</small>
     </div>
   </section>
 
@@ -104,7 +104,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.29.0 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.29.1 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -517,9 +517,24 @@
             <article class="card indicator-kpi"><span>Exposição anual equivalente</span><strong id="financialImpactAnnualExposure">—</strong><small>Receita mensal sob sinal × 12</small><p>Referência anual de exposição, sem previsão de churn.</p></article>
           </div>
 
+          <section class="financial-strategic-section" aria-labelledby="financialStrategicTitle">
+            <div class="section-title financial-strategic-title"><div><span class="eyebrow">LEITURA ESTRATÉGICA</span><h3 id="financialStrategicTitle">O que a qualidade representa financeiramente</h3></div><span class="muted">Indicadores derivados apenas dos dados já importados</span></div>
+            <div class="financial-strategic-grid">
+              <article class="card financial-strategic-kpi"><span>Cobertura financeira</span><strong id="financialStrategicCoverage">0%</strong><small id="financialStrategicCoverageDetail">Receita representada ÷ MRR estimado</small><p>Mostra quanto da receita estimada da carteira teve voz na competência.</p></article>
+              <article class="card financial-strategic-kpi risk"><span>Exposição entre clientes ouvidos</span><strong id="financialStrategicExposure">0%</strong><small id="financialStrategicExposureDetail">Receita sob sinal ÷ receita representada</small><p>Parcela da receita observada associada a pelo menos um sinal de insatisfação.</p></article>
+              <article class="card financial-strategic-kpi origin"><span>Principal origem do risco</span><strong id="financialStrategicPrimaryOrigin">—</strong><small id="financialStrategicPrimaryOriginDetail">Sem sinais de notas 1 a 3</small><p>Dimensão com maior participação entre os sinais de baixa avaliação.</p></article>
+              <article class="card financial-strategic-kpi gap"><span>Receita sem feedback</span><strong id="financialStrategicUnheardRevenue">—</strong><small id="financialStrategicUnheardDetail">Carteira estimada ainda sem voz no período</small><p>MRR estimado que não está representado pela amostra de clientes únicos.</p></article>
+            </div>
+          </section>
+
+          <article class="card chart-card financial-impact-trend-card">
+            <div class="section-title"><div><span class="eyebrow">EVOLUÇÃO FINANCEIRA</span><h3>Receita representada x receita sob sinal</h3></div><span class="muted" id="financialImpactTrendNote">Valores estimados pelo ticket médio de cada competência</span></div>
+            <div id="financialImpactTrendChart" class="chart financial-impact-trend-chart"></div>
+          </article>
+
           <article class="card financial-impact-dimension-card">
-            <div class="section-title"><div><span class="eyebrow">ORIGEM DO SINAL</span><h3>Serviço, Produto e Empresa</h3></div><span class="muted">Notas baixas = 1 a 3</span></div>
-            <div class="table-wrap"><table class="financial-impact-table"><thead><tr><th>Dimensão</th><th>Respostas válidas</th><th>Clientes c/ nota baixa</th><th>% nota baixa</th><th>Receita mensal associada</th><th>Exposição anual equivalente</th></tr></thead><tbody id="financialImpactDimensionRows"></tbody></table></div>
+            <div class="section-title"><div><span class="eyebrow">ORIGEM DO SINAL</span><h3>Serviço, Produto e Empresa</h3></div><span class="muted">Notas baixas = 1 a 3 • participação considera o total de sinais</span></div>
+            <div class="table-wrap"><table class="financial-impact-table"><thead><tr><th>Dimensão</th><th>Respostas válidas</th><th>Clientes c/ nota baixa</th><th>% nota baixa</th><th>Participação nos sinais</th><th>Receita mensal associada</th><th>Exposição anual equivalente</th></tr></thead><tbody id="financialImpactDimensionRows"></tbody></table></div>
           </article>
 
           <article class="card financial-impact-history-card">
@@ -528,7 +543,7 @@
           </article>
 
           <article class="card financial-impact-disclaimer">
-            <strong>Como interpretar</strong><p>Os valores são estimativas de receita <b>associada</b> aos clientes que avaliaram. “Receita sob sinal de risco” não significa receita perdida e não deve ser usada como previsão de churn. O objetivo desta primeira versão é dimensionar financeiramente a voz do cliente sem carregar cadastro individual.</p>
+            <strong>Como interpretar</strong><p>Os valores são estimativas de receita <b>associada</b> aos clientes que avaliaram. “Receita sob sinal de risco” não significa receita perdida e não deve ser usada como previsão de churn. O objetivo é dimensionar financeiramente a voz do cliente sem carregar cadastro individual. Na participação por Serviço, Produto e Empresa, um mesmo cliente pode gerar sinal em mais de uma dimensão; por isso a participação é calculada sobre o total de sinais, e não sobre clientes únicos em risco.</p>
           </article>
         </div>
 
@@ -866,6 +881,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.29.0"></script>
+  <script src="app.js?v=2.29.1"></script>
 </body>
 </html>

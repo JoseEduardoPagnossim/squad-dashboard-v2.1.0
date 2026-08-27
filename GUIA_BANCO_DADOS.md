@@ -352,3 +352,8 @@ O CSV deve ser deduplicado antes da importação. Cada linha válida é consider
 - `Exposição anual equivalente = receita sob sinal × 12`.
 
 Esses valores são estimativas de receita associada à amostra e não previsão de cancelamento.
+
+
+## V2.29.1 — sem alteração de banco
+
+A V2.29.1 adiciona somente cálculos e visualizações estratégicas sobre `quality_financial_monthly`. Não há tabela, coluna, função ou política RLS nova. Se a `MIGRACAO_V2.29.0.sql` já foi executada, não é necessário rodar SQL adicional.
