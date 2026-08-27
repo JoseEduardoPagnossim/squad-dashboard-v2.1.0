@@ -1,4 +1,19 @@
-# Soften Performance Hub V2.28.1
+# Soften Performance Hub V2.29.0
+
+
+## V2.29.0 — Impacto financeiro da qualidade
+
+- nova aba **Indicadores > Impacto financeiro**, exclusiva do Admin Geral;
+- visão corporativa do Suporte técnico completo, sem filtro por Squad;
+- usa **total de clientes ativos + ticket médio mensal + CSV previamente deduplicado**;
+- o CSV real suportado possui `DataAvaliacao`, `NotaServico`, `NotaProduto` e `NotaEmpresa`;
+- cada linha válida é tratada como um cliente único da competência;
+- nenhum nome, CNPJ ou identificador de cliente é persistido;
+- calcula MRR estimado, cobertura da base, receita representada, clientes sob sinal de risco, receita mensal associada ao risco e exposição anual equivalente;
+- separa o impacto por **Serviço, Produto e Empresa**;
+- mantém histórico por competência;
+- “receita sob sinal de risco” é uma associação estimada e **não representa perda confirmada nem previsão de churn**;
+- exige executar `MIGRACAO_V2.29.0.sql` antes de publicar.
 
 
 ## V2.28.1 — Custo geral do Suporte

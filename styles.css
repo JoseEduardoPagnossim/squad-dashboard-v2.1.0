@@ -1271,3 +1271,28 @@ th{font-size:10.5px!important;line-height:1.35}td{font-size:12px!important;line-
 .support-cost-summary-wide .support-cost-summary-card strong{font-size:20px}
 @media(max-width:1050px){.support-cost-input-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.support-cost-summary-wide{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.support-cost-input-grid,.support-cost-summary-wide{grid-template-columns:1fr}}
+
+
+/* V2.29.0 - Impacto financeiro da qualidade */
+.financial-impact-head{margin-bottom:14px}
+.financial-impact-config-card,.financial-impact-dimension-card,.financial-impact-history-card,.financial-impact-disclaimer{padding:22px;margin-bottom:14px}
+.financial-impact-config-grid{display:grid;grid-template-columns:minmax(180px,.8fr) repeat(2,minmax(220px,1fr)) minmax(240px,1.1fr);gap:12px;margin-top:16px;align-items:stretch}
+.financial-impact-config-grid>label{display:grid;gap:6px;padding:13px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.018);min-width:0}
+.financial-impact-config-grid label>span{font-size:11px;color:var(--text);font-weight:800;line-height:1.35}
+.financial-impact-config-grid select,.financial-impact-config-grid input{width:100%;min-height:42px;border:1px solid var(--border);border-radius:10px;background:var(--panel2);color:var(--text);padding:0 11px;font-size:13px;font-variant-numeric:tabular-nums}
+.financial-impact-config-grid small{font-size:10.5px;color:var(--muted);line-height:1.45}
+.financial-impact-actions{display:grid;grid-template-columns:1fr;gap:9px;padding:13px 14px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));border-radius:13px;background:color-mix(in srgb,var(--accent) 4%,transparent);align-content:center}
+.financial-impact-actions .btn{width:100%}
+.financial-impact-import-note{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding:11px 13px;border:1px dashed var(--border);border-radius:12px;background:rgba(255,255,255,.012)}
+.financial-impact-import-note span{font-size:11px;font-weight:800;color:var(--text)}.financial-impact-import-note small{font-size:10.5px;color:var(--muted);line-height:1.45;text-align:right;max-width:680px}
+.financial-impact-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.financial-risk-kpi{border-color:color-mix(in srgb,var(--warn) 25%,var(--border));background:linear-gradient(145deg,color-mix(in srgb,var(--warn) 5%,var(--panel)),var(--panel))}
+.financial-risk-kpi strong{color:var(--warn)}
+.financial-impact-table,.financial-impact-history-table{min-width:920px}
+.financial-impact-table td,.financial-impact-history-table td{font-size:11px;font-variant-numeric:tabular-nums}
+.financial-impact-table td strong,.financial-impact-history-table td strong{font-size:11px;color:var(--text)}
+.financial-impact-history-table .selected-period-row{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.financial-impact-disclaimer{border-color:color-mix(in srgb,var(--accent) 20%,var(--border));background:color-mix(in srgb,var(--accent) 3%,var(--panel))}
+.financial-impact-disclaimer strong{display:block;font-size:12px;margin-bottom:6px}.financial-impact-disclaimer p{margin:0;font-size:11px;line-height:1.6;color:var(--muted)}
+@media(max-width:1180px){.financial-impact-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.financial-impact-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:680px){.financial-impact-config-grid,.financial-impact-kpis{grid-template-columns:1fr!important}.financial-impact-import-note{align-items:flex-start;flex-direction:column}.financial-impact-import-note small{text-align:left}.financial-impact-config-card,.financial-impact-dimension-card,.financial-impact-history-card,.financial-impact-disclaimer{padding:18px}}

@@ -319,3 +319,36 @@ A V2.28.0 somente cadastra e preserva a base histórica. Nenhum custo de chamado
 ## V2.28.1 — support_monthly_costs
 
 Tabela confidencial, visível apenas ao Admin Geral, usada em **Gestão > Custos** para armazenar o custo geral do Suporte por competência. Campos principais: `payroll_cost`, `other_costs`, `technician_count` e `hours_per_day`. O custo individual por técnico da V2.28.0 deixa de ser usado pela interface.
+
+
+## V2.29.0 — quality_financial_monthly
+
+Execute `MIGRACAO_V2.29.0.sql` antes de publicar a V2.29.0.
+
+A tabela `quality_financial_monthly` é uma base **mensal e agregada** para a tela **Indicadores > Impacto financeiro**. Ela não armazena clientes individualmente.
+
+Campos principais:
+
+- `organization_id`, `year`, `month`;
+- `active_clients`;
+- `avg_ticket`;
+- `evaluated_clients`;
+- `risk_any_clients`;
+- contagens N1 a N5 separadas para Serviço, Produto e Empresa;
+- `source_file`, `imported_at`, `updated_at`.
+
+`risk_any_clients` conta cada linha/cliente no máximo uma vez quando existir pelo menos uma nota 1, 2 ou 3 em qualquer uma das três dimensões.
+
+### Privacidade e escopo
+
+O CSV deve ser deduplicado antes da importação. Cada linha válida é considerada um cliente único. O monitor consolida o arquivo no navegador e grava apenas os totais mensais, sem nome, CNPJ ou ID do cliente. A tabela usa RLS e fica disponível somente para `super_admin` da mesma organização.
+
+### Fórmulas da primeira versão
+
+- `MRR estimado = active_clients × avg_ticket`;
+- `Cobertura = evaluated_clients ÷ active_clients`;
+- `Receita representada = evaluated_clients × avg_ticket`;
+- `Receita sob sinal = risk_any_clients × avg_ticket`;
+- `Exposição anual equivalente = receita sob sinal × 12`.
+
+Esses valores são estimativas de receita associada à amostra e não previsão de cancelamento.

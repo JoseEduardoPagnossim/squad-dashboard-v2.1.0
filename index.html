@@ -9,7 +9,7 @@
   </script>
   <link id="appFavicon" rel="icon" type="image/png" href="assets/favicon-dragon.png" />
   <title>Soften • Performance Hub</title>
-  <link rel="stylesheet" href="styles.css?v=2.28.1" />
+  <link rel="stylesheet" href="styles.css?v=2.29.0" />
 </head>
 <body>
   <div class="bg-layer"></div>
@@ -47,7 +47,7 @@
           <button class="login-recovery-link" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         </form>
       </div>
-      <small class="login-version">V2.28.1 • Custo geral do suporte</small>
+      <small class="login-version">V2.29.0 • Impacto financeiro da qualidade</small>
     </div>
   </section>
 
@@ -104,7 +104,7 @@
         <input id="soundVolume" class="sound-volume" type="range" min="0" max="100" step="1" value="18" aria-label="Volume da trilha">
       </div>
       <audio id="themeAudio" loop preload="metadata"></audio>
-      <div class="sidebar-footer">V2.28.1 • Squads A, B, D e E</div>
+      <div class="sidebar-footer">V2.29.0 • Squads A, B, D e E</div>
     </aside>
 
     <main class="main">
@@ -303,6 +303,7 @@
         <div class="indicator-section-tabs" role="tablist" aria-label="Seções dos indicadores">
           <button type="button" class="indicator-section-tab active" data-indicator-section="performance" role="tab" aria-selected="true">Desempenho</button>
           <button type="button" class="indicator-section-tab" data-indicator-section="quality" role="tab" aria-selected="false">Qualidade</button>
+          <button type="button" class="indicator-section-tab" data-indicator-section="financial-impact" role="tab" aria-selected="false">Impacto financeiro</button>
           <button type="button" class="indicator-section-tab" data-indicator-section="business-days" role="tab" aria-selected="false">Por dias úteis</button>
           <button type="button" class="indicator-section-tab" data-indicator-section="detail" role="tab" aria-selected="false">Detalhamento</button>
         </div>
@@ -489,6 +490,48 @@
           </article>
         </div>
 
+        <div id="indicatorFinancialImpactPanel" class="hidden">
+          <div class="history-section-head card financial-impact-head">
+            <div><span class="eyebrow">QUALIDADE EM VALORES</span><h2>Impacto financeiro estimado da qualidade</h2><p>Transforma a amostra de clientes únicos que avaliaram em uma leitura financeira usando o total de clientes ativos e o ticket médio mensal da competência.</p></div>
+            <span class="history-chip">Suporte técnico completo</span>
+          </div>
+
+          <article class="card financial-impact-config-card">
+            <div class="section-title"><div><span class="eyebrow">BASE DA COMPETÊNCIA</span><h3>Parâmetros e CSV deduplicado</h3></div><span class="muted">Nenhum cliente, nome ou CNPJ é armazenado</span></div>
+            <div class="financial-impact-config-grid">
+              <label><span>Competência</span><select id="financialImpactMonthSelect"></select><small>O CSV pode conter uma ou mais competências.</small></label>
+              <label><span>Total de clientes ativos</span><input id="financialImpactActiveClients" type="number" min="0" step="1" inputmode="numeric" placeholder="Ex.: 8000"><small>Quantidade total de clientes ativos no mês.</small></label>
+              <label><span>Ticket médio mensal</span><input id="financialImpactAvgTicket" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ex.: 200,00"><small>Valor médio mensal por cliente.</small></label>
+              <div class="financial-impact-actions"><button class="btn secondary" id="importFinancialQualityCsvBtn" type="button">↑ Importar CSV deduplicado</button><button class="btn primary" id="saveFinancialImpactParamsBtn" type="button">Salvar parâmetros</button></div>
+            </div>
+            <input id="financialQualityCsvInput" type="file" accept=".csv,text/csv" hidden>
+            <div class="financial-impact-import-note"><span id="financialImpactImportStatus">Aguardando CSV de clientes únicos.</span><small>Cada linha válida do arquivo é tratada como um cliente único da competência. A deduplicação deve ocorrer antes da exportação.</small></div>
+          </article>
+
+          <div class="indicator-kpis financial-impact-kpis">
+            <article class="card indicator-kpi"><span>MRR estimado da carteira</span><strong id="financialImpactMrr">—</strong><small id="financialImpactPortfolioBase">Informe clientes e ticket médio</small><p>Clientes ativos × ticket médio mensal.</p></article>
+            <article class="card indicator-kpi"><span>Clientes únicos ouvidos</span><strong id="financialImpactEvaluated">0</strong><small id="financialImpactCoverage">0% da base</small><p>Quantidade de linhas válidas do CSV deduplicado.</p></article>
+            <article class="card indicator-kpi"><span>Receita representada</span><strong id="financialImpactRepresented">—</strong><small id="financialImpactRepresentedShare">0% do MRR estimado</small><p>Clientes ouvidos × ticket médio.</p></article>
+            <article class="card indicator-kpi financial-risk-kpi"><span>Clientes sob sinal de risco</span><strong id="financialImpactRiskClients">0</strong><small id="financialImpactRiskShare">0% dos clientes ouvidos</small><p>Cliente com ao menos uma nota 1, 2 ou 3 em Serviço, Produto ou Empresa.</p></article>
+            <article class="card indicator-kpi financial-risk-kpi"><span>Receita mensal sob sinal de risco</span><strong id="financialImpactRiskRevenue">—</strong><small id="financialImpactRiskPortfolioShare">0% do MRR estimado</small><p>Exposição estimada; não representa perda confirmada.</p></article>
+            <article class="card indicator-kpi"><span>Exposição anual equivalente</span><strong id="financialImpactAnnualExposure">—</strong><small>Receita mensal sob sinal × 12</small><p>Referência anual de exposição, sem previsão de churn.</p></article>
+          </div>
+
+          <article class="card financial-impact-dimension-card">
+            <div class="section-title"><div><span class="eyebrow">ORIGEM DO SINAL</span><h3>Serviço, Produto e Empresa</h3></div><span class="muted">Notas baixas = 1 a 3</span></div>
+            <div class="table-wrap"><table class="financial-impact-table"><thead><tr><th>Dimensão</th><th>Respostas válidas</th><th>Clientes c/ nota baixa</th><th>% nota baixa</th><th>Receita mensal associada</th><th>Exposição anual equivalente</th></tr></thead><tbody id="financialImpactDimensionRows"></tbody></table></div>
+          </article>
+
+          <article class="card financial-impact-history-card">
+            <div class="section-title"><div><span class="eyebrow">EVOLUÇÃO</span><h3>Histórico financeiro por competência</h3></div><span class="muted">Valores estimados com base no ticket médio salvo em cada mês</span></div>
+            <div class="table-wrap"><table class="financial-impact-history-table"><thead><tr><th>Competência</th><th>Clientes ativos</th><th>Ticket médio</th><th>MRR estimado</th><th>Clientes ouvidos</th><th>Cobertura</th><th>Receita representada</th><th>Clientes sob sinal</th><th>Receita sob sinal</th></tr></thead><tbody id="financialImpactHistoryRows"></tbody></table></div>
+          </article>
+
+          <article class="card financial-impact-disclaimer">
+            <strong>Como interpretar</strong><p>Os valores são estimativas de receita <b>associada</b> aos clientes que avaliaram. “Receita sob sinal de risco” não significa receita perdida e não deve ser usada como previsão de churn. O objetivo desta primeira versão é dimensionar financeiramente a voz do cliente sem carregar cadastro individual.</p>
+          </article>
+        </div>
+
         <div id="indicatorBusinessDaysPanel" class="hidden">
           <div class="history-section-head card business-days-head">
             <div><span class="eyebrow">COMPARAÇÃO JUSTA ENTRE COMPETÊNCIAS</span><h2>Por dias úteis</h2><p>Compara meses diferentes no mesmo estágio do mês. Se a competência base estiver no 18º dia útil, as demais também são cortadas no 18º dia útil.</p></div>
@@ -671,7 +714,7 @@
 
           <article class="card how-mini admin-help"><div class="how-section-title"><span class="how-icon green">↓</span><div><span class="eyebrow">RELATÓRIOS</span><h3>Excel e PDF</h3></div></div><ul><li>O Excel traz ambos os modelos, diferença, modelo oficial, valor oficial e todos os ajustes por técnico.</li><li>A aba Resumo mostra totais da folha, métricas da Base do Squad e cancelamento.</li><li>Quando houver comissão do Admin Geral, ela aparece separadamente.</li><li>O PDF apresenta uma conferência compacta do fechamento.</li><li>Prefira gerar os relatórios imediatamente antes de fechar a competência.</li></ul></article>
 
-          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos por competência</b> abre o comparativo mensal em tela cheia. Em Indicadores, <b>Evolução diária dos técnicos</b> usa o calendário dia a dia com as mesmas métricas para alinhamentos semanais.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo <b>Qualidade</b>, <b>Por dias úteis</b>, <b>Detalhamento</b> e ranking financeiro pelo valor oficial recebido no período.</li><li>Em <b>Gestão → Feedbacks</b>, administradores geram rascunhos mensais por regra, revisam, finalizam e podem liberar o registro ao técnico.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
+          <article class="card how-mini"><div class="how-section-title"><span class="how-icon red">◔</span><div><span class="eyebrow">VISÃO DO SETOR</span><h3>Gráficos e indicadores</h3></div></div><ul><li>As telas <b>Meu desempenho</b>, <b>Visão do Squad</b> e <b>Indicadores</b> usam calendário diário. Por padrão, o filtro inicia no primeiro dia do mês atual e termina na última data importada.</li><li>Use os atalhos <b>Hoje</b>, <b>7 dias</b>, <b>15 dias</b>, <b>Este mês</b> e <b>Mês anterior</b>.</li><li>Na <b>Visão do Squad</b>, todos os perfis veem comparativos consolidados entre Squads e o volume diário do setor.</li><li><b>Todos os técnicos por competência</b> abre o comparativo mensal em tela cheia. Em Indicadores, <b>Evolução diária dos técnicos</b> usa o calendário dia a dia com as mesmas métricas para alinhamentos semanais.</li><li>Nos gráficos de linha, passe o mouse por um período para abrir o tooltip compartilhado com todas as séries, inclusive pontos sobrepostos.</li><li>Passe o mouse sobre a legenda para destacar uma linha ou clique para fixar o foco.</li><li>O Admin Geral possui análises adicionais em <b>Indicadores</b>, incluindo <b>Qualidade</b>, <b>Impacto financeiro</b>, <b>Por dias úteis</b>, <b>Detalhamento</b> e ranking financeiro pelo valor oficial recebido no período.</li><li>Em <b>Gestão → Feedbacks</b>, administradores geram rascunhos mensais por regra, revisam, finalizam e podem liberar o registro ao técnico.</li><li>No Meu desempenho, o técnico também vê o ranking financeiro do próprio Squad com os valores oficiais de todos do grupo.</li></ul></article>
 
           <article class="card how-mini"><div class="how-section-title"><span class="how-icon blue">◉</span><div><span class="eyebrow">CONTA E APARÊNCIA</span><h3>Senha, tema e som</h3></div></div><ul><li>Em <b>Meu perfil</b>, qualquer usuário pode trocar a própria senha informando a senha atual; a recuperação por e-mail permanece como alternativa.</li><li>Em <b>Gestão → Aparência</b>, administradores configuram as paletas clara e escura, fundo, favicon e trilha do próprio Squad.</li><li>O botão ☀/☾ no topo alterna Light/Dark instantaneamente. A preferência fica salva no navegador e, no primeiro acesso, segue o modo do sistema operacional.</li><li>A preferência de áudio e volume fica salva no navegador; o som depende de uma interação inicial conforme as regras do navegador.</li><li>A campanha do setor na lateral permanece independente do tema de cada Squad.</li></ul></article>
         </div>
@@ -823,6 +866,6 @@
   <div class="toast" id="toast"></div>
   <script src="config.js"></script>
   <script src="default-data.js"></script>
-  <script src="app.js?v=2.28.1"></script>
+  <script src="app.js?v=2.29.0"></script>
 </body>
 </html>

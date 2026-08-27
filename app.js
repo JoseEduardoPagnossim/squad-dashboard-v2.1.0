@@ -102,6 +102,10 @@
     supportCostMonthId:null,
     supportCostCache:{},
     supportCostLoading:{},
+    financialImpactMonthId:null,
+    financialImpactCache:{},
+    financialImpactLoaded:false,
+    financialImpactLoading:null,
     audio:{source:null,playing:false,pendingResume:false,previewing:false,previewBefore:null,fadeTimer:null}
   };
 
@@ -207,6 +211,12 @@
     if($('#copyPreviousSupportCostsBtn'))$('#copyPreviousSupportCostsBtn').addEventListener('click',copyPreviousSupportCosts);
     if($('#saveSupportCostsBtn'))$('#saveSupportCostsBtn').addEventListener('click',saveSupportCosts);
     ['#supportPayrollCost','#supportOtherCosts','#supportTechnicianCount','#supportHoursPerDay'].forEach(sel=>{if($(sel))$(sel).addEventListener('input',updateSupportCostPreview)});
+    if($('#financialImpactMonthSelect'))$('#financialImpactMonthSelect').addEventListener('change',e=>{state.financialImpactMonthId=e.target.value;renderFinancialImpactIndicators();});
+    if($('#financialImpactActiveClients'))$('#financialImpactActiveClients').addEventListener('input',updateFinancialImpactPreview);
+    if($('#financialImpactAvgTicket'))$('#financialImpactAvgTicket').addEventListener('input',updateFinancialImpactPreview);
+    if($('#importFinancialQualityCsvBtn'))$('#importFinancialQualityCsvBtn').addEventListener('click',()=>$('#financialQualityCsvInput')?.click());
+    if($('#financialQualityCsvInput'))$('#financialQualityCsvInput').addEventListener('change',handleFinancialQualityCsvFile);
+    if($('#saveFinancialImpactParamsBtn'))$('#saveFinancialImpactParamsBtn').addEventListener('click',saveFinancialImpactParameters);
     $('#copyPreviousGoalsBtn').addEventListener('click',copyGoalsFromPreviousMonth);
     $('#saveScoreSettingsBtn').addEventListener('click',saveScoreSettings);
     $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
@@ -335,7 +345,7 @@
 
   async function enterApp(user){
     state.user=user;
-    state.userDirectoryLoaded=false;state.userDirectory=[];state.gameRankingCache={};state.gameRankingLoading={};state.feedbackCache={};state.feedbackLoading={};state.feedbackEditor=null;state.myFeedbacks=null;state.myFeedbackLoading=false;state.supportCostMonthId=null;state.supportCostCache={};state.supportCostLoading={};
+    state.userDirectoryLoaded=false;state.userDirectory=[];state.gameRankingCache={};state.gameRankingLoading={};state.feedbackCache={};state.feedbackLoading={};state.feedbackEditor=null;state.myFeedbacks=null;state.myFeedbackLoading=false;state.supportCostMonthId=null;state.supportCostCache={};state.supportCostLoading={};state.financialImpactMonthId=null;state.financialImpactCache={};state.financialImpactLoaded=false;state.financialImpactLoading=null;
     state.squadCode=user.role==='super_admin'?'D':(user.squadCode||'D');
     chooseLatestMonth(); chooseDefaultTech();
     state.theme=state.squads[state.squadCode]?.theme||loadThemeForSquad(state.squadCode); applyTheme(state.theme);
@@ -719,7 +729,7 @@ function renderIndicatorSafely(label,renderFn,targetIds=[]){
 }
 
 function setIndicatorSection(section){
-  const allowed=new Set(['performance','quality','business-days','detail']);
+  const allowed=new Set(['performance','quality','financial-impact','business-days','detail']);
   state.indicatorSection=allowed.has(section)?section:'performance';
   if(state.currentView==='indicators')renderIndicators();
 }
@@ -728,12 +738,13 @@ function syncIndicatorSectionUi(){
   $$('#view-indicators [data-indicator-section]').forEach(btn=>{const active=btn.dataset.indicatorSection===section;btn.classList.toggle('active',active);btn.setAttribute('aria-selected',active?'true':'false')});
   if($('#indicatorPerformancePanel'))$('#indicatorPerformancePanel').classList.toggle('hidden',section!=='performance');
   if($('#indicatorQualityPanel'))$('#indicatorQualityPanel').classList.toggle('hidden',section!=='quality');
+  if($('#indicatorFinancialImpactPanel'))$('#indicatorFinancialImpactPanel').classList.toggle('hidden',section!=='financial-impact');
   if($('#indicatorBusinessDaysPanel'))$('#indicatorBusinessDaysPanel').classList.toggle('hidden',section!=='business-days');
   if($('#indicatorDetailPanel'))$('#indicatorDetailPanel').classList.toggle('hidden',section!=='detail');
   if($('#indicatorPerformanceActions'))$('#indicatorPerformanceActions').classList.toggle('hidden',section!=='performance');
-  if($('#indicatorGlobalToolbar'))$('#indicatorGlobalToolbar').classList.toggle('hidden',section==='business-days');
-  const titles={performance:'Indicadores gerais',quality:'Indicadores de qualidade','business-days':'Comparativo por dias úteis',detail:'Detalhamento de qualidade'};
-  const texts={performance:'Leitura consolidada para o Admin geral com calendário diário, visão semanal/mensal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.',quality:'Serviço, Produto e Empresa analisados separadamente, preservando a origem de cada avaliação e os gráficos usados na reunião semanal.','business-days':'Compare competências diferentes usando o mesmo número de dias úteis, sem colocar um mês parcial contra outro mês completo.',detail:'Identifique os técnicos com maior acúmulo de notas baixas de Serviço, Produto e Empresa dentro do período selecionado.'};
+  if($('#indicatorGlobalToolbar'))$('#indicatorGlobalToolbar').classList.toggle('hidden',section==='business-days'||section==='financial-impact');
+  const titles={performance:'Indicadores gerais',quality:'Indicadores de qualidade','financial-impact':'Impacto financeiro da qualidade','business-days':'Comparativo por dias úteis',detail:'Detalhamento de qualidade'};
+  const texts={performance:'Leitura consolidada para o Admin geral com calendário diário, visão semanal/mensal, produtividade por tempo trabalhado e histórico comparativo entre técnicos ou Squads.',quality:'Serviço, Produto e Empresa analisados separadamente, preservando a origem de cada avaliação e os gráficos usados na reunião semanal.','financial-impact':'Leitura corporativa da qualidade em valores estimados, sem armazenar clientes individualmente. O cálculo usa clientes ativos, ticket médio e um CSV previamente deduplicado.','business-days':'Compare competências diferentes usando o mesmo número de dias úteis, sem colocar um mês parcial contra outro mês completo.',detail:'Identifique os técnicos com maior acúmulo de notas baixas de Serviço, Produto e Empresa dentro do período selecionado.'};
   if($('#indicatorHeroTitle'))$('#indicatorHeroTitle').textContent=titles[section]||titles.performance;
   if($('#indicatorHeroText'))$('#indicatorHeroText').textContent=texts[section]||texts.performance;
 }
@@ -741,6 +752,7 @@ function syncIndicatorSectionUi(){
 function renderIndicators(){
   if(!isSuperAdmin()||!$('#view-indicators'))return;syncAnalysisDateControls();const squads=indicatorScopeSquads(),rangeIds=analysisMonthIds().filter(id=>indicatorMonthIds(squads).includes(id));
   $('#indicatorScopeTitle').textContent=state.squadCode==='all'?'Todos os Squads':`Squad ${state.squadCode}`;$('#indicatorScopeText').textContent=state.squadCode==='all'?'Comparativo consolidado entre todos os grupos disponíveis.':`Leitura executiva aprofundada do Squad ${state.squadCode}.`;$('#indicatorPeriodLabel').textContent=analysisRangeLabel();syncIndicatorSectionUi();
+  if(state.indicatorSection==='financial-impact'){if($('#indicatorScopeTitle'))$('#indicatorScopeTitle').textContent='Suporte técnico completo';if($('#indicatorScopeText'))$('#indicatorScopeText').textContent='Visão corporativa sem divisão por Squad e sem armazenamento de clientes individuais.';renderFinancialImpactIndicators();return;}
   if(state.indicatorSection==='quality'){renderQualityIndicators(squads,rangeIds);return;}
   if(state.indicatorSection==='business-days'){renderBusinessDaysIndicators(squads);return;}
   if(state.indicatorSection==='detail'){renderDetailIndicators(squads,rangeIds);return;}
@@ -1207,6 +1219,54 @@ function reconciliationMonthData(squads,id){
 }
 function diffText(v){const n=safe(v);return `${n>0?'+':''}${fmtInt(n)}`}
 function diffClass(v){return safe(v)>0?'positive':safe(v)<0?'negative':'zero'}
+
+  function financialImpactEmptyRow(id=''){
+    const [year,month]=String(id||'').split('-').map(Number);
+    return{id:null,organization_id:state.user?.organizationId||null,year:safe(year),month:safe(month),active_clients:0,avg_ticket:0,evaluated_clients:0,risk_any_clients:0,service_n1:0,service_n2:0,service_n3:0,service_n4:0,service_n5:0,product_n1:0,product_n2:0,product_n3:0,product_n4:0,product_n5:0,company_n1:0,company_n2:0,company_n3:0,company_n4:0,company_n5:0,source_file:'',imported_at:null,updated_at:null};
+  }
+  function normalizeFinancialImpactRow(row){
+    if(!row)return null;const id=`${safe(row.year)}-${String(safe(row.month)).padStart(2,'0')}`,out={...financialImpactEmptyRow(id),...row};
+    ['active_clients','evaluated_clients','risk_any_clients','service_n1','service_n2','service_n3','service_n4','service_n5','product_n1','product_n2','product_n3','product_n4','product_n5','company_n1','company_n2','company_n3','company_n4','company_n5'].forEach(k=>out[k]=Math.max(0,Math.round(safe(out[k]))));out.avg_ticket=Math.max(0,safe(out.avg_ticket));return out;
+  }
+  function loadDemoFinancialImpact(){try{const rows=JSON.parse(localStorage.getItem('softenFinancialQualityV1')||'[]');return Array.isArray(rows)?rows:[]}catch(e){return[]}}
+  function saveDemoFinancialImpact(rows){try{localStorage.setItem('softenFinancialQualityV1',JSON.stringify(rows||[]))}catch(e){}}
+  function financialImpactMonthIds(){
+    const ids=new Set(Object.keys(state.financialImpactCache||{}));Object.values(state.squads||{}).forEach(s=>Object.keys(s?.months||{}).forEach(id=>ids.add(id)));return[...ids].filter(id=>/^\d{4}-\d{2}$/.test(id)).sort();
+  }
+  async function ensureFinancialImpactLoaded(force=false){
+    if(!isSuperAdmin())return{};if(state.financialImpactLoaded&&!force)return state.financialImpactCache;if(state.financialImpactLoading)return state.financialImpactLoading;
+    const task=(async()=>{let rows=[];if(state.supabase){const {data,error}=await state.supabase.from('quality_financial_monthly').select('*').eq('organization_id',state.user.organizationId).order('year').order('month');if(error)throw error;rows=data||[];}else rows=loadDemoFinancialImpact();const cache={};for(const raw of rows){const row=normalizeFinancialImpactRow(raw);if(!row?.year||!row?.month)continue;cache[`${row.year}-${String(row.month).padStart(2,'0')}`]=row;}state.financialImpactCache=cache;state.financialImpactLoaded=true;return cache;})();
+    state.financialImpactLoading=task;try{return await task}catch(err){console.error(err);state.financialImpactLoaded=true;if($('#financialImpactImportStatus'))$('#financialImpactImportStatus').textContent='Não foi possível carregar a base financeira. Execute a migração V2.29.0.';return state.financialImpactCache||{};}finally{state.financialImpactLoading=null;if(state.currentView==='indicators'&&state.indicatorSection==='financial-impact')renderFinancialImpactIndicators();}
+  }
+  function financialImpactDimension(row,prefix){
+    const counts={};for(const n of [1,2,3,4,5])counts[n]=safe(row?.[`${prefix}_n${n}`]);const total=Object.values(counts).reduce((a,b)=>a+b,0),low=counts[1]+counts[2]+counts[3];return{counts,total,low,lowPct:total?low/total:0};
+  }
+  function financialImpactMetrics(row,activeClients,avgTicket){
+    const active=Math.max(0,Math.round(safe(activeClients))),ticket=Math.max(0,safe(avgTicket)),heard=Math.max(0,Math.round(safe(row?.evaluated_clients))),risk=Math.max(0,Math.round(safe(row?.risk_any_clients))),mrr=active*ticket,represented=heard*ticket,riskRevenue=risk*ticket;return{active,ticket,heard,risk,mrr,represented,riskRevenue,annualRisk:riskRevenue*12,coverage:active?heard/active:0,representedShare:mrr?represented/mrr:0,riskHeardShare:heard?risk/heard:0,riskPortfolioShare:mrr?riskRevenue/mrr:0};
+  }
+  function updateFinancialImpactPreview(){
+    if(!isSuperAdmin()||!$('#indicatorFinancialImpactPanel')||state.indicatorSection!=='financial-impact')return;const id=state.financialImpactMonthId,row=state.financialImpactCache?.[id]||financialImpactEmptyRow(id),active=safe($('#financialImpactActiveClients')?.value),ticket=safe($('#financialImpactAvgTicket')?.value),m=financialImpactMetrics(row,active,ticket);
+    $('#financialImpactMrr').textContent=m.active&&m.ticket?fmtMoney(m.mrr):'—';$('#financialImpactPortfolioBase').textContent=m.active&&m.ticket?`${fmtInt(m.active)} clientes × ${fmtMoney(m.ticket)}`:'Informe clientes e ticket médio';$('#financialImpactEvaluated').textContent=fmtInt(m.heard);$('#financialImpactCoverage').textContent=`${fmtPct(m.coverage)} da base`;$('#financialImpactRepresented').textContent=m.ticket?fmtMoney(m.represented):'—';$('#financialImpactRepresentedShare').textContent=`${fmtPct(m.representedShare)} do MRR estimado`;$('#financialImpactRiskClients').textContent=fmtInt(m.risk);$('#financialImpactRiskShare').textContent=`${fmtPct(m.riskHeardShare)} dos clientes ouvidos`;$('#financialImpactRiskRevenue').textContent=m.ticket?fmtMoney(m.riskRevenue):'—';$('#financialImpactRiskPortfolioShare').textContent=`${fmtPct(m.riskPortfolioShare)} do MRR estimado`;$('#financialImpactAnnualExposure').textContent=m.ticket?fmtMoney(m.annualRisk):'—';
+    const dims=[['Serviço','service'],['Produto','product'],['Empresa','company']];$('#financialImpactDimensionRows').innerHTML=dims.map(([label,prefix])=>{const d=financialImpactDimension(row,prefix),monthly=d.low*m.ticket,annual=monthly*12;return`<tr><td><strong>${label}</strong></td><td>${fmtInt(d.total)}</td><td>${fmtInt(d.low)}</td><td>${fmtPct(d.lowPct)}</td><td>${m.ticket?fmtMoney(monthly):'—'}</td><td>${m.ticket?fmtMoney(annual):'—'}</td></tr>`}).join('');
+  }
+  function renderFinancialImpactHistory(){
+    const el=$('#financialImpactHistoryRows');if(!el)return;const rows=Object.entries(state.financialImpactCache||{}).sort((a,b)=>b[0].localeCompare(a[0]));if(!rows.length){el.innerHTML='<tr><td colspan="9" class="muted">Importe o primeiro CSV deduplicado para iniciar o histórico.</td></tr>';return;}el.innerHTML=rows.map(([id,row])=>{const m=financialImpactMetrics(row,row.active_clients,row.avg_ticket);return`<tr class="${id===state.financialImpactMonthId?'selected-period-row':''}"><td><strong>${escapeHtml(monthLabelFromId(id))}</strong></td><td>${fmtInt(m.active)}</td><td>${m.ticket?fmtMoney(m.ticket):'—'}</td><td>${m.mrr?fmtMoney(m.mrr):'—'}</td><td>${fmtInt(m.heard)}</td><td>${fmtPct(m.coverage)}</td><td>${m.ticket?fmtMoney(m.represented):'—'}</td><td>${fmtInt(m.risk)}</td><td>${m.ticket?fmtMoney(m.riskRevenue):'—'}</td></tr>`}).join('');
+  }
+  function renderFinancialImpactIndicators(){
+    if(!isSuperAdmin()||!$('#indicatorFinancialImpactPanel'))return;if(!state.financialImpactLoaded){$('#financialImpactImportStatus').textContent='Carregando base financeira...';ensureFinancialImpactLoaded().catch(console.error);return;}const ids=financialImpactMonthIds();if(!ids.length){$('#financialImpactMonthSelect').innerHTML='';$('#financialImpactMonthSelect').disabled=true;$('#financialImpactImportStatus').textContent='Sem competências disponíveis.';return;}if(!state.financialImpactMonthId||!ids.includes(state.financialImpactMonthId))state.financialImpactMonthId=ids[ids.length-1];const id=state.financialImpactMonthId,row=state.financialImpactCache?.[id]||financialImpactEmptyRow(id);$('#financialImpactMonthSelect').disabled=false;$('#financialImpactMonthSelect').innerHTML=ids.map(mid=>`<option value="${mid}" ${mid===id?'selected':''}>${escapeHtml(monthLabelFromId(mid))}</option>`).join('');$('#financialImpactActiveClients').value=safe(row.active_clients)||'';$('#financialImpactAvgTicket').value=safe(row.avg_ticket)?safe(row.avg_ticket).toFixed(2):'';$('#financialImpactImportStatus').textContent=row.imported_at?`${monthLabelFromId(id)} • ${fmtInt(row.evaluated_clients)} clientes únicos importados${row.source_file?` • ${row.source_file}`:''}`:`${monthLabelFromId(id)} • aguardando CSV deduplicado`;updateFinancialImpactPreview();renderFinancialImpactHistory();
+  }
+  function parseFinancialImpactCsv(text){
+    const lines=parseCsvRows(String(text||'').replace(/^﻿/,''));if(lines.length<2)throw new Error('CSV financeiro vazio ou sem linhas de dados.');const headers=lines[0].map(normalizeHeader),idx={};headers.forEach((h,i)=>idx[h]=i);for(const h of ['dataavaliacao','notaservico','notaproduto','notaempresa'])if(idx[h]==null)throw new Error(`Coluna obrigatória não encontrada: ${h}.`);const groups=new Map();let ignored=0;
+    for(const cols of lines.slice(1)){const date=parseCsvDate(cols[idx.dataavaliacao]),service=csvRating(cols[idx.notaservico]),product=csvRating(cols[idx.notaproduto]),company=csvRating(cols[idx.notaempresa]);if(!date||(!service&&!product&&!company)){ignored++;continue;}const id=`${date.year}-${String(date.month).padStart(2,'0')}`,g=groups.get(id)||{id,year:date.year,month:date.month,evaluated_clients:0,risk_any_clients:0,service_n1:0,service_n2:0,service_n3:0,service_n4:0,service_n5:0,product_n1:0,product_n2:0,product_n3:0,product_n4:0,product_n5:0,company_n1:0,company_n2:0,company_n3:0,company_n4:0,company_n5:0};g.evaluated_clients++;if([service,product,company].some(n=>n&&n<=3))g.risk_any_clients++;if(service)g[`service_n${service}`]++;if(product)g[`product_n${product}`]++;if(company)g[`company_n${company}`]++;groups.set(id,g);}
+    if(!groups.size)throw new Error('Nenhuma linha válida foi encontrada.');return{months:[...groups.values()].sort((a,b)=>a.id.localeCompare(b.id)),ignored,total:lines.length-1};
+  }
+  async function handleFinancialQualityCsvFile(e){
+    if(!isSuperAdmin())return;const file=e.target.files?.[0];if(!file)return;const btn=$('#importFinancialQualityCsvBtn'),status=$('#financialImpactImportStatus');if(btn){btn.disabled=true;btn.textContent='Importando...';}if(status)status.textContent='Lendo e consolidando o CSV deduplicado...';try{const parsed=parseFinancialImpactCsv(await file.text());await ensureFinancialImpactLoaded();const now=new Date().toISOString(),payloads=[];for(const g of parsed.months){const previous=state.financialImpactCache?.[g.id]||financialImpactEmptyRow(g.id),row=normalizeFinancialImpactRow({...previous,...g,organization_id:state.user.organizationId||'demo',source_file:file.name,imported_by:state.user.userId||null,imported_at:now,updated_at:now});payloads.push(row);state.financialImpactCache[g.id]=row;}if(state.supabase){const dbRows=payloads.map(r=>({organization_id:state.user.organizationId,year:r.year,month:r.month,active_clients:r.active_clients,avg_ticket:Number(safe(r.avg_ticket).toFixed(2)),evaluated_clients:r.evaluated_clients,risk_any_clients:r.risk_any_clients,service_n1:r.service_n1,service_n2:r.service_n2,service_n3:r.service_n3,service_n4:r.service_n4,service_n5:r.service_n5,product_n1:r.product_n1,product_n2:r.product_n2,product_n3:r.product_n3,product_n4:r.product_n4,product_n5:r.product_n5,company_n1:r.company_n1,company_n2:r.company_n2,company_n3:r.company_n3,company_n4:r.company_n4,company_n5:r.company_n5,source_file:file.name,imported_by:state.user.userId,imported_at:now,updated_at:now}));const {error}=await state.supabase.from('quality_financial_monthly').upsert(dbRows,{onConflict:'organization_id,year,month'});if(error)throw error;await ensureFinancialImpactLoaded(true);}else{const map=new Map(loadDemoFinancialImpact().map(r=>[`${safe(r.year)}-${String(safe(r.month)).padStart(2,'0')}`,r]));payloads.forEach(r=>map.set(`${r.year}-${String(r.month).padStart(2,'0')}`,r));saveDemoFinancialImpact([...map.values()]);state.financialImpactLoaded=true;}state.financialImpactMonthId=payloads[payloads.length-1]?.year?`${payloads[payloads.length-1].year}-${String(payloads[payloads.length-1].month).padStart(2,'0')}`:state.financialImpactMonthId;renderFinancialImpactIndicators();const imported=payloads.reduce((sum,r)=>sum+safe(r.evaluated_clients),0),risk=payloads.reduce((sum,r)=>sum+safe(r.risk_any_clients),0);toast(`${fmtInt(imported)} clientes únicos consolidados em ${payloads.length} competência(s).`);if(status)status.textContent=`${file.name} • ${fmtInt(imported)} clientes únicos • ${fmtInt(risk)} com ao menos um sinal de risco • ${fmtInt(parsed.ignored)} linha(s) ignorada(s)`;}catch(err){console.error(err);if(status)status.textContent=err.message||'Não foi possível importar o CSV.';toast('Não foi possível importar o CSV de impacto financeiro.');}finally{if(btn){btn.disabled=false;btn.textContent='↑ Importar CSV deduplicado';}e.target.value='';}
+  }
+  async function saveFinancialImpactParameters(){
+    if(!isSuperAdmin())return;const id=state.financialImpactMonthId;if(!id)return toast('Selecione uma competência.');const active=Math.max(0,Math.round(safe($('#financialImpactActiveClients')?.value))),ticket=Math.max(0,safe($('#financialImpactAvgTicket')?.value));if(!active)return toast('Informe o total de clientes ativos.');if(!ticket)return toast('Informe o ticket médio mensal.');await ensureFinancialImpactLoaded();const [year,month]=id.split('-').map(Number),previous=state.financialImpactCache?.[id]||financialImpactEmptyRow(id),now=new Date().toISOString(),row=normalizeFinancialImpactRow({...previous,organization_id:state.user.organizationId||'demo',year,month,active_clients:active,avg_ticket:Number(ticket.toFixed(2)),updated_by:state.user.userId||null,updated_at:now});const btn=$('#saveFinancialImpactParamsBtn');if(btn){btn.disabled=true;btn.textContent='Salvando...';}try{if(state.supabase){const db={organization_id:state.user.organizationId,year,month,active_clients:active,avg_ticket:Number(ticket.toFixed(2)),evaluated_clients:row.evaluated_clients,risk_any_clients:row.risk_any_clients,service_n1:row.service_n1,service_n2:row.service_n2,service_n3:row.service_n3,service_n4:row.service_n4,service_n5:row.service_n5,product_n1:row.product_n1,product_n2:row.product_n2,product_n3:row.product_n3,product_n4:row.product_n4,product_n5:row.product_n5,company_n1:row.company_n1,company_n2:row.company_n2,company_n3:row.company_n3,company_n4:row.company_n4,company_n5:row.company_n5,source_file:row.source_file||null,imported_by:row.imported_by||null,imported_at:row.imported_at||null,updated_by:state.user.userId,updated_at:now};const {error}=await state.supabase.from('quality_financial_monthly').upsert(db,{onConflict:'organization_id,year,month'});if(error)throw error;await ensureFinancialImpactLoaded(true);}else{const map=new Map(loadDemoFinancialImpact().map(r=>[`${safe(r.year)}-${String(safe(r.month)).padStart(2,'0')}`,r]));map.set(id,row);saveDemoFinancialImpact([...map.values()]);state.financialImpactCache[id]=row;state.financialImpactLoaded=true;}renderFinancialImpactIndicators();toast(`Parâmetros financeiros de ${monthLabelFromId(id)} salvos.`);}catch(err){console.error(err);toast('Não foi possível salvar. Confira a migração V2.29.0.');}finally{if(btn){btn.disabled=false;btn.textContent='Salvar parâmetros';}}
+  }
+
 function renderQualityReconciliation(squads,ids){
   const list=(ids||[]).map(id=>reconciliationMonthData(squads,id)).filter(r=>r.hasQuality);state.reconciliationCache={};list.forEach(r=>state.reconciliationCache[r.id]=r);
   const total=list.reduce((a,r)=>({service:a.service+r.service,product:a.product+r.product,company:a.company+r.company,divergent:a.divergent+r.divergent}),{service:0,product:0,company:0,divergent:0});
