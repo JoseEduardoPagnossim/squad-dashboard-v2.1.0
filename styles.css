@@ -1316,3 +1316,8 @@ th{font-size:10.5px!important;line-height:1.35}td{font-size:12px!important;line-
 .financial-impact-table{min-width:1080px}
 @media(max-width:1180px){.financial-strategic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.financial-strategic-grid{grid-template-columns:1fr}.financial-strategic-kpi{min-height:0}.financial-impact-trend-card{padding:18px}}
+
+
+/* V2.29.2 - tecnico fora do divisor das referencias */
+.group-count-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:3px 7px;border:1px solid rgba(255,173,51,.42);border-radius:999px;background:rgba(255,173,51,.10);color:#ffb13b;font-size:10px;font-weight:800;line-height:1;letter-spacing:.04em;vertical-align:middle;white-space:nowrap}
+.group-count-badge.compact{min-width:19px;padding:3px 5px;margin-left:5px;font-size:10px;letter-spacing:0}

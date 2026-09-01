@@ -1,6 +1,18 @@
-# Soften Performance Hub V2.29.1
+# Soften Performance Hub V2.29.2
 
 
+
+## V2.29.2 — Consistência de referências e status
+
+- mantém a fórmula oficial de status: **2, 3 ou 4 critérios = ACIMA; 0 ou 1 = ABAIXO**;
+- amplia o checkbox **Desconsiderar na quantidade de técnicos do grupo**: a produção do técnico continua nos totais, mas ele deixa de compor o divisor das referências de desempenho e continua fora do divisor financeiro da Base do Squad;
+- para referências quantitativas, `Atendimentos` e `Total de avaliações` usam o total produzido por todos os técnicos dividido somente pela quantidade de técnicos considerados;
+- `Nota média` e `% avaliado` usam somente os técnicos considerados na composição da média, evitando distorção matemática em indicadores proporcionais;
+- o técnico desconsiderado continua aparecendo no ranking, mantém seus atendimentos, avaliações, pontos e status individual;
+- períodos que cobrem uma competência completa passam a usar o **consolidado mensal oficial** para atendimentos e N1–N5; o detalhe diário permanece apenas para gráficos e recortes parciais. Isso evita divergências entre ranking do mês e consolidado mensal quando o histórico diário estiver desalinhado;
+- o marcador `Ø` identifica visualmente técnicos que estão fora do divisor das referências;
+- ao salvar o checkbox na Bonificação, o sistema também persiste novamente `status`, `goals_hit`, `points`, `rank` e `team_result` da competência aberta;
+- `MIGRACAO_V2.29.2.sql` atualiza o RPC do ranking para técnicos com a mesma regra de referências; não cria novas tabelas ou colunas.
 
 ## V2.29.1 — Leitura estratégica do impacto financeiro
 - adiciona quatro KPIs executivos em `Indicadores > Impacto financeiro`: cobertura financeira, exposição entre clientes ouvidos, principal origem do risco e receita sem feedback;
@@ -172,7 +184,7 @@
 - Ao marcar, o técnico continua com seus atendimentos e notas somados nos totais, mas deixa de compor apenas o denominador de técnicos usado na **média de atendimentos/técnico/dia da Base do Squad**.
 - O `% de Notas 5` do grupo continua considerando todas as Notas 5 e todos os atendimentos, inclusive do técnico desconsiderado.
 - O modelo **Individual** não é alterado.
-- A **gamificação/pontuação/status** também não é alterada: a regra é exclusivamente financeira, mantendo os dois motores separados.
+- Desde a V2.29.2, o mesmo checkbox também ajusta o divisor das referências de gamificação/status; a produção do técnico continua preservada nos totais e no próprio ranking.
 - O painel de auditoria financeira informa quantos técnicos possuem produção e quantos estão efetivamente sendo considerados no denominador.
 - A escolha é preservada em reimportações, gravada por competência, congelada no fechamento e incluída no Excel.
 - Esta versão exige executar `MIGRACAO_V2.20.5.sql` antes de publicar o novo frontend.

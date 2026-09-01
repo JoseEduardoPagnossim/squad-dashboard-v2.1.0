@@ -20,7 +20,7 @@ Pontuação, status oficial, bonificação e fechamento permanecem mensais; o ca
 
 ## V2.20.5 — Técnico fora do denominador financeiro
 
-A configuração `exclude_from_group_count` continua válida e independente do calendário diário. Ela afeta somente o denominador financeiro da Base do Squad.
+A configuração `exclude_from_group_count` continua válida por técnico + competência. Desde a V2.29.2, ela afeta o divisor financeiro da Base do Squad e também o divisor das referências de desempenho. Atendimentos e avaliações do técnico permanecem nos totais; o registro do técnico não é removido.
 
 ## 1. Arquitetura
 
@@ -357,3 +357,18 @@ Esses valores são estimativas de receita associada à amostra e não previsão 
 ## V2.29.1 — sem alteração de banco
 
 A V2.29.1 adiciona somente cálculos e visualizações estratégicas sobre `quality_financial_monthly`. Não há tabela, coluna, função ou política RLS nova. Se a `MIGRACAO_V2.29.0.sql` já foi executada, não é necessário rodar SQL adicional.
+
+
+## V2.29.2 — atualização do ranking/status
+
+Execute `MIGRACAO_V2.29.2.sql` após a V2.20.5/V2.24.2.
+
+A migração **não cria tabela nem coluna**. Ela recria `get_my_squad_game_ranking(date,date)` para aplicar a mesma regra usada no frontend:
+
+- técnico marcado em `technician_finance_monthly.exclude_from_group_count = true` continua com produção, pontos, ranking e status;
+- o total de atendimentos e avaliações continua incluindo a produção dele;
+- o divisor das referências quantitativas usa somente a quantidade de técnicos considerados;
+- nota média e % avaliado usam os técnicos considerados;
+- a fórmula de status permanece `goals_hit >= 2 => ACIMA`.
+
+Para competências fechadas, o snapshot continua imutável. Se for necessário aplicar a nova regra a um mês já fechado, reabra a competência, confira o checkbox e feche novamente.
