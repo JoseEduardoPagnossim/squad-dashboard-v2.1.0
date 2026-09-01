@@ -1,6 +1,16 @@
-# Soften Performance Hub V2.29.2
+# Soften Performance Hub V2.29.3
 
 
+
+
+## V2.29.3 — Importação operacional mais robusta
+
+- Corrige o vínculo de técnicos presentes no CSV operacional quando o cadastro possui o nome em `full_name`, mas o campo `technician_name` está vazio ou diferente.
+- A importação passa a reconhecer, dentro do mesmo Squad: **Nome do técnico**, **Nome completo** e nomes já existentes no histórico do monitor.
+- Ativar/inativar o usuário continua sem interferir na importação histórica.
+- Ao persistir a competência, o `user_id` também pode ser resolvido pelo Nome completo, evitando técnico importado sem vínculo ao usuário quando `technician_name` não estiver preenchido.
+- Não altera cálculos de status, pontuação, bonificação, férias ou a regra `exclude_from_group_count` da V2.29.2.
+- **Não exige nova migração SQL.** A V2.29.2 continua sendo pré-requisito para o RPC de ranking/status.
 
 ## V2.29.2 — Consistência de referências e status
 

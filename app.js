@@ -2349,13 +2349,16 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
         const hist=safe(mapped.sourceCounts?.['histórico anterior'])+safe(mapped.sourceCounts?.['histórico posterior']),directory=safe(mapped.sourceCounts?.['cadastro de usuário']);
         $('#importDetails').innerHTML=`<strong>${fmtInt(mapped.rows.length)} avaliações vinculadas</strong> • <strong>${months.length} meses disponíveis</strong>${un}${amb} • ${fmtInt(parsed.ignored)} linha(s) inválida(s)/sem nota de Produto ou Empresa. <span class="muted">Vínculos recuperados pelo histórico: ${fmtInt(hist)} • pelo cadastro: ${fmtInt(directory)}. Técnicos desligados podem permanecer na qualidade mesmo sem linha operacional na competência. Clientes, Resolve, comentário e NotaServico não entram nos cálculos.</span>`;$('#importProgress').style.width='100%';return;
       }
-      const parsed=parseServiceCsv(text),allowedBy={};
-      // A situação de login (ativo/inativo) não apaga desempenho histórico.
-      for(const code of codes){allowedBy[code]=new Set((state.userDirectory||[]).filter(u=>u.role==='technician'&&u.squadCode===code&&u.techName).map(u=>nameLinkKey(u.techName)));const squad=state.squads?.[code];for(const monthData of Object.values(squad?.months||{}))for(const tech of monthData?.technicians||[])if(tech?.name)allowedBy[code].add(nameLinkKey(tech.name));}
-      if(!codes.some(code=>allowedBy[code].size))throw new Error(scopeAll?'Cadastre técnicos nos Squads antes de importar o CSV.':`Cadastre os técnicos do Squad ${state.squadCode} em Usuários antes de importar o CSV.`);
-      const scopeRows=parsed.rows.filter(r=>codes.includes(r.group)),unmatched=[...new Set(scopeRows.filter(r=>!allowedBy[r.group]?.has(nameLinkKey(r.name))).map(r=>`${r.group}: ${r.name}`))].sort(),rows=scopeRows.filter(r=>allowedBy[r.group]?.has(nameLinkKey(r.name))),months=[...new Set(rows.map(r=>r.id))].sort().reverse();if(!months.length)throw new Error(scopeAll?'O CSV não possui registros que correspondam aos técnicos cadastrados. Confira os vínculos em Usuários.':`O CSV não possui registros que correspondam aos técnicos cadastrados do Squad ${state.squadCode}. Confira o campo Nome do técnico no CSV.`);
+      const parsed=parseServiceCsv(text),aliasBy=serviceTechnicianAliases(codes);
+      // O status de login (ativo/inativo) não interfere no reconhecimento do histórico.
+      // O vínculo operacional aceita tanto "Nome do técnico" quanto "Nome completo" do usuário,
+      // além dos nomes que já existam no histórico do próprio Squad.
+      if(!codes.some(code=>aliasBy[code]?.size))throw new Error(scopeAll?'Cadastre técnicos nos Squads antes de importar o CSV.':`Cadastre os técnicos do Squad ${state.squadCode} em Usuários antes de importar o CSV.`);
+      const scopeRows=parsed.rows.filter(r=>codes.includes(r.group)),unmatchedSet=new Set(),rows=[];
+      for(const r of scopeRows){const canonical=aliasBy[r.group]?.get(nameLinkKey(r.name));if(canonical)rows.push({...r,name:canonical});else unmatchedSet.add(`${r.group}: ${r.name}`)}
+      const unmatched=[...unmatchedSet].sort(),months=[...new Set(rows.map(r=>r.id))].sort().reverse();if(!months.length)throw new Error(scopeAll?'O CSV não possui registros que correspondam aos técnicos cadastrados. Confira os vínculos em Usuários.':`O CSV não possui registros que correspondam aos técnicos cadastrados do Squad ${state.squadCode}. Confira Nome do técnico, Nome completo e Squad do usuário.`);
       state.pendingCsv={kind:'service',fileName:file.name,rows,ignored:parsed.ignored,total:parsed.total,months,unmatched,scopeAll,codes};$('#csvMonthSelect').innerHTML=months.map(id=>{const [y,m]=id.split('-').map(Number);return `<option value="${id}">${MONTHS_PT[m-1]} ${y}</option>`}).join('');$('#csvPeriodBlock').classList.remove('hidden');$('#confirmCsvImportBtn').classList.remove('hidden');$('#confirmCsvImportBtn').textContent='Importar mês';$('#importMessage').textContent=scopeAll?'CSV operacional reconhecido para importação geral.':`CSV operacional reconhecido para o Squad ${state.squadCode}.`;if($('#csvPeriodHint'))$('#csvPeriodHint').textContent='A reimportação operacional substitui Serviço/atendimentos do mês, preserva dados financeiros manuais e qualidade Produto/Empresa e sincroniza o detalhamento diário de notas dos meses históricos já importados no mesmo escopo.';
-      const unmatchedText=unmatched.length?` • <strong>${unmatched.length} vínculo(s) não encontrado(s) ignorado(s)</strong>: ${escapeHtml(unmatched.slice(0,5).join(', '))}${unmatched.length>5?'…':''}`:'';$('#importDetails').innerHTML=`<strong>${fmtInt(rows.length)} linhas vinculadas</strong> aos técnicos cadastrados • <strong>${months.length} meses disponíveis</strong>${unmatchedText} • ${fmtInt(parsed.ignored)} linhas inválidas/fora dos Squads A, B, D e E. <span class="muted">Técnicos inativados continuam sendo reconhecidos no histórico quando possuem dados no CSV.</span>`;$('#importProgress').style.width='100%';
+      const unmatchedText=unmatched.length?` • <strong>${unmatched.length} vínculo(s) não encontrado(s) ignorado(s)</strong>: ${escapeHtml(unmatched.slice(0,5).join(', '))}${unmatched.length>5?'…':''}`:'';$('#importDetails').innerHTML=`<strong>${fmtInt(rows.length)} linhas vinculadas</strong> aos técnicos cadastrados • <strong>${months.length} meses disponíveis</strong>${unmatchedText} • ${fmtInt(parsed.ignored)} linhas inválidas/fora dos Squads A, B, D e E. <span class="muted">O vínculo considera Nome do técnico, Nome completo e histórico do Squad. Ativar ou inativar o login não remove nem bloqueia a importação do desempenho histórico.</span>`;$('#importProgress').style.width='100%';
     }catch(err){console.error(err);state.pendingCsv=null;$('#importMessage').textContent='Não foi possível ler este CSV.';$('#importDetails').textContent=err.message||String(err);$('#importProgress').style.width='100%';$('#confirmCsvImportBtn').classList.add('hidden');$('#csvPeriodBlock').classList.add('hidden')}
     finally{$('#chooseFileBtn').disabled=false;e.target.value=''}
   }
@@ -2465,6 +2468,18 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
   }
   async function persistHistoricalServiceDailySync(sync){
     if(!state.supabase||!sync?.changed?.length)return;let done=0;for(const item of sync.changed){const t=item.tech;if(!t?.dbId)continue;const payload=(t.daily||[]).map(d=>({technician_month_id:t.dbId,day:safe(d.day),att:safe(d.att),notes5:safe(d.notes5),notes4:safe(d.notes4),notes3:safe(d.notes3),notes2:safe(d.notes2),notes1:safe(d.notes1),off:!!d.off}));for(let i=0;i<payload.length;i+=500){const {error}=await state.supabase.from('daily_metrics').upsert(payload.slice(i,i+500),{onConflict:'technician_month_id,day'});if(error)throw error}done++;if($('#importProgress'))$('#importProgress').style.width=(92+Math.round(done/Math.max(1,sync.changed.length)*7))+'%';}
+  }
+
+  function serviceTechnicianAliases(codes){
+    const by={};for(const code of codes||[])by[code]=new Map();
+    for(const u of state.userDirectory||[]){
+      if(u.role!=='technician'||!u.squadCode||!by[u.squadCode])continue;
+      const canonical=normalizeName(u.techName||u.fullName);if(!canonical)continue;
+      for(const alias of [u.techName,u.fullName]){const key=nameLinkKey(alias);if(key&&!by[u.squadCode].has(key))by[u.squadCode].set(key,canonical);}
+      const ownKey=nameLinkKey(canonical);if(ownKey&&!by[u.squadCode].has(ownKey))by[u.squadCode].set(ownKey,canonical);
+    }
+    for(const code of codes||[]){const squad=state.squads?.[code];for(const monthData of Object.values(squad?.months||{}))for(const tech of monthData?.technicians||[]){const key=nameLinkKey(tech?.name);if(key&&!by[code].has(key))by[code].set(key,tech.name);}}
+    return by;
   }
 
   function parseServiceCsv(text){
@@ -2753,7 +2768,7 @@ function renderIndicatorLineChart(el,labels,series,{maxValue=null,percent=false,
     const userMap={};
     if(!state.supabase||!squad?.dbId)return userMap;
     try{const {data:history,error}=await state.supabase.from('profile_squad_history').select('user_id,technician_name,valid_from_year,valid_from_month,valid_to_year,valid_to_month').eq('squad_id',squad.dbId);if(error)throw error;(history||[]).filter(h=>h.technician_name&&periodWithinHistory(h,m.year,m.month)).forEach(h=>userMap[nameLinkKey(h.technician_name)]=h.user_id)}catch(err){console.warn('Histórico de movimentação indisponível; usando perfil atual.',err)}
-    const {data:profiles,error:pe}=await state.supabase.from('profiles').select('user_id,technician_name').eq('squad_id',squad.dbId);if(pe)throw pe;(profiles||[]).forEach(p=>{if(p.technician_name){const key=nameLinkKey(p.technician_name);if(!userMap[key])userMap[key]=p.user_id}});
+    const {data:profiles,error:pe}=await state.supabase.from('profiles').select('user_id,technician_name,full_name').eq('squad_id',squad.dbId);if(pe)throw pe;(profiles||[]).forEach(p=>{for(const alias of [p.technician_name,p.full_name]){const key=nameLinkKey(alias);if(key&&!userMap[key])userMap[key]=p.user_id}});
     return userMap;
   }
   async function persistImportedMonth(m,squad){
