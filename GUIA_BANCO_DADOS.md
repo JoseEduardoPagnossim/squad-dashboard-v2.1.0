@@ -1,4 +1,15 @@
-# Soften Performance Hub V2.26.0 — Banco, segurança e operação
+# Soften Performance Hub V2.29.6 — Banco, segurança e operação
+
+
+## Atualização V2.29.6 — Status operacional x competência parcial
+
+Execute `MIGRACAO_V2.29.6.sql` após a V2.29.5. Ela não cria colunas novas; apenas recria `get_my_squad_game_ranking(date,date)` com as regras consolidadas.
+
+- As médias de status usam **todos os técnicos com produção**.
+- `exclude_from_group_count` deixa de afetar referências/status e passa a ser exclusivamente financeiro.
+- Competências completas usam `evaluation_excluded_att` na taxa de avaliação do ranking do próprio técnico.
+- Intervalos parciais continuam brutos, sem rateio artificial do ajuste mensal.
+- No frontend, `exclude_from_group_count` também isenta a competência parcial do desconto/redistribuição financeira, mantendo produção, status e histórico.
 
 ## Atualização V2.26.0 — Qualidade Produto/Empresa
 
@@ -20,7 +31,7 @@ Pontuação, status oficial, bonificação e fechamento permanecem mensais; o ca
 
 ## V2.20.5 — Técnico fora do denominador financeiro
 
-A configuração `exclude_from_group_count` continua válida por técnico + competência. Desde a V2.29.2, ela afeta o divisor financeiro da Base do Squad e também o divisor das referências de desempenho. Atendimentos e avaliações do técnico permanecem nos totais; o registro do técnico não é removido.
+A configuração `exclude_from_group_count` continua válida por técnico + competência. A partir da V2.29.6 ela é tratada como **competência parcial / regra financeira**: o técnico permanece nos totais, nas médias de status, no ranking e no histórico, mas não entra no divisor da Base do Squad e fica fora do desconto/redistribuição.
 
 ## 1. Arquitetura
 

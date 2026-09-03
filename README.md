@@ -1,8 +1,24 @@
-# Soften Performance Hub V2.29.5
+# Soften Performance Hub V2.29.6
 
 
 
 
+
+
+## V2.29.6 — Consolidação de status e bonificação
+
+- Status operacional replica a planilha: todos os técnicos com produção compõem as médias de atendimento, avaliações, nota média e % de avaliação.
+- Fórmula oficial mantida: 2 ou mais dos 4 critérios = `ACIMA`; 0 ou 1 = `ABAIXO`.
+- Truncamento de nota média corrigido para evitar diferença de 0,01 causada por ponto flutuante (`4,95` sendo interpretado como `4,94`).
+- `Desconsiderar na quantidade do Squad` passa a ser uma regra exclusivamente financeira para competências parciais:
+  - produção continua integral;
+  - status e ranking continuam visíveis;
+  - sai do divisor da Base do Squad;
+  - não recebe desconto de R$ 200 e não participa da redistribuição.
+- Resultado da equipe deriva dos status individuais, com mínimo de 50% `ACIMA`.
+- RPC `get_my_squad_game_ranking` passa a usar a mesma base elegível de avaliação da visão administrativa quando a competência completa é analisada.
+- Em intervalos parciais, os atendimentos sem avaliação continuam sem rateio artificial por dia.
+- Exige `MIGRACAO_V2.29.6.sql`.
 
 ## V2.29.5 — Atendimentos não elegíveis à avaliação
 
@@ -37,12 +53,12 @@
 ## V2.29.2 — Consistência de referências e status
 
 - mantém a fórmula oficial de status: **2, 3 ou 4 critérios = ACIMA; 0 ou 1 = ABAIXO**;
-- amplia o checkbox **Desconsiderar na quantidade de técnicos do grupo**: a produção do técnico continua nos totais, mas ele deixa de compor o divisor das referências de desempenho e continua fora do divisor financeiro da Base do Squad;
-- para referências quantitativas, `Atendimentos` e `Total de avaliações` usam o total produzido por todos os técnicos dividido somente pela quantidade de técnicos considerados;
-- `Nota média` e `% avaliado` usam somente os técnicos considerados na composição da média, evitando distorção matemática em indicadores proporcionais;
+- histórico da V2.29.2: o checkbox chegou a afetar as referências de desempenho; **essa parte foi substituída pela V2.29.6**, que voltou a incluir todos os técnicos com produção nas médias de status;
+- histórico da V2.29.2: as referências quantitativas chegaram a usar um divisor reduzido; **na V2.29.6 as médias de status usam todos os técnicos com produção**;
+- histórico da V2.29.2: `Nota média` e `% avaliado` chegaram a excluir competências parciais; **na V2.29.6 todos os técnicos com produção entram nessas médias**;
 - o técnico desconsiderado continua aparecendo no ranking, mantém seus atendimentos, avaliações, pontos e status individual;
 - períodos que cobrem uma competência completa passam a usar o **consolidado mensal oficial** para atendimentos e N1–N5; o detalhe diário permanece apenas para gráficos e recortes parciais. Isso evita divergências entre ranking do mês e consolidado mensal quando o histórico diário estiver desalinhado;
-- o marcador `Ø` identifica visualmente técnicos que estão fora do divisor das referências;
+- o marcador `Ø` continua identificando competência parcial, mas a partir da V2.29.6 isso significa exclusão **somente do divisor financeiro da Base do Squad e dos ajustes desconto/redistribuição**;
 - ao salvar o checkbox na Bonificação, o sistema também persiste novamente `status`, `goals_hit`, `points`, `rank` e `team_result` da competência aberta;
 - `MIGRACAO_V2.29.2.sql` atualiza o RPC do ranking para técnicos com a mesma regra de referências; não cria novas tabelas ou colunas.
 
@@ -216,7 +232,7 @@
 - Ao marcar, o técnico continua com seus atendimentos e notas somados nos totais, mas deixa de compor apenas o denominador de técnicos usado na **média de atendimentos/técnico/dia da Base do Squad**.
 - O `% de Notas 5` do grupo continua considerando todas as Notas 5 e todos os atendimentos, inclusive do técnico desconsiderado.
 - O modelo **Individual** não é alterado.
-- Desde a V2.29.2, o mesmo checkbox também ajusta o divisor das referências de gamificação/status; a produção do técnico continua preservada nos totais e no próprio ranking.
+- A V2.29.6 consolidou a regra: o checkbox não altera mais gamificação/status; ele é exclusivamente financeiro e também isenta a competência parcial do desconto/redistribuição.
 - O painel de auditoria financeira informa quantos técnicos possuem produção e quantos estão efetivamente sendo considerados no denominador.
 - A escolha é preservada em reimportações, gravada por competência, congelada no fechamento e incluída no Excel.
 - Esta versão exige executar `MIGRACAO_V2.20.5.sql` antes de publicar o novo frontend.
