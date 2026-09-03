@@ -1,7 +1,18 @@
-# Soften Performance Hub V2.29.3
+# Soften Performance Hub V2.29.4
 
 
 
+
+
+## V2.29.4 — Status da equipe alinhado ao status dos técnicos
+
+- Corrige o **Resultado da equipe** na Visão do Squad: ele não é mais definido por `pontuação > média de pontos`.
+- O status individual continua seguindo a regra oficial: **2 ou mais dos 4 critérios = ACIMA; 0 ou 1 = ABAIXO**.
+- A equipe fica **ACIMA quando pelo menos 50% dos técnicos considerados estão com status ACIMA**.
+- Técnicos marcados como **Desconsiderar na quantidade de técnicos do grupo** continuam com produção, pontos e status, mas ficam fora do denominador do resultado da equipe, em linha com a regra já usada nas referências do grupo.
+- A pontuação média continua visível apenas como indicador/ranking e deixa explícito que **não define o status da equipe**.
+- A mesma regra foi aplicada à Visão do Squad, portfólio de Squads, indicadores do período e competências fechadas (derivando o resultado dos status congelados dos técnicos).
+- Não requer nova migração SQL.
 
 ## V2.29.3 — Importação operacional mais robusta
 
