@@ -1,8 +1,19 @@
-# Soften Performance Hub V2.29.4
+# Soften Performance Hub V2.29.5
 
 
 
 
+
+## V2.29.5 — Atendimentos não elegíveis à avaliação
+
+- Novo campo por técnico/competência: **Atend. sem avaliação** para atendimentos cujo tipo não dispara e-mail de avaliação.
+- Esses atendimentos **continuam somando integralmente na produção, meta de atendimentos, média de atendimentos e ranking**.
+- Eles são retirados somente do denominador da **% de avaliação** e da **% de Notas 5** usada na bonificação (modelos Squad e Individual).
+- O ajuste pode ser informado em **Gestão > Operação > Métricas individuais** e também em **Gestão > Bonificação > Técnicos do Squad**; ambos usam o mesmo valor persistido.
+- O valor é limitado para não reduzir a base elegível abaixo da quantidade de avaliações já recebidas.
+- Reimportar o CSV operacional preserva o ajuste manual da competência.
+- Em recortes parciais por dia, a taxa continua bruta porque o ajuste é mensal e não possui distribuição diária; a competência completa usa a base elegível ajustada.
+- Exige `MIGRACAO_V2.29.5.sql`.
 
 ## V2.29.4 — Status da equipe alinhado ao status dos técnicos
 

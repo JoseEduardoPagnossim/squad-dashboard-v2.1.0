@@ -372,3 +372,21 @@ A migração **não cria tabela nem coluna**. Ela recria `get_my_squad_game_rank
 - a fórmula de status permanece `goals_hit >= 2 => ACIMA`.
 
 Para competências fechadas, o snapshot continua imutável. Se for necessário aplicar a nova regra a um mês já fechado, reabra a competência, confira o checkbox e feche novamente.
+
+
+## V2.29.5 — atendimentos sem envio de avaliação
+
+Execute `MIGRACAO_V2.29.5.sql` após a V2.29.2.
+
+A migração adiciona `technician_monthly.evaluation_excluded_att`, que guarda por técnico e competência a quantidade de atendimentos cujo tipo não dispara e-mail de avaliação.
+
+Regras:
+- `att` continua integral e não é reduzido;
+- `base_elegivel = att - evaluation_excluded_att`;
+- `% avaliação = total_eval / base_elegivel`;
+- `% Notas 5` da bonificação também usa `base_elegivel`;
+- o ajuste não altera total de atendimentos, média de atendimentos, metas de volume ou ranking de produção;
+- a entrada é limitada para que `base_elegivel` não fique menor que `total_eval`;
+- recortes diários/parciais permanecem com taxa bruta, pois o ajuste é mensal e não é distribuído artificialmente pelos dias.
+
+A migração também atualiza `get_org_squad_monthly_overview()` e `get_my_squad_game_ranking(date,date)` para manter a mesma regra nas visões agregadas e no ranking acessado pelo técnico.
